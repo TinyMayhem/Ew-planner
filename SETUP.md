@@ -1,16 +1,11 @@
-# UTW Buddy Board activation
+# UTW Buddy Board
 
-The EW Planner is now `/ew-planner.html`; existing root `#build=` links redirect there. The home page is UTW Field HQ. Gear guidance remains unpublished.
+The home page is UTW Field HQ. The EW Planner remains at /ew-planner.html. Gear guidance remains unpublished.
 
-The board uses durable Upstash Redis via server-side REST calls. It returns a setup status and does not accept submissions until configured. Never use localStorage as the shared database or a temporary 72-hour database for production.
+The shared board uses Supabase server-side REST calls. Production environment variables: SUPABASE_URL, SUPABASE_SECRET_KEY, UTW_ADMIN_PASSWORD (at least 16 characters), UTW_SESSION_SECRET (at least 32 characters). Keep all secrets in Vercel, never GitHub or browser code. The secret API key is passed in the apikey header.
 
-In Vercel, open **ew-planner** in **tiny-mayhem-s-projects**:
+Database objects: public.utw_buddy_board (id text primary key constrained to main, revision bigint, data jsonb, updated_at timestamptz); public.utw_buddy_rate_limits (key text primary key, hits integer, expires_at timestamptz); public.utw_buddy_rate_limit(p_key text) returns integer and atomically increments a 15-minute counter, cleaning expired entries. Enable RLS and revoke all access from PUBLIC, anon, authenticated on both tables and the function. Grant table CRUD and function execution only to service_role. Initialize main with revision 0 and an empty board. Do not reset existing board data.
 
-1. Storage → Create Database → Upstash Redis. Choose a permanent database suitable for this project and connect only **ew-planner**. Check the provider's plan and pricing before creating it.
-2. Ensure Production environment has `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` from that database. Some integrations use a different prefix; add these exact names if necessary.
-3. Add `UTW_ADMIN_PASSWORD` (a unique private password of at least 16 characters) and `UTW_SESSION_SECRET` (a separate random secret of at least 32 characters). Neither belongs in GitHub or browser code. Admin sessions are HttpOnly, expire after eight hours, and mutations require same-origin requests.
-4. Redeploy. `/api/buddies` must return `ready: true`. Verify a real member signup, private edit link, admin login, draft/publish, and profession change with two devices. Delete any test entries afterward.
+Writes use an atomic PATCH filtered by stored revision; conflicts return 409. Draft pairings remain private. Profession changes flag affected pairings for reassignment immediately. Only Engineers offering the relevant skill can provide it. Win-Win and Hospital Aid are independent. Private edit tokens are hashed; public responses never contain those hashes. Admin sessions use HttpOnly cookies and expire after eight hours.
 
-Signups are self-reported, not proof of in-game identity. Each skill has one assigned provider slot and one recipient slot per member. Win-Win and Hospital Aid are independent. Only an Engineer explicitly offering a skill may provide it. A profession change flags all their active/draft pairings for reassignment immediately, and old pairings do not auto-reactivate. Admin can recover links and edit or remove entries. Private edit tokens are hashed in storage, never shown in the public board, and only returned when issuing a link.
-
-Atomic compare-and-set prevents concurrent writes from overwriting each other. Conflicts return 409 and require a refresh. Drafts are hidden from the public API, while published pairing invalidations are visible immediately. Rate limits persist in Redis. Enable provider backups or use the admin export regularly.
+After deployment, verify /api/buddies returns ready:true, then signup, private edits, admin login, draft publication, and profession changes on separate devices. Remove test entries afterward. Use admin exports for backups. Signups are self-reported and do not prove in-game identity.
