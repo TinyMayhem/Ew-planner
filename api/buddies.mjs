@@ -1,11 +1,35 @@
 import {emptyBoard,hash,publicBoard,publicMember,memberByToken,register,update,assign,publish,adminPasswordOK,sessionToken,validSession,invalidatePairs} from '../lib/buddies.mjs';
-const KEY='utw:buddy-board:v1';
-const configured=()=>Boolean(process.env.UPSTASH_REDIS_REST_URL&&process.env.UPSTASH_REDIS_REST_TOKEN&&process.env.UTW_ADMIN_PASSWORD?.length>=16&&process.env.UTW_SESSION_SECRET?.length>=32);
-async function redis(command){try{const response=await fetch(process.env.UPSTASH_REDIS_REST_URL,{method:'POST',headers:{Authorization:'Bearer '+process.env.UPSTASH_REDIS_REST_TOKEN,'Content-Type':'application/json'},body:JSON.stringify(command),signal:AbortSignal.timeout(8000)});const data=await response.json();if(!response.ok||data.error)throw new Error('Database unavailable.');return data.result;}catch{throw new Error('Database unavailable.');}}
+const configured=()=>Boolean(process.env.SUPABASE_URL&&process.env.SUPABASE_SECRET_KEY&&process.env.UTW_ADMIN_PASSWORD?.length>=16&&process.env.UTW_SESSION_SECRET?.length>=32);
+async function database(path,options={}) {
+ try {
+  const response=await fetch(process.env.SUPABASE_URL.replace(/\/$/,'')+'/rest/v1/'+path,{
+   ...options,headers:{apikey:process.env.SUPABASE_SECRET_KEY,'Content-Type':'application/json',...options.headers},
+   signal:AbortSignal.timeout(8000)
+  });
+  if(!response.ok)throw new Error('Database unavailable.');
+  return await response.json();
+ }catch{throw new Error('Database unavailable.');}
+}
 const json=(data,status=200,headers={})=>Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers}});
-async function limited(request,kind,max){const ip=request.headers.get('x-vercel-forwarded-for')||request.headers.get('x-forwarded-for')||'unknown';const key='utw:rate:'+kind+':'+hash(ip.split(',')[0]);const count=await redis(['EVAL',"local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],900) end; return n",1,key]);return count>max;}
-async function readBoard(){const raw=await redis(['GET',KEY]);return {raw:raw||'',board:raw?JSON.parse(raw):emptyBoard()};}
-async function save(board,raw){board.revision++;board.updatedAt=new Date().toISOString();const changed=await redis(['EVAL',"local old=redis.call('GET',KEYS[1]) or ''; if old~=ARGV[1] then return 0 end; redis.call('SET',KEYS[1],ARGV[2]); return 1",1,KEY,raw,JSON.stringify(board)]);return changed===1;}
+async function limited(request,kind,max){
+ const ip=request.headers.get('x-vercel-forwarded-for')||request.headers.get('x-forwarded-for')||'unknown';
+ const count=await database('rpc/utw_buddy_rate_limit',{method:'POST',body:JSON.stringify({p_key:kind+':'+hash(ip.split(',')[0])})});
+ if(!Number.isInteger(count))throw new Error('Database unavailable.');
+ return count>max;
+}
+async function readBoard(){
+ const rows=await database('utw_buddy_board?id=eq.main&select=revision,data');
+ if(!Array.isArray(rows)||rows.length!==1||rows[0].data?.revision!==rows[0].revision)throw new Error('Database unavailable.');
+ return {raw:rows[0].revision,board:rows[0].data};
+}
+async function save(board,revision){
+ board.revision++;board.updatedAt=new Date().toISOString();
+ const rows=await database('utw_buddy_board?id=eq.main&revision=eq.'+revision,{
+  method:'PATCH',headers:{Prefer:'return=representation'},
+  body:JSON.stringify({revision:board.revision,data:board,updated_at:board.updatedAt})
+ });
+ return Array.isArray(rows)&&rows.length===1;
+}
 export async function GET(request){if(!configured())return json({ready:false,message:'Buddy signup is not open yet. Tiny is connecting the shared board.'});try{const {board}=await readBoard();const token=request.headers.get('authorization')?.replace(/^Bearer /,'');const member=token?memberByToken(board,token):null;if(token&&!member)return json({error:'This edit link is invalid. Ask Tiny to recover your entry.'},401);const admin=validSession(request.headers.get('cookie'));return json({ready:true,admin,...publicBoard(board,admin),myMember:member?publicMember(member):null});}catch(error){console.error('UTW buddy read failed:',error.message);return json({ready:false,error:'The shared board is temporarily unavailable. Try again.'},503);}}
 export async function POST(request){if(!configured())return json({error:'Buddy signup is not open yet. Your submission has not been saved.'},503);const origin=request.headers.get('origin');if(!origin||origin!==new URL(request.url).origin)return json({error:'Request must come from the UTW site.'},403);if(!request.headers.get('content-type')?.startsWith('application/json'))return json({error:'JSON request required.'},415);let body;try{const text=await request.text();if(text.length>12000)return json({error:'Submission is too large.'},413);body=JSON.parse(text);}catch{return json({error:'Invalid submission.'},400);}try{
  if(await limited(request,body.action==='login'?'login':'write',body.action==='login'?10:60))return json({error:'Too many attempts. Try again in 15 minutes.'},429);
