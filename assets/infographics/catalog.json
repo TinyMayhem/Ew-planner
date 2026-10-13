@@ -1,0 +1,152 @@
+[
+  {
+    "path": "bundled:morrison-ew-overview",
+    "title": "Morrison EW Overview",
+    "tags": [
+      "EW",
+      "Aircraft",
+      "Morrison"
+    ],
+    "description": "Unlock requirements, level 1/10/20/30 milestones and weapon stat bonuses.",
+    "season": 5,
+    "type": "png",
+    "size": 559272,
+    "url": "/assets/infographics/season-5/morrison-ew-overview.png"
+  },
+  {
+    "path": "bundled:week-4-outpost",
+    "title": "Week 4 Expectations: Outpost Week",
+    "tags": [
+      "Week 4",
+      "Outpost",
+      "War",
+      "Banks",
+      "Cities"
+    ],
+    "description": "Outpost rebuilding priorities, contested land, weekly unlocks and the daily checklist.",
+    "season": 5,
+    "type": "png",
+    "size": 780391,
+    "url": "/assets/infographics/season-5/week-4-outpost.png"
+  },
+  {
+    "path": "bundled:high-noon-duels",
+    "title": "High Noon Duels",
+    "tags": [
+      "High Noon",
+      "Duels",
+      "Profession",
+      "Rewards"
+    ],
+    "description": "Inviting players, challenge deposits, duel rules and the Gunslinger Wager skill.",
+    "season": 5,
+    "type": "png",
+    "size": 611982,
+    "url": "/assets/infographics/season-5/high-noon-duels.png"
+  },
+  {
+    "path": "bundled:trade-train-premium-sales",
+    "title": "Trade Train Premium Sales",
+    "tags": [
+      "Trade Train",
+      "Premium Sale",
+      "CrystalGold"
+    ],
+    "description": "Reading trade logs, price trends and purchase quantity to choose when to sell.",
+    "season": 5,
+    "type": "png",
+    "size": 551714,
+    "url": "/assets/infographics/season-5/trade-train-premium-sales.png"
+  },
+  {
+    "path": "bundled:venom-ur-upgrade",
+    "title": "Venom UR Upgrade Guide",
+    "tags": [
+      "Venom",
+      "UR Promotion",
+      "Hero Swap",
+      "VS",
+      "Missile"
+    ],
+    "description": "Promotion preparation, refunded medals and Hero Swap steps for Hero Advancement points.",
+    "season": 5,
+    "type": "png",
+    "size": 541038,
+    "url": "/assets/infographics/season-5/venom-ur-upgrade.png"
+  },
+  {
+    "path": "bundled:stetmann-ew-tank",
+    "title": "Stetmann EW: Tank Guide",
+    "tags": [
+      "EW",
+      "Tank",
+      "Stetmann",
+      "Shields"
+    ],
+    "description": "Weapon milestones, shield breaking and the Kimberly plus Marshall targeting warning.",
+    "season": 5,
+    "type": "png",
+    "size": 669267,
+    "url": "/assets/infographics/season-5/stetmann-ew-tank.png"
+  },
+  {
+    "path": "bundled:week-3-wasteland-trade",
+    "title": "Week 3 Wasteland Trade",
+    "tags": [
+      "Week 3",
+      "Trade Train",
+      "Premium Sale",
+      "Profession",
+      "Plunder"
+    ],
+    "description": "Premium sales, train profession skills, protection and plunder tips.",
+    "season": 5,
+    "type": "png",
+    "size": 561961,
+    "url": "/assets/infographics/season-5/week-3-wasteland-trade.png"
+  },
+  {
+    "path": "bundled:how-to-rob-a-train",
+    "title": "How to Rob a Train",
+    "tags": [
+      "Trade Train",
+      "Plunder",
+      "Timing"
+    ],
+    "description": "Finding a target, using plunder attempts and understanding the train schedule.",
+    "season": 5,
+    "type": "png",
+    "size": 524399,
+    "url": "/assets/infographics/season-5/how-to-rob-a-train.png"
+  },
+  {
+    "path": "bundled:bank-deposits",
+    "title": "How to Do Bank Deposits",
+    "tags": [
+      "Banks",
+      "Deposits",
+      "CrystalGold",
+      "Risk"
+    ],
+    "description": "Bank capacity, deposit terms, illustrated returns and risk versus reward.",
+    "season": 5,
+    "type": "png",
+    "size": 633632,
+    "url": "/assets/infographics/season-5/bank-deposits.png"
+  },
+  {
+    "path": "bundled:week-2-overview",
+    "title": "Week 2 Overview: Trade Smart, Guard Your Loot",
+    "tags": [
+      "Week 2",
+      "Trade Train",
+      "Banks",
+      "Plague Roosters"
+    ],
+    "description": "Week 2 unlocks, trains, bank deposits and plague rooster rewards.",
+    "season": 5,
+    "type": "png",
+    "size": 733328,
+    "url": "/assets/infographics/season-5/week-2-overview.png"
+  }
+]
