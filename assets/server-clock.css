@@ -1,0 +1,20 @@
+.hero .server-clock{width:350px;flex:0 0 350px;margin:0;text-align:center;pointer-events:none;--hour:0deg;--minute:0deg;--second:0deg;--slide:0px;--wobble:3deg}
+.server-clock-stage{position:relative;width:350px;height:390px;padding-top:20px;box-sizing:border-box}
+.server-clock-dial{position:relative;width:300px;height:300px;margin:auto;border:10px solid #bd8c43;border-radius:50%;box-sizing:border-box;background:radial-gradient(circle,#fff9e9,#e9dfc0);box-shadow:0 0 0 5px #49391c,0 0 0 8px #d7b866,0 12px 40px #0009,inset 0 0 30px #a7905b66;color:#234636}
+.server-clock-dial svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.clock-hand{position:absolute;left:50%;top:50%;width:0;height:0;transform:rotate(var(--hour));z-index:2}
+.clock-hand::before{content:'';position:absolute;width:9px;height:78px;left:-4.5px;bottom:-8px;border-radius:8px;background:#254c39;box-shadow:0 0 0 2px #c7a04f}
+.clock-minute{transform:rotate(var(--minute));z-index:3}.clock-minute::before{width:6px;left:-3px;height:109px;background:#8f5b25}
+.clock-second{transform:rotate(var(--second));z-index:1}.clock-second::before{width:2px;left:-1px;height:118px;background:#b75c40;box-shadow:none}
+.clock-pin{position:absolute;width:17px;height:17px;left:calc(50% - 8.5px);top:calc(50% - 8.5px);background:#e9c775;border:3px solid #5b4a25;border-radius:50%;z-index:6;box-sizing:border-box}
+.clock-rider{position:absolute;left:0;top:calc(-65px - var(--slide));width:0;height:0}
+.clock-rider-upright{position:absolute;transform:rotate(calc(-1 * var(--hour)));width:0;height:0}
+.clock-tiny{position:absolute;width:92px;max-width:none;height:auto;left:-46px;top:-5px;transform-origin:50% 5px;animation:tiny-clings 5s ease-in-out infinite;filter:drop-shadow(0 3px 3px #0005)}
+.clock-minute .clock-rider{top:-91px}.clock-minute .clock-rider-upright{transform:rotate(calc(-1 * var(--minute)))}
+.clock-chicken{position:absolute;width:69px;max-width:none;height:auto;left:-34.5px;bottom:-3px;transform-origin:50% 100%;animation:chicken-balances 4s ease-in-out infinite;filter:drop-shadow(0 2px 2px #0005)}
+.server-clock figcaption{position:relative;margin-top:0;color:#fff4d5}.server-clock-label{display:block;font-size:10px;font-weight:800;letter-spacing:.18em;color:#e7c578}.server-clock time{display:block;font:700 25px/1.6 ui-monospace,monospace;font-variant-numeric:tabular-nums}.server-clock-note{display:block;font-size:13px;font-style:italic;color:#f4dfb5}
+@keyframes tiny-clings{0%,100%{transform:rotate(calc(-1 * var(--wobble)))}50%{transform:rotate(var(--wobble))}}
+@keyframes chicken-balances{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+@media(max-width:900px){.hero .server-clock{width:300px;flex-basis:300px}.server-clock-stage{transform:scale(.85);transform-origin:top left;margin-bottom:-58px}}
+@media(max-width:600px){.hero .container{flex-wrap:wrap}.hero .hero-copy{flex-basis:100%}.hero .server-clock{width:280px;flex-basis:280px;margin:10px auto 0}.server-clock-stage{transform:scale(.8);margin-bottom:-78px}.server-clock time{font-size:23px}}
+@media(prefers-reduced-motion:reduce){.clock-tiny,.clock-chicken{animation:none}}
