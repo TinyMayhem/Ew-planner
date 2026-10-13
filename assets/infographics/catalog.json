@@ -300,5 +300,161 @@
     "type": "png",
     "size": 2399322,
     "url": "/assets/infographics/general/t11-kawaii-blueprint.png"
+  },
+  {
+    "path": "bundled:ammo-bonanza",
+    "title": "Ammo Bonanza",
+    "tags": [
+      "Ammo Bonanza",
+      "Events",
+      "Ammo",
+      "Rewards"
+    ],
+    "description": "Ammo tasks, event cycles, prize guarantees and the poster's reward planning examples.",
+    "season": null,
+    "type": "jpg",
+    "size": 418243,
+    "url": "/assets/infographics/general/ammo-bonanza.jpg"
+  },
+  {
+    "path": "bundled:golden-wasteland-rules",
+    "title": "Season 5 Intel: The Golden Wasteland Rules",
+    "tags": [
+      "War",
+      "Cities",
+      "Banks",
+      "Battle Windows"
+    ],
+    "description": "Map size, capture days, battle windows, Sunday truce and starting-area guidance.",
+    "season": 5,
+    "type": "png",
+    "size": 336121,
+    "url": "/assets/infographics/season-5/golden-wasteland-rules.png"
+  },
+  {
+    "path": "bundled:code-boss-battle-record",
+    "title": "Optimizing Code Boss: Read Your Battle Record",
+    "tags": [
+      "Code Boss",
+      "Battle Reports",
+      "Damage",
+      "Gear"
+    ],
+    "description": "Opening battle records and identifying damage dealers for attack-gear allocation.",
+    "season": null,
+    "type": "jpg",
+    "size": 269051,
+    "url": "/assets/infographics/general/code-boss-battle-record.jpg"
+  },
+  {
+    "path": "bundled:code-boss-f2p",
+    "title": "Code Boss Mastery for Free-to-Play",
+    "tags": [
+      "Code Boss",
+      "F2P",
+      "Lineups",
+      "Gear",
+      "War Fever"
+    ],
+    "description": "Pre-battle preparation, gear testing and suggested lineups for Code 87, 39 and 64.",
+    "season": null,
+    "type": "jpg",
+    "size": 244389,
+    "url": "/assets/infographics/general/code-boss-f2p.jpg"
+  },
+  {
+    "path": "bundled:restricted-area-power",
+    "title": "How to Increase Power in the Restricted Area",
+    "tags": [
+      "Restricted Area",
+      "T11",
+      "March Size",
+      "Research",
+      "Overlord"
+    ],
+    "description": "Research, hero levels, Overlord bonds, troop centers and other march-size upgrades.",
+    "season": null,
+    "type": "jpg",
+    "size": 476294,
+    "url": "/assets/infographics/general/restricted-area-power.jpg"
+  },
+  {
+    "path": "bundled:season-5-prep",
+    "title": "Hoard Like a Legend: Season 5 Prep Guide",
+    "tags": [
+      "Preparation",
+      "Teleports",
+      "Stamina",
+      "Speedups",
+      "Shields"
+    ],
+    "description": "Supplies to save before Season 5, including teleports, stamina, healing and training speedups.",
+    "season": 5,
+    "type": "png",
+    "size": 634397,
+    "url": "/assets/infographics/season-5/season-5-prep.png"
+  },
+  {
+    "path": "bundled:tesla-coil-guide",
+    "title": "Tesla Coil Complete Guide: Season 4 Week 4",
+    "tags": [
+      "Tesla Coil",
+      "Week 4",
+      "Copper War",
+      "Electricians",
+      "Reinforcements"
+    ],
+    "description": "Tesla Coil deployment, durability damage, reinforcement scaling and preparation-phase use.",
+    "season": 4,
+    "type": "png",
+    "size": 602310,
+    "url": "/assets/infographics/season-4/tesla-coil-guide.png"
+  },
+  {
+    "path": "bundled:stat-explanations",
+    "title": "Last War Stat Explanations",
+    "tags": [
+      "Stats",
+      "PvP",
+      "Counters",
+      "Durability",
+      "Severe Wounds"
+    ],
+    "description": "Plain-language examples for attacking, defending, troop-type counters and wound-rate stats.",
+    "season": null,
+    "type": "png",
+    "size": 595641,
+    "url": "/assets/infographics/general/stat-explanations.png"
+  },
+  {
+    "path": "bundled:squad-formation-basics",
+    "title": "Squads: Formation Basics and Troop-Type Bonuses",
+    "tags": [
+      "Squads",
+      "Formation",
+      "Front Row",
+      "Back Row",
+      "Counters"
+    ],
+    "description": "Front-row defenders, back-row damage dealers, type counters and formation bonuses.",
+    "season": null,
+    "type": "jpg",
+    "size": 334307,
+    "url": "/assets/infographics/general/squad-formation-basics.jpg"
+  },
+  {
+    "path": "bundled:oni-summon",
+    "title": "How to Use Oni Summon Skill",
+    "tags": [
+      "Oni Summon",
+      "Engineer",
+      "Profession",
+      "Oni Legion"
+    ],
+    "description": "Activating the profession skill, sending a squad and luring an Oni Legion.",
+    "season": null,
+    "type": "png",
+    "size": 432974,
+    "url": "/assets/infographics/general/oni-summon.png"
   }
 ]
