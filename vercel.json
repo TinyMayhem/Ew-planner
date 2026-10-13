@@ -7,6 +7,9 @@
   "functions": {
     "api/buddies.mjs": {
       "maxDuration": 30
+    },
+    "api/builds.mjs": {
+      "maxDuration": 30
     }
   },
   "headers": [
@@ -32,6 +35,10 @@
     {
       "source": "/gear-beta.html",
       "destination": "/api/gear-beta"
+    },
+    {
+      "source": "/b/:id",
+      "destination": "/ew-planner.html?shared=:id"
     }
   ]
 }
