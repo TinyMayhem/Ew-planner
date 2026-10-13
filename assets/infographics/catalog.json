@@ -148,5 +148,157 @@
     "type": "png",
     "size": 733328,
     "url": "/assets/infographics/season-5/week-2-overview.png"
+  },
+  {
+    "path": "bundled:wasteland-trade-week-2",
+    "title": "Wasteland Trade: Week 2 Overview",
+    "tags": [
+      "Week 2",
+      "Trade Train",
+      "Whiskey",
+      "Plunder"
+    ],
+    "description": "Train timings, consignment limits, selling rules and Week 2 plunder tips.",
+    "season": 5,
+    "type": "png",
+    "size": 590179,
+    "url": "/assets/infographics/season-5/wasteland-trade-week-2.png"
+  },
+  {
+    "path": "bundled:plague-rooster-farming",
+    "title": "Plague Roosters: Week 2 Farming Guide",
+    "tags": [
+      "Week 2",
+      "Plague Roosters",
+      "Truffle Coffee",
+      "Virus Resistance"
+    ],
+    "description": "Spawning and finding roosters, recipe farming, first-kill rewards and coffee benefits.",
+    "season": 5,
+    "type": "png",
+    "size": 599474,
+    "url": "/assets/infographics/season-5/plague-rooster-farming.png"
+  },
+  {
+    "path": "bundled:fiona-ew-priority",
+    "title": "Fiona EW Priority for Missile Mains",
+    "tags": [
+      "EW",
+      "Fiona",
+      "Adam",
+      "Missile",
+      "Shards"
+    ],
+    "description": "Fiona versus Adam investment priorities, weapon milestones and shard planning.",
+    "season": 5,
+    "type": "png",
+    "size": 630524,
+    "url": "/assets/infographics/season-5/fiona-ew-priority.png"
+  },
+  {
+    "path": "bundled:tactics-card-limit",
+    "title": "How to Check Your Tactics Card Limit",
+    "tags": [
+      "Tactics Cards",
+      "Profession Hall",
+      "Daily Limit"
+    ],
+    "description": "Finding the card menu and checking the acquired-today counter for your daily limit.",
+    "season": null,
+    "type": "png",
+    "size": 441384,
+    "url": "/assets/infographics/general/tactics-card-limit.png"
+  },
+  {
+    "path": "bundled:counter-fiona",
+    "title": "How to Counter Fiona",
+    "tags": [
+      "Fiona",
+      "Aircraft",
+      "Tank",
+      "Counter Reversal",
+      "PvP"
+    ],
+    "description": "Fiona's buff removal, affected heroes and matchup advice for aircraft and tank mains.",
+    "season": 5,
+    "type": "png",
+    "size": 679865,
+    "url": "/assets/infographics/season-5/counter-fiona.png"
+  },
+  {
+    "path": "bundled:high-noon-play-guide",
+    "title": "High Noon: How to Play and What You Get",
+    "tags": [
+      "High Noon",
+      "Duels",
+      "Coffee Beans",
+      "Rewards"
+    ],
+    "description": "Daily stages, ricochet mechanics, ranking rewards and duel mode.",
+    "season": 5,
+    "type": "png",
+    "size": 554232,
+    "url": "/assets/infographics/season-5/high-noon-play-guide.png"
+  },
+  {
+    "path": "bundled:season-5-coffee",
+    "title": "Wild West Brews: Season 5 Coffee Guide",
+    "tags": [
+      "Coffee",
+      "Virus Resistance",
+      "Truffle Coffee",
+      "CrystalGold"
+    ],
+    "description": "Coffee recipe sources, development buffs, monster damage and logistics boosts.",
+    "season": 5,
+    "type": "png",
+    "size": 392673,
+    "url": "/assets/infographics/season-5/season-5-coffee.png"
+  },
+  {
+    "path": "bundled:restricted-area-t11",
+    "title": "Master the Restricted Area: Your Path to T11 Troops",
+    "tags": [
+      "T11",
+      "Restricted Area",
+      "Training",
+      "Armament Cores"
+    ],
+    "description": "Daily training sessions, march-size research and side-mission loot.",
+    "season": null,
+    "type": "png",
+    "size": 1584003,
+    "url": "/assets/infographics/general/restricted-area-t11.png"
+  },
+  {
+    "path": "bundled:t11-f2p-guide",
+    "title": "Cute and Steady: F2P Guide to T11 Troops",
+    "tags": [
+      "T11",
+      "F2P",
+      "Armament Cores",
+      "Restricted Area",
+      "Black Market"
+    ],
+    "description": "Daily training, core priorities, event currencies and alliance missions.",
+    "season": null,
+    "type": "png",
+    "size": 2404156,
+    "url": "/assets/infographics/general/t11-f2p-guide.png"
+  },
+  {
+    "path": "bundled:t11-kawaii-blueprint",
+    "title": "Your Kawaii Blueprint to T11 Troops",
+    "tags": [
+      "T11",
+      "Armament Cores",
+      "Weekly Pass",
+      "Glittering Market"
+    ],
+    "description": "Core budgeting, training habits, saved currencies and final unlock planning.",
+    "season": null,
+    "type": "png",
+    "size": 2399322,
+    "url": "/assets/infographics/general/t11-kawaii-blueprint.png"
   }
 ]
