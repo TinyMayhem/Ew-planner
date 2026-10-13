@@ -1,0 +1,2 @@
+import {convertTime} from '../assets/time-converter-core.js';
+export async function GET(request){try{const time=new URL(request.url).searchParams.get('time');if(!time||time.length>5)return Response.json({error:'Enter server time as 1200 or 12:00.'},{status:400});return Response.json(convertTime(time),{headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}catch(error){return Response.json({error:error.message||'Could not convert this time.'},{status:400,headers:{'Cache-Control':'no-store'}});}}
