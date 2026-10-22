@@ -29,6 +29,10 @@
   ],
   "rewrites": [
     {
+      "source": "/r4-planner",
+      "destination": "/api/r4-planner"
+    },
+    {
       "source": "/gear-beta",
       "destination": "/api/gear-beta"
     },
