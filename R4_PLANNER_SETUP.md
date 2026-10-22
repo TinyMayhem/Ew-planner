@@ -1,37 +1,44 @@
-# Season 6 R4 Command Centre
+# UTW Season 6 R4 Command Centre
 
-Route: /r4-planner (served by the Vercel function api/r4-planner.mjs).
+Route: /r4-planner (Vercel function api/r4-planner.mjs)
+Private discussion endpoint: /api/r4-comments (GET, POST).
 
-## Security and setup
+## Environment and passcode
 
-The Hub homepage and regular EW Planner remain public. The Command Centre has a separate server-side password gate. It fails closed with HTTP 503 until these Vercel environment variables are configured:
+The requested R4 passcode is stored as the encrypted Vercel environment variable UTW_R4_PASSWORD. Do not commit the actual passcode to GitHub. A short dictionary passcode is much weaker than a random password, so the login requires Supabase rate limiting and fails closed if the rate-limiter is unreachable. Rotate this passcode if it leaks outside the intended R4/R5 group.
 
-- UTW_R4_PASSWORD: a unique randomly generated passcode of at least 16 characters, shared only with authorized UTW R4/R5. Do not reuse UTW_ADMIN_PASSWORD, UTW_PAGE_PASSWORD, or the gear beta passcode.
-- UTW_SESSION_SECRET: existing strong project secret of at least 32 characters. Do not overwrite it: other app sessions depend on it.
+Existing production/preview variables:
+- UTW_R4_PASSWORD: the separate R4 passcode (at least 8 characters).
+- UTW_SESSION_SECRET: existing secret (at least 32 characters). Do not overwrite it.
+- SUPABASE_URL: existing Supabase URL.
+- SUPABASE_SECRET_KEY: existing server-only Supabase service role credential.
 
-Set UTW_R4_PASSWORD in Vercel Project Settings -> Environment Variables (Production, and Preview if testing previews). Redeploy the relevant environment after adding it. Never commit the password, an auth cookie, or individual diplomatic secrets to GitHub.
+The R4 login uses the existing utw_buddy_rate_limit RPC, capped at ten attempts per IP/15 minutes. The comment API uses the same RPC, capped at 30 comments per IP/15 minutes, and fails closed if unavailable. The passcode is verified only on the server. Eight-hour sessions use HMAC-signed HttpOnly, Secure, SameSite=Strict cookies (Path=/); GET and POST APIs verify session cookies. POST additionally verifies Origin.
 
-If SUPABASE_URL and SUPABASE_SECRET_KEY are present, R4 logins additionally use the existing utw_buddy_rate_limit database RPC and fail closed when rate checking is unavailable. Allow up to 10 attempts per rolling 15-minute period per IP before the RPC rejects further attempts. Use a strong randomly generated passcode even with rate limiting.
-
-Authenticated sessions use HMAC-signed HttpOnly, Secure, SameSite=Strict cookies for eight hours. The page and server response are no-store and noindex. Log out after using a shared device. Revoke access by rotating UTW_R4_PASSWORD or UTW_SESSION_SECRET, considering that changing the latter affects other features.
+**Shared comments require one database setup action:** Run the reviewed migration in supabase/season6-r4-comments.sql using the SQL Editor of the *existing* Supabase project. This creates public.utw_r4_comments with its private indexes and security grants. No access is granted to anon/authenticated; the server API uses the server-only service role key. Do not paste credentials into the editor or browser.
 
 ## Features
 
-- Ten-week dropdown: pre-season Weeks 1-2, Season Weeks 1-8.
-- 75 tasks covering diplomacy, leadership structure, capture maps, polls, city and Outpost battles, Altar Conquest, Sanctuary Duel, Faction Duel and settlement.
-- Checkboxes, per-week progress, next-week, copy and reset controls, responsive mobile layout.
-- Standard T-72 / T-48 / T-24 battle preparation reminders.
+- 10-week dropdown: Pre-season Weeks 1–2 and Season Weeks 1–8.
+- 75 checklist tasks for diplomacy, leadership structure, city battles, War Merit, Altars, Outposts, Sanctuary Duels, Faction Duel and settlement.
+- Expandable Discussion per individual item, including name, message and timestamps, visible to other signed-in R4s on other devices. Users choose a display name, which is **not verified** as a game account.
+- 72-hour leadership/map review, 48-hour attendance poll, 24-hour final-map approval reminders.
+- Checkboxes and progress are still stored **locally in each browser**, NOT shared. User can copy the checklist to back up progress.
+- The generic checklists are stored in a **public** GitHub repository. The discussion contents are NOT in GitHub, only in the private Supabase table, accessible through the locked server API.
 
-Task ticks are stored only in the current browser via localStorage. They are NOT shared, backed up, synchronized, or stored in Supabase. Clearing browser data wipes them. Use Copy Checklist to keep a manual backup, and do not enter confidential diplomatic agreements or account secrets. The generic task templates are committed to a public repository, so the server-side lock restricts page access but does not make those source templates confidential. A proper shared R4 live board would require separate authenticated server-side storage and access auditing.
+## Rollout and verification
 
-Before each season event, validate exact opening dates and windows against the in-game Season 6 event calendar. The countdowns in the app are UTW planning practices, not game-mandated rules.
+1. Confirm the Vercel preview and production environments have the four environment variables. Redeploy after setting a new one.
+2. Run supabase/season6-r4-comments.sql in your existing Supabase dashboard.
+3. Run npm test or review GitHub checks.
+4. Test /r4-planner in a preview: unauthenticated users only see the passcode screen.
+5. Sign in, switch through all ten weeks, expand a discussion, and post a test message.
+6. Sign in on another device and confirm the same comment appears. Check that checkbox ticks remain device-local.
+7. Try an invalid login and log out; confirm API comments cannot be fetched without the signed session.
+8. When approved, merge the draft pull request to main. This activates the Hub link in production.
 
-## Smoke test
+No messages are shared before the Supabase table is created. If the table is missing or Supabase is unavailable, the UI shows a clear error and does not pretend a comment was saved.
 
-Run npm test locally or in CI. On a deployed preview:
-1. Open /r4-planner with no cookie and verify the passcode screen appears.
-2. Confirm wrong passcodes do not show the checklist.
-3. Enter the R4 passcode; confirm all ten weeks and task categories render.
-4. Check a box, refresh the page, verify it stays checked on the same device.
-5. Copy a weekly checklist and ensure completion markers reflect selections.
-6. Lock the page and confirm protected content is no longer served without a session.
+## Privacy and operational considerations
+
+The R4 password is shared among all R4s; access is role-based by knowledge of that password, not individual identity. Anyone with the passcode can read/post discussions using any displayed name. Avoid highly sensitive commitments and individual account credentials. For verified attribution, revocation of individual R4s, or edit/delete moderation, implement per-user sign-in instead of a shared passcode. To revoke access quickly, rotate UTW_R4_PASSWORD and UTW_SESSION_SECRET as appropriate (changing the latter also invalidates other feature sessions).
