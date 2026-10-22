@@ -55,7 +55,7 @@ test('Season 6 R4 page and discussions require authentication',async()=>{
     assert.match(page,/Week 7/);
     assert.match(page,/48 hours/);
     assert.match(page,/Checkmarks stay on this browser/);
-    assert.match(page,/Shared discussions/);
+    assert.match(page,/Discussions are shared between R4s/);
     assert.match(page,/r4-discussion/);
     assert.equal(unlocked.headers.get('cache-control'),'private, no-store, max-age=0');
     assert.equal(authorized(new Request(base,{headers:{Cookie:cookie.replace(/.$/,'x')}})),false);
