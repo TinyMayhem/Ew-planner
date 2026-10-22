@@ -36,7 +36,7 @@ test('R4 command centre requires an independent passcode and a valid signed sess
     assert.match(body,/Faction diplomacy/);
     assert.match(body,/Week 7/);
     assert.match(body,/48 hours/);
-    assert.match(body,/Saved only in this browser/);
+    assert.match(body,/saved only in this browser/);
     assert.equal(unlocked.headers.get('cache-control'),'private, no-store, max-age=0');
     assert.equal(authorized(new Request(base,{headers:{Cookie:cookie.replace(/.$/,'x')}})),false);
     const loggedOut=await POST(form({action:'logout'}));
