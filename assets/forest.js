@@ -16,3 +16,5 @@ updateVisitorCounter();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)updateVisitorCounter();});
 
 const clockNav=document.querySelector('nav[aria-label="Main navigation"]');if(clockNav&&!clockNav.querySelector('a[href="/time-converter.html"]')){const link=document.createElement('a');link.href='/time-converter.html';link.textContent='Time Converter';if(location.pathname==='/time-converter.html')link.setAttribute('aria-current','page');clockNav.append(link);}
+
+const comicNav=document.querySelector('nav[aria-label="Main navigation"]');if(comicNav&&!comicNav.querySelector('a[href="/comics.html"]')){const a=document.createElement("a");a.href="/comics.html";a.textContent="Tiny Comics";if(location.pathname==="/comics.html")a.setAttribute("aria-current","page");comicNav.append(a);}
