@@ -37,7 +37,7 @@ function ranking(metric,period){
 function lines(target,rows,limit=10,metric=null){
  const root=$(target);root.replaceChildren();if(!rows.length){root.append(elEmpty('No CSV data for this period yet.'));return}
  rows.slice(0,limit).forEach((r,i)=>{const line=text('div',null,'stat-line');line.append(text('span','#'+(i+1),'stat-rank'));
- const mid=text('div');mid.append(text('strong',memberName(r.id)));if(r.dup)mid.append(text('small','Multiple aliases in one snapshot, highest value used'));line.append(mid,text('span',fmt(r.points),'stat-points'));if(metric&&scoreFlag(metric,r.points))line.append(text('small','Below '+(metric==='vs_daily'?'7.2M':'42M'),'stat-vs-low'));root.append(line)});
+ const mid=text('div');mid.append(text('strong',memberName(r.id)));if(r.dup)mid.append(text('small','Multiple aliases in one snapshot, highest value used'));if(metric&&scoreFlag(metric,r.points))mid.append(text('small','Below '+(metric==='vs_daily'?'7.2M':'42M'),'stat-vs-low'));line.append(mid,text('span',fmt(r.points),'stat-points'));root.append(line)});
 }
 function statBox(label,value){const box=text('div',null,'stat-summary');box.append(text('b',value),text('span',label));return box}
 function overview(){
