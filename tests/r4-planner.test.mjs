@@ -56,7 +56,7 @@ test('Season 6 R4 page and discussions require authentication',async()=>{
     assert.match(page,/Week 7/);
     assert.match(page,/48 hours/);
     assert.match(page,/Checklist ticks sync/);
-    assert.match(page,/Discussions are shared between R4s/);
+    assert.match(page,/Joint faction land-planning tasks and discussions are shared by UTW and VON/);
     assert.match(page,/r4-discussion/);
     assert.equal(unlocked.headers.get('cache-control'),'private, no-store, max-age=0');
     assert.equal(authorized(new Request(base,{headers:{Cookie:cookie.replace(/.$/,'x')}})),false);
