@@ -1,7 +1,9 @@
+import {parseCsv,guessColumn,defaultsForFile,validTarget,rowsFromCsv} from './r4-csv-utils.mjs';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
-const state={data:null,week:'',season:'post-s5',csv:null,head:[],matrix:[],candidates:[]};
+const state={data:null,week:'',season:'post-s5',csvQueue:[],candidates:[]};
+let csvBusy=false,nextCsvId=0;
 const text=(tag,content,cls)=>{const el=document.createElement(tag);if(content!==undefined&&content!==null)el.textContent=String(content);if(cls)el.className=cls;return el};
 const dateAdd=(s,days)=>new Date(Date.parse(s+'T00:00:00Z')+days*86400000).toISOString().slice(0,10);
 const serverToday=()=>{const d=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Noronha',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const v=Object.fromEntries(d.map(x=>[x.type,x.value]));return v.year+'-'+v.month+'-'+v.day};
@@ -133,61 +135,128 @@ async function load(){
  state.week=week;$('sync').textContent='Loading…';
  try{const r=await fetch('/api/r4-stats?week='+encodeURIComponent(week)+'&season='+encodeURIComponent(state.season),{credentials:'same-origin',cache:'no-store'});if(r.status===401){location.href='/r4-planner';return}const data=await r.json();if(!r.ok)throw Error(data.error||'Data unavailable');state.data=data;const season=$('season');const prev=season.value;season.replaceChildren(...(data.seasons||[]).map(x=>new Option(x.label,x.id)));if([...season.options].some(x=>x.value===prev))season.value=prev;render();$('sync').textContent='Synced · '+new Date().toLocaleTimeString()}catch(e){$('sync').textContent='Unavailable';notice(e.message,true)}
 }
-function csvParse(input){
- const raw=input.replace(/^\uFEFF/,'');const first=raw.split(/\r?\n/).find(l=>l.trim())||'';
- const counts=[',',';','\t'].map(delimiter=>({delimiter,count:first.split(delimiter).length}));
- const delimiter=counts.sort((a,b)=>b.count-a.count)[0].delimiter;
- const rows=[];let row=[],field='',quoted=false;
- for(let i=0;i<raw.length;i++){const c=raw[i],next=raw[i+1];
-  if(c==='"'){if(quoted&&next==='"'){field+='"';i++}else quoted=!quoted}
-  else if(c===delimiter&&!quoted){row.push(field);field=''}
-  else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&next==='\n')i++;row.push(field);if(row.some(x=>x.trim()))rows.push(row);row=[];field=''}
-  else field+=c;
- }
- if(quoted)throw Error('CSV contains an unclosed quoted field.');
- row.push(field);if(row.some(x=>x.trim()))rows.push(row);
- if(rows.length<2)throw Error('CSV requires a header row and at least one member.');
- const columns=rows[0].map((x,i)=>x.trim()||'Column '+(i+1));return {head:columns,matrix:rows.slice(1)};
+function csvIssue(item){
+ if(item.status==='invalid')return item.error;
+ if(!validTarget(item.metric,item.period))return 'Select a valid date. Weekly VS and donations must use a Monday.';
+ const clash=state.csvQueue.some(other=>other!==item&&other.status!=='invalid'&&other.metric===item.metric&&other.period===item.period);
+ if(clash)return 'Another selected file uses the same stat type and date. Adjust one or remove the duplicate to avoid overwriting it.';
+ try{rowsFromCsv(item.matrix,item.nameCol,item.pointsCol)}catch(e){return e.message}
+ return '';
 }
-function csvPreview(){
- const m=$('col-name').value,p=$('col-points').value,preview=$('csv-preview');preview.replaceChildren();
- const wrap=text('div',null,'stat-scroll'),table=text('table',null,'stat-table');const head=text('tr');['Name','Points / donations'].forEach(x=>head.append(text('th',x)));table.append(head);
- state.matrix.slice(0,5).forEach(row=>{const tr=text('tr');[row[m],row[p]].forEach(x=>tr.append(text('td',x||'')));table.append(tr)});wrap.append(table);
- preview.append(text('p','Previewing '+state.matrix.length+' rows, first 5 shown.','stat-muted'),wrap);
+function csvField(caption,control){
+ const label=text('label');label.append(text('span',caption),control);return label;
+}
+function csvSelect(values,selected,callback){
+ const select=document.createElement('select');
+ for(const [value,label] of values)select.append(new Option(label,String(value)));
+ select.value=String(selected);select.addEventListener('change',()=>callback(select.value));
+ return select;
+}
+function renderCsvQueue(){
+ const root=$('csv-batch');root.replaceChildren();
+ const total=state.csvQueue.length,uploaded=state.csvQueue.filter(e=>e.status==='uploaded').length;
+ const failed=state.csvQueue.filter(e=>e.status==='failed').length;
+ const pending=state.csvQueue.filter(e=>e.status!=='uploaded'&&e.status!=='invalid');
+ const needsAttention=pending.filter(e=>csvIssue(e)).length+state.csvQueue.filter(e=>e.status==='invalid').length;
+ for(const item of state.csvQueue){
+  const card=text('article',null,'stat-batch-card');
+  const heading=text('div',null,'stat-batch-heading'),title=text('div');
+  title.append(text('strong',item.file.name),text('small',Math.ceil(item.file.size/1024)+' KB · '+(item.matrix?.length||0)+' members','stat-muted'));
+  const remove=text('button','Remove','stat-button');remove.type='button';remove.disabled=csvBusy;
+  remove.addEventListener('click',()=>{state.csvQueue=state.csvQueue.filter(e=>e!==item);renderCsvQueue()});
+  heading.append(title,remove);card.append(heading);
+  const issue=item.status==='uploaded'?'':csvIssue(item);
+  const status=item.status==='uploaded'?'✓ Uploaded ('+item.result.rows+' members)':
+   item.status==='uploading'?'Uploading…':item.status==='invalid'?'File needs attention: '+item.error:
+   issue?'Fix before upload: '+issue:item.status==='failed'?'Upload failed: '+item.error:'Ready to upload';
+  card.append(text('p',status,'stat-batch-state'+(issue||item.status==='failed'?' error':item.status==='uploaded'?' complete':'')));
+  if(item.status!=='invalid'){
+   const lock=csvBusy||item.status==='uploaded';
+   const fields=text('div',null,'stat-fields');
+   const metric=csvSelect([['vs_daily','Daily VS points'],['vs_weekly','Weekly VS totals'],['donations_weekly','Weekly donations']],item.metric,value=>{item.metric=value;if(item.status==='failed')item.status='ready';renderCsvQueue()});
+   metric.disabled=lock;
+   const day=document.createElement('input');day.type='date';day.value=item.period;day.disabled=lock;
+   day.addEventListener('change',()=>{item.period=day.value;if(item.status==='failed')item.status='ready';renderCsvQueue()});
+   const names=csvSelect(item.head.map((h,i)=>[i,h]),item.nameCol,value=>{item.nameCol=Number(value);if(item.status==='failed')item.status='ready';renderCsvQueue()});
+   const points=csvSelect(item.head.map((h,i)=>[i,h]),item.pointsCol,value=>{item.pointsCol=Number(value);if(item.status==='failed')item.status='ready';renderCsvQueue()});
+   names.disabled=lock;points.disabled=lock;
+   fields.append(csvField('Stat type',metric),csvField('Date / Monday week',day),csvField('Name column',names),csvField('Points / total column',points));
+   card.append(fields);
+   const preview=text('details',null,'stat-batch-preview'),summary=text('summary','Preview first 5 rows');preview.append(summary);
+   const wrap=text('div',null,'stat-scroll'),table=text('table',null,'stat-table');
+   const thead=text('tr');['Name','Points / donations'].forEach(h=>thead.append(text('th',h)));table.append(thead);
+   for(const row of item.matrix.slice(0,5)){const tr=text('tr');[row[item.nameCol],row[item.pointsCol]].forEach(x=>tr.append(text('td',x||'')));table.append(tr)}
+   wrap.append(table);preview.append(wrap);card.append(preview);
+  }
+  root.append(card);
+ }
+ $('import').disabled=csvBusy||!pending.length;
+ $('import').textContent=csvBusy?'Uploading / reading files…':pending.length?'Upload '+pending.length+' queued CSV'+(pending.length===1?'':'s'):'Choose CSV files to upload';
+ $('clear-batch').disabled=csvBusy||!total;
+ $('csv-file').disabled=csvBusy;
+ $('season').disabled=csvBusy;
+ $('metric').disabled=csvBusy;
+ $('period').disabled=csvBusy;
+ $('csv-batch-status').textContent=!total?'Select multiple CSV files above to start.':
+  total+' selected · '+uploaded+' uploaded'+(needsAttention?' · '+needsAttention+' need fixes':'')+(failed?' · '+failed+' upload errors':'')+(csvBusy?' · Working through files one at a time':'');
 }
 async function csvChanged(){
- const file=$('csv-file').files[0];state.csv=null;$('mapping').hidden=true;if(!file)return;
- try{
-  if(file.size>1024*1024)throw Error('CSV must be under 1 MB');
-  const parsed=csvParse(await file.text());state.csv=file;state.head=parsed.head;state.matrix=parsed.matrix;
-  const fill=(id)=>{const el=$(id);el.replaceChildren();parsed.head.forEach((h,i)=>el.append(new Option(h,String(i))))};
-  fill('col-name');fill('col-points');
-  const find=pattern=>parsed.head.findIndex(h=>pattern.test(h.toLowerCase()));
-  let n=find(/name|commander|player|nickname|member|ign/),p=find(/points|score|donat|contribut|total/);
-  $('col-name').value=String(n<0?0:n);$('col-points').value=String(p<0?Math.min(1,parsed.head.length-1):p);
-  $('mapping').hidden=false;csvPreview();
- }catch(e){notice(e.message,true)}
-}
-function uploadRows(){
- const n=Number($('col-name').value),p=Number($('col-points').value);
- if(n===p)throw Error('Choose different name and points columns');
- const rows=[],seen=new Set();
- for(const [i,row] of state.matrix.entries()){
-  const name=String(row[n]||'').trim().replace(/\s+/g,' '),raw=String(row[p]||'').trim().replace(/[\s,]/g,''),points=Number(raw);
-  if(!name||name.length>60||!/^\d+(?:\.0+)?$/.test(raw)||!Number.isSafeInteger(points))throw Error('Invalid member name or points in CSV row '+(i+2)+'. Check your column choices.');
-  const k=normalize(name);if(seen.has(k))throw Error('Duplicate name in CSV row '+(i+2)+': '+name);
-  seen.add(k);rows.push({name,points});
+ const input=$('csv-file'),files=[...input.files];input.value='';
+ if(!files.length)return;
+ if(csvBusy)return;
+ const existing=new Set(state.csvQueue.map(e=>e.key));
+ const next=[],skipped=[];
+ for(const file of files){
+  const key=file.name+'|'+file.size+'|'+file.lastModified;
+  if(existing.has(key)){skipped.push(file.name+' (already selected)');continue}
+  if(state.csvQueue.length+next.length>=20){skipped.push(file.name+' (20-file limit)');continue}
+  existing.add(key);next.push({file,key,id:++nextCsvId,status:'reading'});
  }
- if(rows.length>500)throw Error('CSV cannot exceed 500 members');
- return rows;
+ csvBusy=true;renderCsvQueue();
+ for(const item of next){
+  const defaults=defaultsForFile(item.file.name,$('metric').value,$('period').value);
+  Object.assign(item,{...defaults,head:[],matrix:[],nameCol:0,pointsCol:1,error:'',result:null});
+  try{
+   if(!/\.csv$/i.test(item.file.name))throw Error('Choose a CSV (.csv) file.');
+   if(item.file.size>1024*1024)throw Error('CSV must be under 1 MB.');
+   if(!item.file.size)throw Error('CSV is empty.');
+   const parsed=parseCsv(await item.file.text());
+   item.head=parsed.head;item.matrix=parsed.matrix;
+   item.nameCol=guessColumn(item.head,/name|commander|player|nickname|member|ign/,0);
+   item.pointsCol=guessColumn(item.head,/points|score|donat|contribut|total/,Math.min(1,item.head.length-1));
+   item.status='ready';
+  }catch(e){item.status='invalid';item.error=e.message}
+  state.csvQueue.push(item);
+ }
+ csvBusy=false;renderCsvQueue();
+ if(skipped.length)notice(skipped.length+' file(s) skipped: '+skipped.slice(0,3).join('; ')+(skipped.length>3?'…':''),true);
+ else notice(next.length+' file(s) added. Review each date, stat type and column mapping before uploading.');
 }
-async function saveCsv(){
- if(!state.csv)throw Error('Choose a CSV first');
- const metric=$('metric').value,period=$('period').value;
- if(!validDate(period)||(metric!=='vs_daily'&&monday(period)!==period))throw Error('Weekly uploads must use a Monday date');
- const rows=uploadRows();
- const result=await post({action:'import',season_id:state.season,metric,period,filename:state.csv.name,rows});
- return result;
+async function uploadCsvQueue(){
+ if(csvBusy)return;
+ const pending=state.csvQueue.filter(item=>item.status!=='uploaded'&&item.status!=='invalid');
+ const valid=pending.filter(item=>!csvIssue(item));
+ if(!valid.length){notice('No valid queued files. Correct the highlighted errors or choose another CSV.',true);return}
+ const season=state.season;
+ csvBusy=true;renderCsvQueue();
+ let saved=0,failed=0,stopped=false;
+ try{
+  for(const item of valid){
+   item.status='uploading';item.error='';renderCsvQueue();
+   try{
+    const rows=rowsFromCsv(item.matrix,item.nameCol,item.pointsCol);
+    const result=await post({action:'import',season_id:season,metric:item.metric,period:item.period,filename:item.file.name,rows});
+    item.status='uploaded';item.result=result;saved++;
+   }catch(e){
+    item.status='failed';item.error=e.message;failed++;
+    if(e.message.includes('sign-in expired')){stopped=true;break}
+   }
+   renderCsvQueue();
+  }
+ }finally{csvBusy=false;renderCsvQueue()}
+ if(saved)await load();
+ const left=state.csvQueue.filter(item=>item.status!=='uploaded'&&item.status!=='invalid'&&csvIssue(item)).length+state.csvQueue.filter(item=>item.status==='invalid').length;
+ notice(saved+' CSV'+(saved===1?'':'s')+' imported to '+season+'.'+(failed?' '+failed+' failed, with reasons shown beside the files.':'')+(left?' '+left+' need corrections.':'')+(stopped?' Sign in again before retrying.':''),!!failed||!!left);
 }
 function changePeriod(){
  const metric=$('metric').value;
@@ -203,8 +272,9 @@ function wire(){
  document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.stat-tab').forEach(p=>p.hidden=p.id!=='tab-'+button.dataset.tab)}));
  $('daily-date').addEventListener('change',()=>lines('daily-vs',ranking('vs_daily',$('daily-date').value),20));
  $('metric').addEventListener('change',changePeriod);$('csv-file').addEventListener('change',csvChanged);
- $('col-name').addEventListener('change',csvPreview);$('col-points').addEventListener('change',csvPreview);
- $('import').addEventListener('click',()=>action(saveCsv,'CSV imported successfully. Refresh rankings and review any new member names.'));
+ renderCsvQueue();
+ $('import').addEventListener('click',uploadCsvQueue);
+ $('clear-batch').addEventListener('click',()=>{if(!csvBusy){state.csvQueue=[];renderCsvQueue();notice('')}});
  $('member-search').addEventListener('input',directory);
  $('merge').addEventListener('click',()=>{const from=$('merge-from').value,to=$('merge-to').value;
   if(!from||!to||from===to){notice('Choose different records.',true);return}
