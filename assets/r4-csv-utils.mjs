@@ -37,9 +37,9 @@ export function detectedFileDate(filename){
 }
 export function defaultsForFile(filename,globalMetric,globalPeriod){
  const lower=filename.toLowerCase();
- const metric=/donat|contribut/.test(lower)?'donations_weekly':/weekly[\s_.-]*vs|vs[\s_.-]*weekly/.test(lower)?'vs_weekly':globalMetric;
+ const metric=/donat|contribut/.test(lower)?'donations_weekly':lower.includes('weekly')&&lower.includes('vs')?'vs_weekly':globalMetric;
  const stamped=detectedFileDate(filename);
- return {metric,period:stamped?(metric==='vs_daily'?stamped:weekStart(stamped)):globalPeriod};
+ return {metric,period:stamped?(metric==='vs_daily'?stamped:weekStart(stamped)):(metric==='vs_daily'?globalPeriod:weekStart(globalPeriod))};
 }
 export function validTarget(metric,period){
  if(!['vs_daily','vs_weekly','donations_weekly'].includes(metric)||!isRealDate(period))return false;
