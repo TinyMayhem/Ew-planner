@@ -34,7 +34,7 @@
     },
     {
       "source": "/r4-stats",
-      "destination": "/api/r4-stats-page"
+      "destination": "/api/r4-stats?view=1"
     },
     {
       "source": "/gear-beta",
