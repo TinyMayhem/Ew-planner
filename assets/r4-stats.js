@@ -1,5 +1,5 @@
 import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv} from './r4-csv-utils.mjs';
-import {DAILY_TARGET,WEEKLY_TARGET,archivedWeeks,vsWeekSlots,vsLeaderboard,weekOf} from './r4-vs-archive.mjs';
+import {archivedWeeks,vsWeekSlots,vsLeaderboard,weekOf,scoreFlag} from './r4-vs-archive.mjs';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
@@ -34,20 +34,20 @@ function ranking(metric,period){
  }
  return [...map.values()].sort((a,b)=>b.points-a.points||memberName(a.id).localeCompare(memberName(b.id)));
 }
-function lines(target,rows,limit=10){
+function lines(target,rows,limit=10,metric=null){
  const root=$(target);root.replaceChildren();if(!rows.length){root.append(elEmpty('No CSV data for this period yet.'));return}
  rows.slice(0,limit).forEach((r,i)=>{const line=text('div',null,'stat-line');line.append(text('span','#'+(i+1),'stat-rank'));
- const mid=text('div');mid.append(text('strong',memberName(r.id)));if(r.dup)mid.append(text('small','Multiple aliases in one snapshot, highest value used'));line.append(mid,text('span',fmt(r.points),'stat-points'));root.append(line)});
+ const mid=text('div');mid.append(text('strong',memberName(r.id)));if(r.dup)mid.append(text('small','Multiple aliases in one snapshot, highest value used'));line.append(mid,text('span',fmt(r.points),'stat-points'));if(metric&&scoreFlag(metric,r.points))line.append(text('small','Below '+(metric==='vs_daily'?'7.2M':'42M'),'stat-vs-low'));root.append(line)});
 }
 function statBox(label,value){const box=text('div',null,'stat-summary');box.append(text('b',value),text('span',label));return box}
 function overview(){
  const d=state.data,week=state.week,donations=ranking('donations_weekly',week),vs=ranking('vs_weekly',week);
  const unique=new Set(d.values.map(v=>d.aliases.find(a=>a.alias_key===v.alias_key)?.member_id).filter(Boolean));
  setContent('summary',statBox('Members in directory',fmt(d.members.length)),statBox('Members with active CSV stats',fmt(unique.size)),statBox('DS records this week',fmt(d.ds.length)));
- lines('weekly-vs',vs);lines('weekly-donations',donations);
+ lines('weekly-vs',vs,10,'vs_weekly');lines('weekly-donations',donations);
  const select=$('daily-date'),old=select.value;select.replaceChildren();for(let i=0;i<7;i++){const v=dateAdd(week,i);select.append(new Option(v,v))}
  select.value=[...select.options].some(o=>o.value===old)?old:serverToday()>=week&&serverToday()<=dateAdd(week,6)?serverToday():week;
- lines('daily-vs',ranking('vs_daily',select.value),20);
+ lines('daily-vs',ranking('vs_daily',select.value),20,'vs_daily');
 }
 function showTab(tab){
  document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
@@ -323,7 +323,7 @@ function wire(){
  $('week').addEventListener('change',()=>{$('train-date').value=$('week').value;$('ds-date').value=$('week').value;load()});
  document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>showTab(button.dataset.tab)));
  $('vs-refresh').addEventListener('click',load);
- $('daily-date').addEventListener('change',()=>lines('daily-vs',ranking('vs_daily',$('daily-date').value),20));
+ $('daily-date').addEventListener('change',()=>lines('daily-vs',ranking('vs_daily',$('daily-date').value),20,'vs_daily'));
  $('csv-file').addEventListener('change',csvChanged);
  renderCsvQueue();
  $('import').addEventListener('click',uploadCsvQueue);
