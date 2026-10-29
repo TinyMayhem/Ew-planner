@@ -56,7 +56,7 @@ async function tooManyAttempts(request){
 }
 async function oldGET(request){
   if(!configured())return new Response(login('R4 access is not configured yet.'),{status:503,headers:NO_STORE});
-  return new Response(authorized(request)?page:login(),{headers:NO_STORE});
+  return new Response(authorized(request)?plannerFor('utw','r4'):login(),{headers:NO_STORE});
 }
 async function oldPOST(request){
   if(!originAllowed(request))return new Response('Request must come from this website.',{status:403,headers:NO_STORE});
