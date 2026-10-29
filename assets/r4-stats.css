@@ -41,3 +41,20 @@
 .stat-candidate strong{color:#255b40}.stat-candidate .stat-button{flex-shrink:0}
 .stat-evidence{max-width:220px;max-height:120px;object-fit:contain;border-radius:9px;display:block;margin:8px 0}
 @media(max-width:760px){.stat-fields,.stat-two,.stat-summaries,.stat-directory{grid-template-columns:1fr}.stat-card{padding:16px}.stat-summary{padding:12px}.stat-tabs button{padding:10px}.stat-inline{align-items:start}}
+
+/* Bulk CSV importer: each file has its own editable mapping and progress. */
+.stat-batch-card{border:1px solid #d5bd8b;border-radius:13px;padding:15px;background:#f7f0df;min-width:0}
+.stat-batch-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.stat-batch-heading strong{display:block;color:#204b34;overflow-wrap:anywhere}
+.stat-batch-heading small{display:block;margin-top:3px}
+.stat-batch-state{font-size:13px;font-weight:750;margin:10px 0 0;color:#41694d}
+.stat-batch-state.error{color:#9e3b32}
+.stat-batch-state.complete{color:#1d744b}
+.stat-batch-preview{margin-top:8px;font-size:13px}
+.stat-batch-preview summary{cursor:pointer;color:#305b43;font-weight:700;padding:8px 0}
+.stat-batch-preview[open] summary{margin-bottom:8px}
+.stat-batch-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.stat-batch-card .stat-fields{grid-template-columns:repeat(4,minmax(0,1fr));margin:10px 0 0}
+.stat-batch-card .stat-fields label{min-width:0}
+@media(max-width:1050px){.stat-batch-card .stat-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.stat-batch-card .stat-fields{grid-template-columns:1fr}}
