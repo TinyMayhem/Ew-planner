@@ -68,7 +68,7 @@ export async function POST(request){
   }catch{return json({error:'Invalid comment request.'},400)}
   const alliance=requestedAlliance(body.alliance??null);
   if(!alliance)return json({error:'Invalid alliance'},400);
-  if(!await authorizedAlliance(request,alliance))return json({error:'No access to this alliance discussion'},403);
+  if(!await authorizedAlliance(request,alliance))return denied(request);
   if(!validKey(body.taskKey))return json({error:'Invalid checklist task.'},400);
   const author=cleanText(body.author,40),message=cleanText(body.body,1200);
   if(!author||!message)return json({error:'Enter an in-game name and a comment (maximum 1200 characters).'},400);
