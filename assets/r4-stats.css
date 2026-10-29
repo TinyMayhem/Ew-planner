@@ -58,3 +58,48 @@
 .stat-batch-card .stat-fields label{min-width:0}
 @media(max-width:1050px){.stat-batch-card .stat-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.stat-batch-card .stat-fields{grid-template-columns:1fr}}
+
+
+/* Saved, date-scoped VS result archive */
+.stat-archive-title{display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap}
+.stat-archive-title h2{margin:5px 0}
+.stat-threshold-key{display:flex;gap:8px;flex-wrap:wrap}
+.stat-threshold-key span{background:#f8dfd5;color:#853d2b;border-radius:8px;padding:7px 10px;font-size:12px}
+.stat-week-nav{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px;max-height:180px;overflow-y:auto}
+.stat-week-choice{border:1px solid #b3a078;border-radius:10px;padding:10px 13px;background:#fffdf5;color:#28533f;cursor:pointer;text-align:left;min-width:185px;flex:1}
+.stat-week-choice strong,.stat-week-choice small{display:block}
+.stat-week-choice strong{font-size:14px}
+.stat-week-choice small{font-size:12px;margin-top:5px;color:#536d60}
+.stat-week-choice.selected{background:#2c5c42;color:#fff9e5;border-color:#2c5c42}
+.stat-week-choice.selected small{color:#f5dfba}
+.stat-week-choice:focus-visible,.stat-vs-slot summary:focus-visible{outline:3px solid #bc934d;outline-offset:3px}
+.stat-vs-slot{border:1px solid #dccba7;background:#fffef9;border-radius:11px;overflow:hidden}
+.stat-vs-slot summary{list-style:none;cursor:pointer;padding:13px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between}
+.stat-vs-slot summary::-webkit-details-marker{display:none}
+.stat-vs-slot summary:after{content:'▾';color:#3c684f;font-size:17px}
+.stat-vs-slot[open] summary{background:#f5edda;border-bottom:1px solid #dccba7}
+.stat-vs-slot[open] summary:after{content:'▴'}
+.stat-vs-name strong,.stat-vs-name small{display:block}
+.stat-vs-name strong{color:#28533f;font-size:16px}
+.stat-vs-name small{color:#5b7566;font-size:12px;margin-top:3px}
+.stat-vs-status{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;margin-left:auto;font-size:12px;font-weight:700}
+.stat-vs-members{background:#e6eadc;color:#2c5844;border-radius:7px;padding:5px 8px}
+.stat-vs-low{background:#ffe4de;color:#962f26;border:1px solid #e5b1a5;border-radius:7px;padding:4px 8px;font-size:12px;font-weight:750;white-space:nowrap;display:inline-block}
+.stat-vs-clear{background:#e3efdc;color:#2e603f;border-radius:7px;padding:4px 8px;font-size:12px;font-weight:750;white-space:nowrap;display:inline-block}
+.stat-vs-absent{font-size:12px;color:#7b796d}
+.stat-vs-slot>.stat-muted{padding:0 16px}
+.stat-vs-detail{padding:5px 14px 14px}
+.stat-vs-under{background:#fff1ed}
+.stat-vs-points{font-variant-numeric:tabular-nums;font-weight:700;text-align:right!important}
+.stat-vs-table th:nth-child(3){text-align:right}
+.stat-vs-table td{white-space:normal}
+.stat-vs-table td:nth-child(2){min-width:160px}
+.stat-vs-table td small{display:block;font-weight:400;margin-top:4px}
+@media(max-width:600px){
+ .stat-week-choice{min-width:145px}
+ .stat-vs-slot summary{align-items:flex-start}
+ .stat-vs-status{justify-content:flex-start}
+ .stat-vs-name{min-width:105px}
+ .stat-vs-detail{padding:4px 8px 10px}
+ .stat-vs-table td,.stat-vs-table th{padding:8px 6px;font-size:12px}
+}

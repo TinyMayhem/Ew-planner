@@ -1,8 +1,9 @@
 import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv} from './r4-csv-utils.mjs';
+import {archivedWeeks,vsWeekSlots,vsLeaderboard,weekOf,scoreFlag} from './r4-vs-archive.mjs';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
-const state={data:null,week:'',season:'post-s5',csvQueue:[],candidates:[]};
+const state={data:null,week:'',season:'post-s5',archiveImports:[],csvQueue:[],candidates:[]};
 let csvBusy=false,nextCsvId=0;
 const text=(tag,content,cls)=>{const el=document.createElement(tag);if(content!==undefined&&content!==null)el.textContent=String(content);if(cls)el.className=cls;return el};
 const dateAdd=(s,days)=>new Date(Date.parse(s+'T00:00:00Z')+days*86400000).toISOString().slice(0,10);
@@ -33,20 +34,74 @@ function ranking(metric,period){
  }
  return [...map.values()].sort((a,b)=>b.points-a.points||memberName(a.id).localeCompare(memberName(b.id)));
 }
-function lines(target,rows,limit=10){
+function lines(target,rows,limit=10,metric=null){
  const root=$(target);root.replaceChildren();if(!rows.length){root.append(elEmpty('No CSV data for this period yet.'));return}
  rows.slice(0,limit).forEach((r,i)=>{const line=text('div',null,'stat-line');line.append(text('span','#'+(i+1),'stat-rank'));
- const mid=text('div');mid.append(text('strong',memberName(r.id)));if(r.dup)mid.append(text('small','Multiple aliases in one snapshot, highest value used'));line.append(mid,text('span',fmt(r.points),'stat-points'));root.append(line)});
+ const mid=text('div');mid.append(text('strong',memberName(r.id)));if(r.dup)mid.append(text('small','Multiple aliases in one snapshot, highest value used'));if(metric&&scoreFlag(metric,r.points))mid.append(text('small','Below '+(metric==='vs_daily'?'7.2M':'42M'),'stat-vs-low'));line.append(mid,text('span',fmt(r.points),'stat-points'));root.append(line)});
 }
 function statBox(label,value){const box=text('div',null,'stat-summary');box.append(text('b',value),text('span',label));return box}
 function overview(){
  const d=state.data,week=state.week,donations=ranking('donations_weekly',week),vs=ranking('vs_weekly',week);
  const unique=new Set(d.values.map(v=>d.aliases.find(a=>a.alias_key===v.alias_key)?.member_id).filter(Boolean));
  setContent('summary',statBox('Members in directory',fmt(d.members.length)),statBox('Members with active CSV stats',fmt(unique.size)),statBox('DS records this week',fmt(d.ds.length)));
- lines('weekly-vs',vs);lines('weekly-donations',donations);
+ lines('weekly-vs',vs,10,'vs_weekly');lines('weekly-donations',donations);
  const select=$('daily-date'),old=select.value;select.replaceChildren();for(let i=0;i<7;i++){const v=dateAdd(week,i);select.append(new Option(v,v))}
  select.value=[...select.options].some(o=>o.value===old)?old:serverToday()>=week&&serverToday()<=dateAdd(week,6)?serverToday():week;
- lines('daily-vs',ranking('vs_daily',select.value),20);
+ lines('daily-vs',ranking('vs_daily',select.value),20,'vs_daily');
+}
+function showTab(tab){
+ document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+ document.querySelectorAll('.stat-tab').forEach(p=>p.hidden=p.id!=='tab-'+tab);
+}
+function archive(){
+ const root=$('vs-weeks');root.replaceChildren();
+ const weeks=archivedWeeks(state.archiveImports);
+ if(!weeks.length)root.append(elEmpty('No saved VS reports for this season yet. Upload a daily or weekly VS CSV to start an archive.'));
+ for(const w of weeks){
+  const button=text('button',null,'stat-week-choice'+(w.week===state.week?' selected':''));
+  button.type='button';button.setAttribute('aria-pressed',String(w.week===state.week));
+  button.append(text('strong','Week of '+w.week),text('small',w.dailyCount+'/6 days · '+(w.hasWeekly?'Weekly total saved':'Weekly total missing')));
+  button.addEventListener('click',async()=>{$('week').value=w.week;await load();showTab('vsarchive')});
+  root.append(button);
+ }
+ const results=$('vs-week-results'),expanded=new Set([...results.querySelectorAll('details[open]')].map(x=>x.dataset.slot));
+ results.replaceChildren();$('vs-week-title').textContent='Week of '+state.week;
+ const slots=vsWeekSlots(state.week,state.data?.imports||[]);
+ for(const slot of slots){
+  const details=text('details',null,'stat-vs-slot');details.dataset.slot=slot.metric+'|'+slot.period;
+  const summary=text('summary',null,'stat-vs-summary');
+  const heading=text('div',null,'stat-vs-name');
+  heading.append(text('strong',slot.label),text('small',slot.metric==='vs_daily'?slot.period:'Monday '+slot.period+' to Sunday '+dateAdd(slot.period,6)));
+  const info=text('div',null,'stat-vs-status');
+  if(!slot.import){
+   info.append(text('span','Not recorded','stat-vs-absent'));
+   summary.append(heading,info);details.append(summary,text('p','No CSV uploaded for this result. This is missing data, not a failed score.','stat-muted'));
+  }else{
+   const rows=vsLeaderboard(state.data,slot.metric,slot.period);
+   const flagged=rows.filter(x=>x.belowTarget).length;
+   info.append(text('span',fmt(rows.length)+' members','stat-vs-members'));
+   info.append(text('span',flagged+' below '+(slot.metric==='vs_daily'?'7.2M':'42M'),flagged?'stat-vs-low':'stat-vs-clear'));
+   summary.append(heading,info);details.append(summary);
+   const content=text('div',null,'stat-vs-detail');
+   content.append(text('p','Recorded from '+slot.import.filename+' · '+new Date(slot.import.created_at).toLocaleString()+' · All '+rows.length+' member results','stat-muted'));
+   const wrap=text('div',null,'stat-scroll'),table=text('table',null,'stat-table stat-vs-table'),thead=text('thead'),hr=text('tr');
+   for(const name of ['Rank','Member','VS score','Target'])hr.append(text('th',name));
+   thead.append(hr);table.append(thead);
+   const tbody=text('tbody');
+   for(const entry of rows){
+    const tr=text('tr',null,entry.belowTarget?'stat-vs-under':'');
+    tr.append(text('td','#'+entry.rank));
+    const member=text('td');member.append(text('strong',entry.name));
+    if(entry.duplicate)member.append(text('small','Aliases merged; highest score used','stat-muted'));
+    tr.append(member,text('td',fmt(entry.points),'stat-vs-points'));
+    const status=text('td');status.append(text('span',entry.belowTarget?'Below target':'Met target',entry.belowTarget?'stat-vs-low':'stat-vs-clear'));
+    tr.append(status);tbody.append(tr);
+   }
+   table.append(tbody);wrap.append(table);content.append(wrap);details.append(content);
+  }
+  if(expanded.has(details.dataset.slot))details.open=true;
+  results.append(details);
+ }
 }
 function imports(){
  const root=$('imports');root.replaceChildren();if(!state.data.imports.length){root.append(elEmpty('No active imports yet.'));return}
@@ -129,12 +184,12 @@ function trainHistory(){
   const button=text('button','Remove mistaken assignment','stat-button');button.addEventListener('click',()=>{if(confirm('Delete this train assignment?'))action(()=>post({action:'delete_award',id:award.id}),'Assignment removed.')});row.append(button);root.append(row)
  }
 }
-function render(){if(!state.data)return;overview();imports();memberFields();dsHistory();exceptionList();trainHistory();candidates()}
+function render(){if(!state.data)return;overview();archive();imports();memberFields();dsHistory();exceptionList();trainHistory();candidates()}
 async function load(){
  const week=$('week').value;state.season=$('season').value;
  if(!validDate(week)||monday(week)!==week){notice('Select a Monday for the week.',true);return}
  state.week=week;$('sync').textContent='Loading…';
- try{const r=await fetch('/api/r4-stats?week='+encodeURIComponent(week)+'&season='+encodeURIComponent(state.season),{credentials:'same-origin',cache:'no-store'});if(r.status===401){location.href='/r4-planner';return}const data=await r.json();if(!r.ok)throw Error(data.error||'Data unavailable');state.data=data;const season=$('season');const prev=season.value;season.replaceChildren(...(data.seasons||[]).map(x=>new Option(x.label,x.id)));if([...season.options].some(x=>x.value===prev))season.value=prev;render();$('sync').textContent='Synced · '+new Date().toLocaleTimeString()}catch(e){$('sync').textContent='Unavailable';notice(e.message,true)}
+ try{const [r,archiveResponse]=await Promise.all([fetch('/api/r4-stats?week='+encodeURIComponent(week)+'&season='+encodeURIComponent(state.season),{credentials:'same-origin',cache:'no-store'}),fetch('/api/r4-stats?archive=1&season='+encodeURIComponent(state.season),{credentials:'same-origin',cache:'no-store'})]);if(r.status===401||archiveResponse.status===401){location.href='/r4-planner';return}const [data,history]=await Promise.all([r.json(),archiveResponse.json()]);if(!r.ok)throw Error(data.error||'Data unavailable');if(!archiveResponse.ok)throw Error(history.error||'Archive unavailable');state.data=data;state.archiveImports=history.imports||[];const season=$('season');const prev=season.value;season.replaceChildren(...(data.seasons||[]).map(x=>new Option(x.label,x.id)));if([...season.options].some(x=>x.value===prev))season.value=prev;render();$('sync').textContent='Synced · '+new Date().toLocaleTimeString()}catch(e){$('sync').textContent='Unavailable';notice(e.message,true)}
 }
 function csvIssue(item){
  if(item.status==='invalid')return item.error;
@@ -174,7 +229,7 @@ function renderCsvQueue(){
   if(item.status!=='invalid'){
    const lock=csvBusy||item.status==='uploaded';
    const fields=text('div',null,'stat-fields');
-   const metric=csvSelect([['vs_daily','Daily VS points'],['vs_weekly','Weekly VS totals'],['donations_weekly','Weekly donations']],item.metric,value=>{item.metric=value;item.period=targetFromCsvDate(value,item.detectedDate);if(item.status==='failed')item.status='ready';renderCsvQueue()});
+   const metric=csvSelect([['vs_daily','VS Daily Results'],['vs_weekly','VS Weekly Total'],['donations_weekly','Donations Record']],item.metric,value=>{item.metric=value;item.period=targetFromCsvDate(value,item.detectedDate);if(item.status==='failed')item.status='ready';renderCsvQueue()});
    metric.disabled=lock;
    const day=text('div',item.detectedDate+(item.metric==='vs_daily'?'':' → Week of '+item.period),'stat-detected-date');
    const names=csvSelect(item.head.map((h,i)=>[i,h]),item.nameCol,value=>{item.nameCol=Number(value);if(item.status==='failed')item.status='ready';renderCsvQueue()});
@@ -240,14 +295,14 @@ async function uploadCsvQueue(){
  if(!valid.length){notice('No valid queued files. Correct the highlighted errors or choose another CSV.',true);return}
  const season=state.season;
  csvBusy=true;renderCsvQueue();
- let saved=0,failed=0,stopped=false;
+ let saved=0,failed=0,stopped=false,latestVsWeek='';
  try{
   for(const item of valid){
    item.status='uploading';item.error='';renderCsvQueue();
    try{
     const rows=rowsFromCsv(item.matrix,item.nameCol,item.pointsCol);
     const result=await post({action:'import',season_id:season,metric:item.metric,period:item.period,filename:item.file.name,rows});
-    item.status='uploaded';item.result=result;saved++;
+    item.status='uploaded';item.result=result;saved++;if(item.metric==='vs_daily'||item.metric==='vs_weekly'){const w=weekOf(item.period);if(w>latestVsWeek)latestVsWeek=w}
    }catch(e){
     item.status='failed';item.error=e.message;failed++;
     if(e.message.includes('sign-in expired')){stopped=true;break}
@@ -255,7 +310,7 @@ async function uploadCsvQueue(){
    renderCsvQueue();
   }
  }finally{csvBusy=false;renderCsvQueue()}
- if(saved)await load();
+ if(saved){if(latestVsWeek)$('week').value=latestVsWeek;await load();if(latestVsWeek)showTab('vsarchive')}
  const left=state.csvQueue.filter(item=>item.status!=='uploaded'&&item.status!=='invalid'&&csvIssue(item)).length+state.csvQueue.filter(item=>item.status==='invalid').length;
  notice(saved+' CSV'+(saved===1?'':'s')+' imported to '+season+'.'+(failed?' '+failed+' failed, with reasons shown beside the files.':'')+(left?' '+left+' need corrections.':'')+(stopped?' Sign in again before retrying.':''),!!failed||!!left);
 }
@@ -266,8 +321,9 @@ function wire(){
  $('season').value='post-s5';$('season').addEventListener('change',load);
  $('season-report').addEventListener('click',async()=>{try{const response=await fetch('/api/r4-stats?report=1&season='+encodeURIComponent(state.season),{cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'Could not generate report');const columns=['member_name','vs_daily_total','vs_weekly_total','donations_total','recorded_vs_days','recorded_vs_weeks','trains_awarded'];const csv=[columns.join(','),...(data.rows||[]).map(row=>columns.map(k=>'\"'+String(row[k]??'').replaceAll('"','""')+'\"').join(','))].join('\r\n');const object=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=object;a.download='utw-season-report-'+state.season+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(object),1500);notice('Season report downloaded.')}catch(e){notice(e.message,true)}});
  $('week').addEventListener('change',()=>{$('train-date').value=$('week').value;$('ds-date').value=$('week').value;load()});
- document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.stat-tab').forEach(p=>p.hidden=p.id!=='tab-'+button.dataset.tab)}));
- $('daily-date').addEventListener('change',()=>lines('daily-vs',ranking('vs_daily',$('daily-date').value),20));
+ document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>showTab(button.dataset.tab)));
+ $('vs-refresh').addEventListener('click',load);
+ $('daily-date').addEventListener('change',()=>lines('daily-vs',ranking('vs_daily',$('daily-date').value),20,'vs_daily'));
  $('csv-file').addEventListener('change',csvChanged);
  renderCsvQueue();
  $('import').addEventListener('click',uploadCsvQueue);

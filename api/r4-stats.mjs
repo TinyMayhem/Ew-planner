@@ -85,6 +85,12 @@ export async function GET(request){
   const season=q.get('season')||'post-s5';
   if(!seasons.some(s=>s.id===season))return json({error:'Invalid season'},400);
   if(q.get('report')==='1')return json({season,rows:await db('rpc/utw_stat_season_report',{method:'POST',body:JSON.stringify({p_season:season})})});
+  if(q.get('archive')==='1'){
+   // Report index only. Full member scores are fetched on demand for the chosen week.
+   const history=await list('utw_stat_imports',{select:'id,metric,period,filename,row_count,created_at',season_id:'eq.'+season,metric:'in.(vs_daily,vs_weekly)',order:'created_at.desc,id.desc',limit:'1000'});
+   if(!Array.isArray(history))throw Error('VS archive unavailable');
+   return json({season,imports:history});
+  }
   const week=q.get('week');
   if(!isMonday(week))return json({error:'Select a valid Monday to start the week'},400);
   return json({...await getData(week,season),seasons,season});
