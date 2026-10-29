@@ -51,10 +51,10 @@ function overview(){
 function imports(){
  const root=$('imports');root.replaceChildren();if(!state.data.imports.length){root.append(elEmpty('No active imports yet.'));return}
  const wrap=text('div',null,'stat-scroll'),table=text('table',null,'stat-table'),head=text('tr');
- ['Metric','Period','Rows','Filename','Saved'].forEach(x=>head.append(text('th',x)));
+ ['Metric','Period','Rows','Filename','Saved','Action'].forEach(x=>head.append(text('th',x)));
  const thead=text('thead');thead.append(head);table.append(thead);
  for(const imp of state.data.imports.slice().sort((a,b)=>a.period.localeCompare(b.period))){
-  const tr=text('tr');[imp.metric.replaceAll('_',' '),imp.period,imp.row_count,imp.filename,new Date(imp.created_at).toLocaleString()].forEach(v=>tr.append(text('td',v)));table.append(tr)
+  const tr=text('tr');[imp.metric.replaceAll('_',' '),imp.period,imp.row_count,imp.filename,new Date(imp.created_at).toLocaleString()].forEach(v=>tr.append(text('td',v)));const cell=text('td');const remove=text('button','Delete upload','stat-button');remove.type='button';remove.addEventListener('click',()=>{if(confirm('Remove '+imp.filename+' for '+imp.period+'? The owner can undo this in the audit log.'))action(()=>post({action:'delete_import',id:imp.id}),'Import removed and audited.')});cell.append(remove);tr.append(cell);table.append(tr)
  }wrap.append(table);root.append(wrap);
 }
 function directory(){
@@ -73,6 +73,7 @@ function dsHistory(){
   card.append(text('strong',d.event_date+(d.opponent?' · vs '+d.opponent:'')));
   const ol=text('p','🥇 '+memberName(d.first_member)+(d.second_member?'  ·  🥈 '+memberName(d.second_member):'')+(d.third_member?'  ·  🥉 '+memberName(d.third_member):''));card.append(ol);
   if(d.notes)card.append(text('p',d.notes,'stat-muted'));
+  const remove=text('button','Delete DS record','stat-button');remove.type='button';remove.addEventListener('click',()=>{if(confirm('Remove Desert Storm result from '+d.event_date+'? The owner can undo this.'))action(()=>post({action:'delete_ds',id:d.id}),'DS result removed and audited.')});card.append(remove);
   const a=text('a','Open original screenshot');a.href='/api/r4-stats?image='+encodeURIComponent(d.id);a.target='_blank';a.rel='noopener';const image=document.createElement('img');image.src=a.href;image.alt='DS evidence screenshot';image.loading='lazy';image.className='stat-evidence';a.prepend(image);card.append(a);root.append(card);
  }
 }
