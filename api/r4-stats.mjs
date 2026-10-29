@@ -136,8 +136,9 @@ async function dsUpload(form,request){
  const path=eventDate+'/'+randomUUID()+'.'+ext;
  const upload=await storage('utw-r4-ds-evidence/'+path,{method:'POST',headers:{'Content-Type':file.type,'x-upsert':'false'},body:bytes});
  if(!upload.ok)throw Error('Secure screenshot upload failed');
+ let created;
  try{
-  const created=await insert('utw_stat_ds',{season_id:season,event_date:eventDate,first_member:first,second_member:second,third_member:third,opponent,notes,screenshot_path:path});
+  created=await insert('utw_stat_ds',{season_id:season,event_date:eventDate,first_member:first,second_member:second,third_member:third,opponent,notes,screenshot_path:path});
  }catch(e){await storage('utw-r4-ds-evidence/'+path,{method:'DELETE'}).catch(()=>{});throw e}
  await recordAudit(request,'ds',{id:created[0].id,season,date:eventDate,opponent,first,second,third,screenshot:path},true);
  return json({ok:true},201);
