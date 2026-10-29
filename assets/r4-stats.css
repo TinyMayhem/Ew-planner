@@ -1,0 +1,43 @@
+
+.stat-hero{padding:25px 0;background:linear-gradient(120deg,#0a3023,#32604a);color:#fff3d4}
+.stat-hero h1{font-size:clamp(34px,5vw,52px);margin:6px 0}.stat-hero p{margin:0;max-width:760px}
+.stats-main{padding-top:20px}.stat-toolbar{display:flex;align-items:end;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.stat-toolbar label{max-width:300px}.stat-toolbar-right{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13px}
+.stat-tabs{display:flex;gap:7px;overflow-x:auto;margin:15px 0;padding-bottom:4px}
+.stat-tabs button{white-space:nowrap;border:1px solid #b3a078;background:#e9dfc6;padding:12px 18px;border-radius:10px;cursor:pointer;color:#1f4935;font-weight:700}
+.stat-tabs button.active{background:#23543c;color:#fff7d8}
+.stat-card{background:#fffaf0;border:1px solid #d8c59d;border-radius:16px;padding:21px;margin-bottom:16px;box-shadow:0 6px 18px #072d1712}
+.stat-card h2{font-size:23px}.stat-card h3{font-size:17px;margin:12px 0}
+.stat-muted{font-size:13px;color:#61746b}.stat-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.stat-summaries{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:12px 0 16px}
+.stat-summary{border:1px solid #cab990;border-radius:15px;padding:17px;background:#f4ead5}
+.stat-summary b{font-size:25px;display:block;color:#1e563e}.stat-summary span{font-size:12px;color:#566857}
+.stat-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:14px 0}
+.stats-main label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:700;min-width:0;margin-bottom:9px}
+.stats-main input,.stats-main select,.stats-main textarea{width:100%;min-height:40px;border:1px solid #baa984;border-radius:9px;background:#fffefa;padding:8px 10px;color:#1b3d2e}
+.stats-main textarea{font:inherit}.stats-main .stat-button{width:auto;min-height:40px;padding:9px 14px;border:1px solid #315d47;background:#fffdf6;color:#28513e;border-radius:9px;text-decoration:none;font-weight:700;cursor:pointer}
+.stats-main .stat-button.primary{background:#28573f;color:#fff9dd}
+.stat-button:disabled{opacity:.5;cursor:not-allowed}
+.stat-notice{padding:13px 16px;border:1px solid #ceab73;border-radius:12px;background:#f8f0db;margin-bottom:16px}
+.stat-notice.error{background:#fff0e8;color:#8f3429}
+.stat-line{display:grid;grid-template-columns:35px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #e7d8bb;font-size:14px}
+.stat-line:last-child{border-bottom:0}.stat-rank{font:bold 18px Georgia;color:#987034}
+.stat-points{font-variant-numeric:tabular-nums;font-weight:750;color:#23553c}.stat-line small{font-size:11px;color:#6c796d}
+.stat-inline{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.stat-inline label{min-width:190px}
+.stat-scroll{overflow-x:auto;max-width:100%}.stat-table{width:100%;border-collapse:collapse;font-size:13px}
+.stat-table td,.stat-table th{padding:9px 12px;border-bottom:1px solid #e7d8bb;text-align:left;white-space:nowrap}
+.stat-table th{background:#e8dec4}
+.stat-directory{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}
+.stat-person{padding:11px 13px;border:1px solid #e5d7bc;border-radius:10px}
+.stat-person b{display:block;color:#28553f}.stat-person span{font-size:12px;color:#66756b;overflow-wrap:anywhere}
+.stat-stack{display:grid;gap:9px}.stat-row{padding:11px;border:1px solid #e3d4b4;border-radius:10px;background:#fffef9}
+.stat-row strong{color:#28543e}
+.stat-row .stat-button{margin-top:6px}
+.stat-flag{display:inline-block;border-radius:8px;padding:2px 6px;font-size:11px;background:#fff0ce;color:#83572f;margin-left:7px}
+.stat-flag.blocked{background:#ffe4dd;color:#8e3930}
+.stat-empty{padding:10px 0;font-size:13px;color:#728176}
+.stat-candidate{display:flex;justify-content:space-between;gap:14px;align-items:start;padding:12px 0;border-bottom:1px solid #e7d8bb}
+.stat-candidate strong{color:#255b40}.stat-candidate .stat-button{flex-shrink:0}
+.stat-evidence{max-width:220px;max-height:120px;object-fit:contain;border-radius:9px;display:block;margin:8px 0}
+@media(max-width:760px){.stat-fields,.stat-two,.stat-summaries,.stat-directory{grid-template-columns:1fr}.stat-card{padding:16px}.stat-summary{padding:12px}.stat-tabs button{padding:10px}.stat-inline{align-items:start}}
