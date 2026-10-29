@@ -1,6 +1,8 @@
 
 import {createHash,randomUUID} from 'node:crypto';
 import {authorizedAccess} from './r4-planner.mjs';
+import {sessionUser} from '../lib/r4-auth.mjs';
+import {GET as auditPage} from '../lib/r4-audit-page.mjs';
 import {GET as statsPage} from '../lib/r4-stats-page.mjs';
 
 const HEADERS={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
@@ -31,6 +33,12 @@ async function rateLimit(request){
  if(!Number.isInteger(count)||count>50)throw Error('Too many changes. Please try again later.');
 }
 function sendErr(e){const m=e?.message||'Unexpected error';if(m.startsWith('Too many'))return json({error:m},429);if(m.includes('duplicate key')||m.includes('unique constraint'))return json({error:'This entry already exists. Check existing names, uploads, or train slots.'},409);return json({error:'Unable to complete this request. '+m.replace(/https?:\/\/\S+/g,'').slice(0,160)},503)}
+async function recordAudit(request,action,details,reversible=false){
+ const user=await sessionUser(request);
+ const actor=user?.username||'Shared R4 / unattributed';
+ await insert('utw_stat_audit',{action,details,actor,actor_id:user?.id||null,reversible});
+}
+async function owner(request){const user=await sessionUser(request);return user?.role==='admin'?user:null}
 async function storage(path,options={}){const {url,secret}=sb();const res=await fetch(url+'/storage/v1/object/'+path,{...options,headers:{apikey:secret,...options.headers},signal:AbortSignal.timeout(18000)});return res}
 async function getData(week,season){
  const end=dateAdd(week,6),startHistory=dateAdd(week,-35);
@@ -62,11 +70,17 @@ async function evidence(request,id){
  return new Response(res.body,{status:200,headers:{...HEADERS,'Content-Type':type,'Content-Disposition':'inline; filename="ds-evidence"','X-Content-Type-Options':'nosniff'}});
 }
 export async function GET(request){
- if(new URL(request.url).searchParams.get('view')==='1')return statsPage(request);
+ const view=new URL(request.url).searchParams.get('view');
+ if(view==='1')return statsPage(request);
+ if(view==='audit')return auditPage(request);
  if(!await authorizedAccess(request))return json({error:'R4 sign-in required'},401);
  const q=new URL(request.url).searchParams;
  try{
   if(q.get('image'))return await evidence(request,q.get('image'));
+  if(q.get('audit')==='1'){
+   if(!await owner(request))return json({error:'Owner account required'},403);
+   return json({events:await list('utw_stat_audit',{select:'id,action,actor,created_at,reversible,undone_at,undone_by,details',order:'created_at.desc,id.desc',limit:'400'})});
+  }
   const seasons=await list('utw_stat_seasons',{select:'id,label,sort_order',order:'sort_order.asc',limit:'50'});
   const season=q.get('season')||'post-s5';
   if(!seasons.some(s=>s.id===season))return json({error:'Invalid season'},400);
@@ -76,7 +90,7 @@ export async function GET(request){
   return json({...await getData(week,season),seasons,season});
  }catch(e){return sendErr(e)}
 }
-async function importCsv(body){
+async function importCsv(body,request){
  const {metric,period,filename,rows}=body;
  const season=body.season_id||'post-s5';
  if(!/^[a-z0-9-]{2,30}$/.test(season)||(await list('utw_stat_seasons',{select:'id',id:'eq.'+season,limit:'1'})).length!==1)return json({error:'Invalid season'},400);
@@ -103,9 +117,10 @@ async function importCsv(body){
  try{
   await insert('utw_stat_values',cleanRows.map(x=>({import_id:importId,alias_key:x.alias_key,original_name:x.name,points:x.points})));
  }catch(e){await del('utw_stat_imports',{id:'eq.'+importId}).catch(()=>{});throw e}
+ await recordAudit(request,'import',{id:importId,filename,season,metric,period,rows:cleanRows.length,new_members:fresh.length},true);
  return json({ok:true,rows:cleanRows.length,new_members:fresh.length},201);
 }
-async function dsUpload(form){
+async function dsUpload(form,request){
  const season=form.get('season_id')||'post-s5';
  if(!/^[a-z0-9-]{2,30}$/.test(season)||(await list('utw_stat_seasons',{select:'id',id:'eq.'+season,limit:'1'})).length!==1)return json({error:'Invalid season'},400);
  const eventDate=form.get('date'),first=form.get('first'),second=form.get('second')||null,third=form.get('third')||null;
@@ -121,9 +136,11 @@ async function dsUpload(form){
  const path=eventDate+'/'+randomUUID()+'.'+ext;
  const upload=await storage('utw-r4-ds-evidence/'+path,{method:'POST',headers:{'Content-Type':file.type,'x-upsert':'false'},body:bytes});
  if(!upload.ok)throw Error('Secure screenshot upload failed');
+ let created;
  try{
-  await insert('utw_stat_ds',{season_id:season,event_date:eventDate,first_member:first,second_member:second,third_member:third,opponent,notes,screenshot_path:path});
+  created=await insert('utw_stat_ds',{season_id:season,event_date:eventDate,first_member:first,second_member:second,third_member:third,opponent,notes,screenshot_path:path});
  }catch(e){await storage('utw-r4-ds-evidence/'+path,{method:'DELETE'}).catch(()=>{});throw e}
+ await recordAudit(request,'ds',{id:created[0].id,season,date:eventDate,opponent,first,second,third,screenshot:path},true);
  return json({ok:true},201);
 }
 export async function POST(request){
@@ -137,46 +154,83 @@ export async function POST(request){
    if(declared>4.3*1024*1024)return json({error:'Screenshot too large'},413);
    const form=await request.formData();
    if(form.get('action')!=='ds')return json({error:'Unknown upload'},400);
-   return await dsUpload(form);
+   return await dsUpload(form,request);
   }
   if(!type.startsWith('application/json'))return json({error:'JSON required'},415);
   const raw=await request.text();
   if(raw.length>150000)return json({error:'Request too large'},413);
   const body=JSON.parse(raw);
   switch(body.action){
-   case 'import':return await importCsv(body);
+   case 'import':return await importCsv(body,request);
    case 'alias':{
     const alias=name(body.alias),memberId=body.member_id;
     if(alias.length<1||alias.length>60||!uuid(memberId))return json({error:'Enter a valid alias and member'},400);
     await insert('utw_stat_aliases',{alias_key:key(alias),alias,member_id:memberId});
+    await recordAudit(request,'alias',{alias_key:key(alias),alias,member_id:memberId},true);
     return json({ok:true},201);
    }
    case 'merge':{
     if(!uuid(body.source)||!uuid(body.target)||body.source===body.target)return json({error:'Choose two distinct members'},400);
     await db('rpc/utw_stat_merge_members',{method:'POST',body:JSON.stringify({p_source:body.source,p_target:body.target})});
+    await recordAudit(request,'merge',{source:body.source,target:body.target},false);
     return json({ok:true});
    }
    case 'exception':{
     if(!uuid(body.member_id)||!['all','ds','donations','vs'].includes(body.scope)||!isoDate(body.starts_on)||!isoDate(body.ends_on)||body.ends_on<body.starts_on||clean(body.reason,301).length<1||clean(body.reason,301).length>300)return json({error:'Enter a valid member, scope, date range and reason'},400);
-    await insert('utw_stat_exceptions',{member_id:body.member_id,scope:body.scope,starts_on:body.starts_on,ends_on:body.ends_on,reason:clean(body.reason,300)});
+    const created=await insert('utw_stat_exceptions',{member_id:body.member_id,scope:body.scope,starts_on:body.starts_on,ends_on:body.ends_on,reason:clean(body.reason,300)});
+    await recordAudit(request,'exception',{id:created[0].id,member_id:body.member_id,scope:body.scope,starts_on:body.starts_on,ends_on:body.ends_on,reason:clean(body.reason,300)},true);
     return json({ok:true},201);
    }
    case 'clear_exception':{
     if(!uuid(body.id))return json({error:'Invalid exception'},400);
+    const old=await list('utw_stat_exceptions',{select:'id,active,member_id,reason',id:'eq.'+body.id,limit:'1'});
+    if(old.length!==1||!old[0].active)return json({error:'Exception is already inactive'},409);
     await db('utw_stat_exceptions?'+urlParams({id:'eq.'+body.id}),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({active:false})});
+    await recordAudit(request,'clear_exception',{id:body.id,member_id:old[0].member_id,reason:old[0].reason},true);
     return json({ok:true});
    }
    case 'award':{
     const season=body.season_id||'post-s5';if(!/^[a-z0-9-]{2,30}$/.test(season)||(await list('utw_stat_seasons',{select:'id',id:'eq.'+season,limit:'1'})).length!==1)return json({error:'Invalid season'},400);
     if(!isoDate(body.train_date)||!uuid(body.member_id)||!['ds','donations','vs','manual'].includes(body.source)||!name(body.slot)||name(body.slot).length>50)return json({error:'Enter a valid train date, member, source and slot'},400);
-    await insert('utw_stat_awards',{season_id:season,train_date:body.train_date,member_id:body.member_id,source:body.source,slot:name(body.slot),reason:clean(body.reason,500)});
+    const created=await insert('utw_stat_awards',{season_id:season,train_date:body.train_date,member_id:body.member_id,source:body.source,slot:name(body.slot),reason:clean(body.reason,500)});
+    await recordAudit(request,'award',{id:created[0].id,season,date:body.train_date,slot:body.slot,member_id:body.member_id},true);
     return json({ok:true},201);
    }
    case 'delete_award':{
     if(!uuid(body.id))return json({error:'Invalid train assignment'},400);
+    const old=await list('utw_stat_awards',{select:'*',id:'eq.'+body.id,limit:'1'});
+    if(old.length!==1)return json({error:'Train assignment not found'},404);
     await del('utw_stat_awards',{id:'eq.'+body.id});
-    await insert('utw_stat_audit',{action:'delete_award',details:{award_id:body.id}});
+    await recordAudit(request,'delete_award',{row:old[0],date:old[0].train_date,slot:old[0].slot},true);
     return json({ok:true});
+   }
+
+   case 'delete_import':{
+    if(!uuid(body.id))return json({error:'Invalid import ID'},400);
+    const old=await list('utw_stat_imports',{select:'*',id:'eq.'+body.id,limit:'1'});
+    if(old.length!==1)return json({error:'Import not found'},404);
+    const values=await list('utw_stat_values',{select:'alias_key,original_name,points',import_id:'eq.'+body.id,limit:'501'});
+    if(values.length!==old[0].row_count)return json({error:'Import backup appears incomplete'},409);
+    await del('utw_stat_imports',{id:'eq.'+body.id});
+    await recordAudit(request,'delete_import',{row:old[0],values,filename:old[0].filename,season:old[0].season_id,period:old[0].period,metric:old[0].metric},true);
+    return json({ok:true});
+   }
+   case 'delete_ds':{
+    if(!uuid(body.id))return json({error:'Invalid DS result ID'},400);
+    const old=await list('utw_stat_ds',{select:'*',id:'eq.'+body.id,limit:'1'});
+    if(old.length!==1)return json({error:'DS result not found'},404);
+    await del('utw_stat_ds',{id:'eq.'+body.id});
+    // The private screenshot stays in storage so an owner can undo the deletion.
+    await recordAudit(request,'delete_ds',{row:old[0],date:old[0].event_date,opponent:old[0].opponent},true);
+    return json({ok:true});
+   }
+   case 'undo_audit':{
+    const account=await owner(request);
+    if(!account)return json({error:'Personal owner login required'},403);
+    const id=Number(body.id);
+    if(!Number.isSafeInteger(id)||id<1)return json({error:'Invalid audit entry'},400);
+    const result=await db('rpc/utw_stat_undo_audit_entry',{method:'POST',body:JSON.stringify({p_audit_id:id,p_actor:account.username})});
+    return json({ok:true,message:result});
    }
    default:return json({error:'Unknown action'},400);
   }

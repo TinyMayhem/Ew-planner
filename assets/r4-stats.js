@@ -1,4 +1,4 @@
-import {parseCsv,guessColumn,defaultsForFile,validTarget,rowsFromCsv} from './r4-csv-utils.mjs';
+import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv} from './r4-csv-utils.mjs';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
@@ -51,10 +51,10 @@ function overview(){
 function imports(){
  const root=$('imports');root.replaceChildren();if(!state.data.imports.length){root.append(elEmpty('No active imports yet.'));return}
  const wrap=text('div',null,'stat-scroll'),table=text('table',null,'stat-table'),head=text('tr');
- ['Metric','Period','Rows','Filename','Saved'].forEach(x=>head.append(text('th',x)));
+ ['Metric','Period','Rows','Filename','Saved','Action'].forEach(x=>head.append(text('th',x)));
  const thead=text('thead');thead.append(head);table.append(thead);
  for(const imp of state.data.imports.slice().sort((a,b)=>a.period.localeCompare(b.period))){
-  const tr=text('tr');[imp.metric.replaceAll('_',' '),imp.period,imp.row_count,imp.filename,new Date(imp.created_at).toLocaleString()].forEach(v=>tr.append(text('td',v)));table.append(tr)
+  const tr=text('tr');[imp.metric.replaceAll('_',' '),imp.period,imp.row_count,imp.filename,new Date(imp.created_at).toLocaleString()].forEach(v=>tr.append(text('td',v)));const cell=text('td');const remove=text('button','Delete upload','stat-button');remove.type='button';remove.addEventListener('click',()=>{if(confirm('Remove '+imp.filename+' for '+imp.period+'? The owner can undo this in the audit log.'))action(()=>post({action:'delete_import',id:imp.id}),'Import removed and audited.')});cell.append(remove);tr.append(cell);table.append(tr)
  }wrap.append(table);root.append(wrap);
 }
 function directory(){
@@ -73,6 +73,7 @@ function dsHistory(){
   card.append(text('strong',d.event_date+(d.opponent?' · vs '+d.opponent:'')));
   const ol=text('p','🥇 '+memberName(d.first_member)+(d.second_member?'  ·  🥈 '+memberName(d.second_member):'')+(d.third_member?'  ·  🥉 '+memberName(d.third_member):''));card.append(ol);
   if(d.notes)card.append(text('p',d.notes,'stat-muted'));
+  const remove=text('button','Delete DS record','stat-button');remove.type='button';remove.addEventListener('click',()=>{if(confirm('Remove Desert Storm result from '+d.event_date+'? The owner can undo this.'))action(()=>post({action:'delete_ds',id:d.id}),'DS result removed and audited.')});card.append(remove);
   const a=text('a','Open original screenshot');a.href='/api/r4-stats?image='+encodeURIComponent(d.id);a.target='_blank';a.rel='noopener';const image=document.createElement('img');image.src=a.href;image.alt='DS evidence screenshot';image.loading='lazy';image.className='stat-evidence';a.prepend(image);card.append(a);root.append(card);
  }
 }
@@ -173,14 +174,13 @@ function renderCsvQueue(){
   if(item.status!=='invalid'){
    const lock=csvBusy||item.status==='uploaded';
    const fields=text('div',null,'stat-fields');
-   const metric=csvSelect([['vs_daily','Daily VS points'],['vs_weekly','Weekly VS totals'],['donations_weekly','Weekly donations']],item.metric,value=>{item.metric=value;if(item.status==='failed')item.status='ready';renderCsvQueue()});
+   const metric=csvSelect([['vs_daily','Daily VS points'],['vs_weekly','Weekly VS totals'],['donations_weekly','Weekly donations']],item.metric,value=>{item.metric=value;item.period=targetFromCsvDate(value,item.detectedDate);if(item.status==='failed')item.status='ready';renderCsvQueue()});
    metric.disabled=lock;
-   const day=document.createElement('input');day.type='date';day.value=item.period;day.disabled=lock;
-   day.addEventListener('change',()=>{item.period=day.value;if(item.status==='failed')item.status='ready';renderCsvQueue()});
+   const day=text('div',item.detectedDate+(item.metric==='vs_daily'?'':' → Week of '+item.period),'stat-detected-date');
    const names=csvSelect(item.head.map((h,i)=>[i,h]),item.nameCol,value=>{item.nameCol=Number(value);if(item.status==='failed')item.status='ready';renderCsvQueue()});
    const points=csvSelect(item.head.map((h,i)=>[i,h]),item.pointsCol,value=>{item.pointsCol=Number(value);if(item.status==='failed')item.status='ready';renderCsvQueue()});
    names.disabled=lock;points.disabled=lock;
-   fields.append(csvField('Stat type',metric),csvField('Date / Monday week',day),csvField('Name column',names),csvField('Points / total column',points));
+   fields.append(csvField('Stat type',metric),csvField('CSV report date',day),csvField('Name column',names),csvField('Points / total column',points));
    card.append(fields);
    const preview=text('details',null,'stat-batch-preview'),summary=text('summary','Preview first 5 rows');preview.append(summary);
    const wrap=text('div',null,'stat-scroll'),table=text('table',null,'stat-table');
@@ -196,7 +196,7 @@ function renderCsvQueue(){
  $('csv-file').disabled=csvBusy;
  $('season').disabled=csvBusy;
  $('metric').disabled=csvBusy;
- $('period').disabled=csvBusy;
+ 
  $('csv-batch-status').textContent=!total?'Select multiple CSV files above to start.':
   total+' selected · '+uploaded+' uploaded'+(needsAttention?' · '+needsAttention+' need fixes':'')+(failed?' · '+failed+' upload errors':'')+(csvBusy?' · Working through files one at a time':'');
 }
@@ -214,14 +214,15 @@ async function csvChanged(){
  }
  csvBusy=true;renderCsvQueue();
  for(const item of next){
-  const defaults=defaultsForFile(item.file.name,$('metric').value,$('period').value);
-  Object.assign(item,{...defaults,head:[],matrix:[],nameCol:0,pointsCol:1,error:'',result:null});
+  const metric=$('metric').value;
+  Object.assign(item,{metric,detectedDate:'',period:'',head:[],matrix:[],nameCol:0,pointsCol:1,error:'',result:null});
   try{
    if(!/\.csv$/i.test(item.file.name))throw Error('Choose a CSV (.csv) file.');
    if(item.file.size>1024*1024)throw Error('CSV must be under 1 MB.');
    if(!item.file.size)throw Error('CSV is empty.');
-   const parsed=parseCsv(await item.file.text());
-   item.head=parsed.head;item.matrix=parsed.matrix;
+   const parsed=csvForReport(await item.file.text());
+   if(!parsed.date)throw Error(parsed.error||'Unable to find reporting date in CSV.');
+   item.head=parsed.head;item.matrix=parsed.matrix;item.detectedDate=parsed.date;item.period=targetFromCsvDate(metric,item.detectedDate);
    item.nameCol=guessColumn(item.head,/name|commander|player|nickname|member|ign/,0);
    item.pointsCol=guessColumn(item.head,/points|score|donat|contribut|total/,Math.min(1,item.head.length-1));
    item.status='ready';
@@ -258,20 +259,16 @@ async function uploadCsvQueue(){
  const left=state.csvQueue.filter(item=>item.status!=='uploaded'&&item.status!=='invalid'&&csvIssue(item)).length+state.csvQueue.filter(item=>item.status==='invalid').length;
  notice(saved+' CSV'+(saved===1?'':'s')+' imported to '+season+'.'+(failed?' '+failed+' failed, with reasons shown beside the files.':'')+(left?' '+left+' need corrections.':'')+(stopped?' Sign in again before retrying.':''),!!failed||!!left);
 }
-function changePeriod(){
- const metric=$('metric').value;
- $('period').value=metric==='vs_daily'?serverToday():state.week;
-}
 function wire(){
  const today=serverToday(),week=monday(today);
- $('week').value=week;$('period').value=today;$('ds-date').value=today;$('train-date').value=today;$('exception-start').value=today;$('exception-end').value=today;
+ $('week').value=week;$('ds-date').value=today;$('train-date').value=today;$('exception-start').value=today;$('exception-end').value=today;
  $('reload').addEventListener('click',load);
  $('season').value='post-s5';$('season').addEventListener('change',load);
  $('season-report').addEventListener('click',async()=>{try{const response=await fetch('/api/r4-stats?report=1&season='+encodeURIComponent(state.season),{cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'Could not generate report');const columns=['member_name','vs_daily_total','vs_weekly_total','donations_total','recorded_vs_days','recorded_vs_weeks','trains_awarded'];const csv=[columns.join(','),...(data.rows||[]).map(row=>columns.map(k=>'\"'+String(row[k]??'').replaceAll('"','""')+'\"').join(','))].join('\r\n');const object=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=object;a.download='utw-season-report-'+state.season+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(object),1500);notice('Season report downloaded.')}catch(e){notice(e.message,true)}});
- $('week').addEventListener('change',()=>{$('period').value=$('metric').value==='vs_daily'?today:$('week').value;$('train-date').value=$('week').value;$('ds-date').value=$('week').value;load()});
+ $('week').addEventListener('change',()=>{$('train-date').value=$('week').value;$('ds-date').value=$('week').value;load()});
  document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.stat-tab').forEach(p=>p.hidden=p.id!=='tab-'+button.dataset.tab)}));
  $('daily-date').addEventListener('change',()=>lines('daily-vs',ranking('vs_daily',$('daily-date').value),20));
- $('metric').addEventListener('change',changePeriod);$('csv-file').addEventListener('change',csvChanged);
+ $('csv-file').addEventListener('change',csvChanged);
  renderCsvQueue();
  $('import').addEventListener('click',uploadCsvQueue);
  $('clear-batch').addEventListener('click',()=>{if(!csvBusy){state.csvQueue=[];renderCsvQueue();notice('')}});
