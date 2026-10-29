@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import {authorizedAlliance,weeks} from './r4-planner.mjs';
 import {sessionUser} from '../lib/r4-auth.mjs';
 import {GET as checksGET,POST as checksPOST} from '../lib/r4-checks.mjs';
+import {GET as rolesGET,POST as rolesPOST} from '../lib/r4-roles.mjs';
 import {scopeForTask,isFactionTask} from '../lib/r4-workspace.mjs';
 
 const headers={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
@@ -39,6 +40,7 @@ async function rateLimited(request){
 }
 export async function GET(request){
   if(new URL(request.url).searchParams.get('checks')==='1')return checksGET(request);
+  if(new URL(request.url).searchParams.get('roles')==='1')return rolesGET(request);
   const url=new URL(request.url);
   const alliance=requestedAlliance(url.searchParams.get('alliance'));
   if(!alliance)return json({error:'Invalid alliance'},400);
@@ -62,6 +64,7 @@ export async function GET(request){
 }
 export async function POST(request){
   if(new URL(request.url).searchParams.get('checks')==='1')return checksPOST(request);
+  if(new URL(request.url).searchParams.get('roles')==='1')return rolesPOST(request);
   if(request.headers.get('origin')!==new URL(request.url).origin)return json({error:'Invalid request origin.'},403);
   if(!request.headers.get('content-type')?.startsWith('application/json'))return json({error:'JSON required.'},415);
   let body;
