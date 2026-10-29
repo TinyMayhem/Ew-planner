@@ -28,14 +28,18 @@ async function setup(fn){
    return Response.json([sample.admin]);
   }
   if(path.endsWith('/utw_r4_comments')){
-   const alliance=u.searchParams.get('alliance')?.replace('eq.','')||'unknown';
+   const scope=u.searchParams.get('alliance')||'unknown';
+   const alliance=scope.includes('von')?'von':'utw';
    if(options.method==='POST'){
     const body=JSON.parse(options.body);
     seen.push({alliance:body.alliance,method:'POST'});
     return Response.json([{...body,id:14,created_at:'2026-10-29T13:00:00Z'}]);
    }
    seen.push({alliance,method:'GET'});
-   return Response.json([{id:4,task_key:'0-0-0',author:alliance,body:alliance+' comment',created_at:'2026-10-29T10:00:00Z'}]);
+   return Response.json([
+    {id:5,task_key:'0-1-0',author:alliance,body:alliance+' private discussion',alliance,created_at:'2026-10-29T11:00:00Z'},
+    {id:4,task_key:'0-0-0',author:'faction',body:'Shared land planning',alliance:'faction',created_at:'2026-10-29T10:00:00Z'}
+   ]);
   }
   if(path.endsWith('/rpc/utw_buddy_rate_limit'))return Response.json(1);
   if(path.endsWith('/utw_stat_seasons'))return Response.json([{id:'post-s5',label:'Post Season 5'}]);
@@ -75,21 +79,21 @@ test('UTW R4 does not get VON access; Tiny owner can switch both',()=>setup(asyn
  assert.match(await owner.text(),/VON checklist/);
  assert.equal(await authorizedAlliance(req('admin','/r4-planner'),'von'),true);
 }));
-test('VON and UTW discussions are strictly segregated for both reads and writes',()=>setup(async(seen)=>{
+test('VON and UTW share faction threads but isolate their other discussions and permissions',()=>setup(async(seen)=>{
  const vonUrl='/api/r4-comments?week=0&alliance=von',utwUrl='/api/r4-comments?week=0&alliance=utw';
  assert.equal((await commentsGET(req('von',utwUrl))).status,403);
  assert.equal((await commentsGET(req('r4',vonUrl))).status,403);
  const vonComments=await commentsGET(req('von',vonUrl));
  assert.equal(vonComments.status,200);
- assert.equal((await vonComments.json()).comments[0].author,'von');
+ assert.deepEqual((await vonComments.json()).comments.map(c=>c.author),['faction','von']);
  const utwComments=await commentsGET(req('r4',utwUrl));
  assert.equal(utwComments.status,200);
- assert.equal((await utwComments.json()).comments[0].author,'utw');
+ assert.deepEqual((await utwComments.json()).comments.map(c=>c.author),['faction','utw']);
  const post=(key,alliance)=>req(key,'/api/r4-comments',{method:'POST',headers:{Origin:site,'Content-Type':'application/json'},body:JSON.stringify({taskKey:'0-0-0',author:'Test',body:'Alliance comment',alliance})});
  assert.equal((await commentsPOST(post('von','utw'))).status,403);
  assert.equal((await commentsPOST(post('r4','von'))).status,403);
  assert.equal((await commentsPOST(post('von','von'))).status,201);
  assert.deepEqual(seen.filter(s=>s.method==='GET').map(s=>s.alliance),['von','utw']);
- assert.deepEqual(seen.filter(s=>s.method==='POST').map(s=>s.alliance),['von']);
+ assert.deepEqual(seen.filter(s=>s.method==='POST').map(s=>s.alliance),['faction']);
  assert.equal((await commentsGET(new Request(site+vonUrl))).status,401);
 }));
