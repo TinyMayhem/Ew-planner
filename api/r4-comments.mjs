@@ -1,6 +1,8 @@
 import {createHash} from 'node:crypto';
 import {authorizedAlliance,weeks} from './r4-planner.mjs';
 import {sessionUser} from '../lib/r4-auth.mjs';
+import {GET as checksGET,POST as checksPOST} from '../lib/r4-checks.mjs';
+import {scopeForTask,isFactionTask} from '../lib/r4-workspace.mjs';
 
 const headers={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
 const json=(data,status=200)=>Response.json(data,{status,headers});
@@ -10,7 +12,7 @@ const validKey=key=>{
   return w>=0&&w<weeks.length&&g>=0&&g<weeks[w].groups.length&&i>=0&&i<weeks[w].groups[g].items.length;
 };
 const taskKeysForWeek=week=>weeks[week].groups.flatMap((g,group)=>g.items.map((_,item)=>week+'-'+group+'-'+item));
-const formatComment=c=>({id:c.id,task_key:c.task_key,author:c.author,body:c.body,created_at:c.created_at});
+const formatComment=c=>({id:c.id,task_key:c.task_key,author:c.author,body:c.body,created_at:c.created_at,scope:c.alliance});
 const requestedAlliance=v=>v===null?'utw':['utw','von'].includes(v)?v:null;
 const denied=async request=>json({error:'No access to this alliance discussion'},(await sessionUser(request).catch(()=>null))?403:401);
 const cleanText=(value,max)=>typeof value==='string'&&value.trim().length>=1&&value.trim().length<=max&&!/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)?value.trim():null;
@@ -36,6 +38,7 @@ async function rateLimited(request){
   return count>30;
 }
 export async function GET(request){
+  if(new URL(request.url).searchParams.get('checks')==='1')return checksGET(request);
   const url=new URL(request.url);
   const alliance=requestedAlliance(url.searchParams.get('alliance'));
   if(!alliance)return json({error:'Invalid alliance'},400);
@@ -45,19 +48,20 @@ export async function GET(request){
   const week=Number(w);
   try{
     const params=new URLSearchParams({
-      select:'id,task_key,author,body,created_at',
+      select:'id,task_key,author,body,created_at,alliance',
       task_key:'like.'+week+'-*',
-      alliance:'eq.'+alliance,
+      alliance:'in.('+alliance+',faction)',
       order:'created_at.desc',
       limit:'500'
     });
     const comments=await db('utw_r4_comments?'+params);
     if(!Array.isArray(comments))throw Error('Invalid data');
     const allowed=new Set(taskKeysForWeek(week));
-    return json({comments:comments.filter(c=>allowed.has(c.task_key)).reverse().map(formatComment)});
+    return json({comments:comments.filter(c=>allowed.has(c.task_key)&&(c.alliance===alliance||(c.alliance==='faction'&&isFactionTask(c.task_key,weeks)))).reverse().map(formatComment)});
   }catch{return json({error:'Shared discussions are not available. Check the R4 database setup.'},503)}
 }
 export async function POST(request){
+  if(new URL(request.url).searchParams.get('checks')==='1')return checksPOST(request);
   if(request.headers.get('origin')!==new URL(request.url).origin)return json({error:'Invalid request origin.'},403);
   if(!request.headers.get('content-type')?.startsWith('application/json'))return json({error:'JSON required.'},415);
   let body;
@@ -70,6 +74,8 @@ export async function POST(request){
   if(!alliance)return json({error:'Invalid alliance'},400);
   if(!await authorizedAlliance(request,alliance))return denied(request);
   if(!validKey(body.taskKey))return json({error:'Invalid checklist task.'},400);
+  const scope=scopeForTask(alliance,body.taskKey,weeks);
+  if(!scope)return json({error:'Invalid checklist scope'},400);
   const author=cleanText(body.author,40),message=cleanText(body.body,1200);
   if(!author||!message)return json({error:'Enter an in-game name and a comment (maximum 1200 characters).'},400);
   try{
@@ -77,7 +83,7 @@ export async function POST(request){
     const result=await db('utw_r4_comments',{
       method:'POST',
       headers:{Prefer:'return=representation'},
-      body:JSON.stringify({task_key:body.taskKey,author,body:message,alliance})
+      body:JSON.stringify({task_key:body.taskKey,author,body:message,alliance:scope})
     });
     if(!Array.isArray(result)||result.length!==1)throw Error('Invalid data');
     return json({comment:formatComment(result[0])},201);

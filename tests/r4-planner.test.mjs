@@ -30,7 +30,7 @@ test('Season 6 R4 page and discussions require authentication',async()=>{
           const data=JSON.parse(options.body);
           return Response.json([{id:12,...data,created_at:'2026-10-22T10:00:00Z'}]);
         }
-        return Response.json([{id:4,task_key:'0-0-0',author:'Catalyst',body:'I can coordinate.',created_at:'2026-10-22T09:00:00Z'}]);
+        return Response.json([{id:4,task_key:'0-0-0',author:'Catalyst',body:'I can coordinate.',alliance:'faction',created_at:'2026-10-22T09:00:00Z'}]);
       }
       return new Response('Unknown', {status:404});
     };
@@ -55,8 +55,8 @@ test('Season 6 R4 page and discussions require authentication',async()=>{
     assert.match(page,/Faction diplomacy/);
     assert.match(page,/Week 7/);
     assert.match(page,/48 hours/);
-    assert.match(page,/Checkmarks stay on this browser/);
-    assert.match(page,/Discussions are shared between R4s/);
+    assert.match(page,/Checklist ticks sync/);
+    assert.match(page,/Joint faction land-planning tasks and discussions are shared by UTW and VON/);
     assert.match(page,/r4-discussion/);
     assert.equal(unlocked.headers.get('cache-control'),'private, no-store, max-age=0');
     assert.equal(authorized(new Request(base,{headers:{Cookie:cookie.replace(/.$/,'x')}})),false);
