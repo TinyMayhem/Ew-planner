@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {authorized,weeks} from './r4-planner.mjs';
+import {authorizedAccess,weeks} from './r4-planner.mjs';
 
 const headers={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
 const json=(data,status=200)=>Response.json(data,{status,headers});
@@ -33,7 +33,7 @@ async function rateLimited(request){
   return count>30;
 }
 export async function GET(request){
-  if(!authorized(request))return json({error:'R4 sign-in required.'},401);
+  if(!await authorizedAccess(request))return json({error:'R4 sign-in required.'},401);
   const url=new URL(request.url);
   const w=url.searchParams.get('week');
   if(!/^[0-9]$/.test(w)||Number(w)>=weeks.length)return json({error:'Invalid week.'},400);
@@ -52,7 +52,7 @@ export async function GET(request){
   }catch{return json({error:'Shared discussions are not available. Check the R4 database setup.'},503)}
 }
 export async function POST(request){
-  if(!authorized(request))return json({error:'R4 sign-in required.'},401);
+  if(!await authorizedAccess(request))return json({error:'R4 sign-in required.'},401);
   if(request.headers.get('origin')!==new URL(request.url).origin)return json({error:'Invalid request origin.'},403);
   if(!request.headers.get('content-type')?.startsWith('application/json'))return json({error:'JSON required.'},415);
   let body;

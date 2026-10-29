@@ -10,6 +10,9 @@ process.env.UTW_SESSION_SECRET='x'.repeat(64);
 process.env.SUPABASE_URL='https://test.invalid';
 process.env.SUPABASE_SECRET_KEY='test-only-secret';
 const base='https://example.vercel.app';
+const seasons=[{id:'post-s5',label:'Post Season 5'},{id:'s6',label:'Season 6'}];
+const fakeFetch=async url=>String(url).includes('/utw_stat_seasons')?Response.json(seasons):String(url).includes('/rpc/utw_buddy_rate_limit')?Response.json(1):Response.json([]);
+globalThis.fetch=fakeFetch;
 function cookie(){
  const expiry=String(Date.now()+60_000);
  const signature=createHmac('sha256',process.env.UTW_SESSION_SECRET).update('r4-planner:'+expiry).digest('hex');
@@ -43,7 +46,7 @@ test('POST blocks cross-origin edits',async()=>{
 });
 test('valid, empty week returns only protected structured records',async()=>{
  const original=globalThis.fetch;
- globalThis.fetch=async url=>Response.json([]);
+ globalThis.fetch=fakeFetch;
  try{
   const res=await apiGet(req('/api/r4-stats?week=2026-10-26'));
   assert.equal(res.status,200);
@@ -55,7 +58,7 @@ test('valid, empty week returns only protected structured records',async()=>{
 });
 test('CSV import rejects duplicate nickname rows instead of double counting',async()=>{
  const original=globalThis.fetch;
- globalThis.fetch=async url=>Response.json(1);
+ globalThis.fetch=fakeFetch;
  try{
   const res=await apiPost(req('/api/r4-stats',{method:'POST',headers:{origin:base,'content-type':'application/json'},body:JSON.stringify({action:'import',metric:'vs_daily',period:'2026-10-28',filename:'vs.csv',rows:[{name:'Tiny',points:100},{name:'Tiny',points:200}]})}));
   assert.equal(res.status,400);

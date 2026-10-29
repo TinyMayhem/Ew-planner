@@ -24,6 +24,7 @@ test('Season 6 R4 page and discussions require authentication',async()=>{
     globalThis.fetch=async(url,options={})=>{
       const target=String(url);
       if(target.includes('/rpc/utw_buddy_rate_limit'))return Response.json(1);
+      if(target.includes('/utw_r4_accounts'))return Response.json([]);
       if(target.includes('/utw_r4_comments')){
         if(options.method==='POST'){
           const data=JSON.parse(options.body);

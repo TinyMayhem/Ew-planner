@@ -1,7 +1,7 @@
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
-const state={data:null,week:'',csv:null,head:[],matrix:[],candidates:[]};
+const state={data:null,week:'',season:'post-s5',csv:null,head:[],matrix:[],candidates:[]};
 const text=(tag,content,cls)=>{const el=document.createElement(tag);if(content!==undefined&&content!==null)el.textContent=String(content);if(cls)el.className=cls;return el};
 const dateAdd=(s,days)=>new Date(Date.parse(s+'T00:00:00Z')+days*86400000).toISOString().slice(0,10);
 const serverToday=()=>{const d=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Noronha',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const v=Object.fromEntries(d.map(x=>[x.type,x.value]));return v.year+'-'+v.month+'-'+v.day};
@@ -128,10 +128,10 @@ function trainHistory(){
 }
 function render(){if(!state.data)return;overview();imports();memberFields();dsHistory();exceptionList();trainHistory();candidates()}
 async function load(){
- const week=$('week').value;
+ const week=$('week').value;state.season=$('season').value;
  if(!validDate(week)||monday(week)!==week){notice('Select a Monday for the week.',true);return}
  state.week=week;$('sync').textContent='Loading…';
- try{const r=await fetch('/api/r4-stats?week='+encodeURIComponent(week),{credentials:'same-origin',cache:'no-store'});if(r.status===401){location.href='/r4-planner';return}const data=await r.json();if(!r.ok)throw Error(data.error||'Data unavailable');state.data=data;render();$('sync').textContent='Synced · '+new Date().toLocaleTimeString()}catch(e){$('sync').textContent='Unavailable';notice(e.message,true)}
+ try{const r=await fetch('/api/r4-stats?week='+encodeURIComponent(week)+'&season='+encodeURIComponent(state.season),{credentials:'same-origin',cache:'no-store'});if(r.status===401){location.href='/r4-planner';return}const data=await r.json();if(!r.ok)throw Error(data.error||'Data unavailable');state.data=data;const season=$('season');const prev=season.value;season.replaceChildren(...(data.seasons||[]).map(x=>new Option(x.label,x.id)));if([...season.options].some(x=>x.value===prev))season.value=prev;render();$('sync').textContent='Synced · '+new Date().toLocaleTimeString()}catch(e){$('sync').textContent='Unavailable';notice(e.message,true)}
 }
 function csvParse(input){
  const raw=input.replace(/^\uFEFF/,'');const first=raw.split(/\r?\n/).find(l=>l.trim())||'';
@@ -186,7 +186,7 @@ async function saveCsv(){
  const metric=$('metric').value,period=$('period').value;
  if(!validDate(period)||(metric!=='vs_daily'&&monday(period)!==period))throw Error('Weekly uploads must use a Monday date');
  const rows=uploadRows();
- const result=await post({action:'import',metric,period,filename:state.csv.name,rows});
+ const result=await post({action:'import',season_id:state.season,metric,period,filename:state.csv.name,rows});
  return result;
 }
 function changePeriod(){
@@ -197,6 +197,8 @@ function wire(){
  const today=serverToday(),week=monday(today);
  $('week').value=week;$('period').value=today;$('ds-date').value=today;$('train-date').value=today;$('exception-start').value=today;$('exception-end').value=today;
  $('reload').addEventListener('click',load);
+ $('season').value='post-s5';$('season').addEventListener('change',load);
+ $('season-report').addEventListener('click',async()=>{try{const response=await fetch('/api/r4-stats?report=1&season='+encodeURIComponent(state.season),{cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'Could not generate report');const columns=['member_name','vs_daily_total','vs_weekly_total','donations_total','recorded_vs_days','recorded_vs_weeks','trains_awarded'];const csv=[columns.join(','),...(data.rows||[]).map(row=>columns.map(k=>'\"'+String(row[k]??'').replaceAll('"','""')+'\"').join(','))].join('\r\n');const object=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=object;a.download='utw-season-report-'+state.season+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(object),1500);notice('Season report downloaded.')}catch(e){notice(e.message,true)}});
  $('week').addEventListener('change',()=>{$('period').value=$('metric').value==='vs_daily'?today:$('week').value;$('train-date').value=$('week').value;$('ds-date').value=$('week').value;load()});
  document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.stat-tab').forEach(p=>p.hidden=p.id!=='tab-'+button.dataset.tab)}));
  $('daily-date').addEventListener('change',()=>lines('daily-vs',ranking('vs_daily',$('daily-date').value),20));
@@ -209,13 +211,13 @@ function wire(){
   if(confirm('Permanently merge '+memberName(from)+' into '+memberName(to)+'? This also merges DS results and train history.'))action(()=>post({action:'merge',source:from,target:to}),'Member records merged. Historic points now follow the correct person.');
  });
  $('alias-save').addEventListener('click',()=>action(()=>post({action:'alias',member_id:$('alias-member').value,alias:$('alias-name').value}),'Nickname added to the member.'));
- $('ds-form').addEventListener('submit',event=>{event.preventDefault();action(()=>{const form=new FormData($('ds-form'));form.set('action','ds');return post(form,true)},'DS evidence and podium saved.')});
+ $('ds-form').addEventListener('submit',event=>{event.preventDefault();action(()=>{const form=new FormData($('ds-form'));form.set('action','ds');form.set('season_id',state.season);return post(form,true)},'DS evidence and podium saved.')});
  $('train-source').addEventListener('change',candidates);$('train-date').addEventListener('change',candidates);
  $('award').addEventListener('click',()=>{const source=$('train-source').value,date=$('train-date').value,id=$('train-member').value,reason=$('train-reason').value.trim();
   if(!id||!date){notice('Select member and date.',true);return}
   const blocked=activeException(id,source,date);
   if(blocked.length&&(!reason||!confirm('This player has an active exception. Save a manual override with the stated reason?'))){notice('An override reason and confirmation are required for an excepted member.',true);return}
-  action(()=>post({action:'award',train_date:date,slot:$('train-slot').value,member_id:id,source,reason}), 'Train assignment recorded.');
+  action(()=>post({action:'award',season_id:state.season,train_date:date,slot:$('train-slot').value,member_id:id,source,reason}), 'Train assignment recorded.');
  });
  $('exception-save').addEventListener('click',()=>action(()=>post({action:'exception',member_id:$('exception-member').value,scope:$('exception-scope').value,starts_on:$('exception-start').value,ends_on:$('exception-end').value,reason:$('exception-reason').value}), 'Exception saved.'));
  load();
