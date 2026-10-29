@@ -59,3 +59,56 @@ export function rowsFromCsv(matrix,nameColumn,pointsColumn){
  if(!rows.length||rows.length>500)throw Error('CSV must have 1 to 500 members.');
  return rows;
 }
+
+/**
+ * Read the reporting date from CSV CONTENT, never from the machine's upload date
+ * or file name. A file with mixed/ambiguous dates is rejected instead of guessed.
+ */
+export function parseReportDate(value){
+ const input=String(value||'').trim();
+ let m=/(?:^|[^\d])(20\d{2})[-/.](0?[1-9]|1[0-2])[-/.]([0-3]?\d)(?!\d)/.exec(input);
+ if(m){const d=m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');return isRealDate(d)?d:''}
+ m=/(?:^|[^\d])(0?[1-9]|1[0-2])\/([0-3]?\d)\/(20\d{2})(?!\d)/.exec(input);
+ if(m){const d=m[3]+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0');return isRealDate(d)?d:''}
+ m=/(?:^|[^\d])([0-3]?\d)[ ]+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)[ ,]+(20\d{2})(?!\d)/i.exec(input);
+ if(m){const n=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(m[2].slice(0,3).toLowerCase())+1;const d=m[3]+'-'+String(n).padStart(2,'0')+'-'+m[1].padStart(2,'0');return isRealDate(d)?d:''}
+ return '';
+}
+export function csvDateFromContent(raw,head,matrix){
+ const matches=new Set(),notes=[];
+ // Report titles, date-bearing header labels and the first preamble lines.
+ for(const line of String(raw||'').split(/\r?\n/).slice(0,12)){
+  const date=parseReportDate(line);
+  if(date&&/(?:date|day|period|week|report|snapshot|vs|point|donat|as of|daily|season)/i.test(line)){
+   matches.add(date);notes.push('report header');
+  }
+ }
+ for(const h of head){const date=parseReportDate(h);if(date){matches.add(date);notes.push('column header')}}
+ const dateColumns=head.map((h,i)=>/(?:^|[^a-z])(date|day|timestamp|reporting|period|as of|snapshot)(?:$|[^a-z])/i.test(h)?i:-1).filter(i=>i>=0);
+ for(const row of matrix){
+  for(const col of dateColumns){
+   const date=parseReportDate(row[col]);if(date){matches.add(date);notes.push('date column')}
+  }
+ }
+ if(matches.size>1)return {date:'',error:'This CSV contains multiple reporting dates. Upload one reporting date per file.'};
+ if(matches.size===0)return {date:'',error:'No reporting date found inside the CSV. The file needs a dated header, report title, or date column.'};
+ return {date:[...matches][0],source:notes[0]||'CSV'};
+}
+export function csvForReport(raw){
+ // Some exports include "Date: yyyy-mm-dd" or title lines before the table.
+ // Find the real table header while preserving the original raw text for date extraction.
+ const lines=String(raw).replace(/^\uFEFF/,'').split(/\r?\n/);
+ const headerIndex=lines.findIndex(line=>{
+  const normalized=line.toLowerCase();
+  return /(?:member|player|commander|nickname|ign|name)/.test(normalized)&&/[,;\t]/.test(line)
+   &&/(?:point|score|total|donat|contribut|vs|value)/.test(normalized);
+ });
+ const data=headerIndex>0?lines.slice(headerIndex).join('\n'):raw;
+ const parsed=parseCsv(data);
+ const report=csvDateFromContent(raw,parsed.head,parsed.matrix);
+ return {...parsed,...report};
+}
+export function targetFromCsvDate(metric,date){
+ if(!date)return '';
+ return metric==='vs_daily'?date:weekStart(date);
+}
