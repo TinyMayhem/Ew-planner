@@ -33,6 +33,10 @@
       "destination": "/api/r4-planner"
     },
     {
+      "source": "/r4-stats",
+      "destination": "/api/r4-stats-page"
+    },
+    {
       "source": "/gear-beta",
       "destination": "/api/gear-beta"
     },
