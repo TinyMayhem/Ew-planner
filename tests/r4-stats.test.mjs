@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHmac} from 'node:crypto';
-import {GET as pageGet} from '../api/r4-stats-page.mjs';
+import {GET as pageGet} from '../lib/r4-stats-page.mjs';
 import {GET as apiGet,POST as apiPost} from '../api/r4-stats.mjs';
 
 process.env.UTW_R4_PASSWORD='test-passcode-change-me';
