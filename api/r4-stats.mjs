@@ -14,7 +14,7 @@ const dateAdd=(v,days)=>new Date(Date.parse(v+'T00:00:00Z')+days*86400000).toISO
 const sb=()=>{const url=process.env.SUPABASE_URL?.replace(/\/$/,'');const secret=process.env.SUPABASE_SECRET_KEY;if(!url||!secret)throw Error('Server database is not configured');return {url,secret}};
 async function db(path,options={}){
  const {url,secret}=sb();
- const res=await fetch(url+'/rest/v1/'+path,{...options,headers:{apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json',...options.headers},signal:AbortSignal.timeout(15000)});
+ const res=await fetch(url+'/rest/v1/'+path,{...options,headers:{apikey:secret,'Content-Type':'application/json',...options.headers},signal:AbortSignal.timeout(15000)});
  if(!res.ok){const txt=await res.text();throw Error('Database operation failed ('+res.status+'): '+txt.slice(0,200))}
  if(res.status===204)return null;
  return res.json();
@@ -30,7 +30,7 @@ async function rateLimit(request){
  if(!Number.isInteger(count)||count>50)throw Error('Too many changes. Please try again later.');
 }
 function sendErr(e){const m=e?.message||'Unexpected error';if(m.startsWith('Too many'))return json({error:m},429);if(m.includes('duplicate key')||m.includes('unique constraint'))return json({error:'This entry already exists. Check existing names, uploads, or train slots.'},409);return json({error:'Unable to complete this request. '+m.replace(/https?:\/\/\S+/g,'').slice(0,160)},503)}
-async function storage(path,options={}){const {url,secret}=sb();const res=await fetch(url+'/storage/v1/object/'+path,{...options,headers:{apikey:secret,Authorization:'Bearer '+secret,...options.headers},signal:AbortSignal.timeout(18000)});return res}
+async function storage(path,options={}){const {url,secret}=sb();const res=await fetch(url+'/storage/v1/object/'+path,{...options,headers:{apikey:secret,...options.headers},signal:AbortSignal.timeout(18000)});return res}
 async function getData(week){
  const end=dateAdd(week,6),startHistory=dateAdd(week,-35);
  const [members,aliases,allImports,ds,exceptions,awards]=await Promise.all([
