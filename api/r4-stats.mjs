@@ -1,6 +1,7 @@
 
 import {createHash,randomUUID} from 'node:crypto';
 import {authorized} from './r4-planner.mjs';
+import {GET as statsPage} from '../lib/r4-stats-page.mjs';
 
 const HEADERS={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
 const json=(body,status=200)=>Response.json(body,{status,headers:HEADERS});
@@ -61,6 +62,7 @@ async function evidence(request,id){
  return new Response(res.body,{status:200,headers:{...HEADERS,'Content-Type':type,'Content-Disposition':'inline; filename="ds-evidence"','X-Content-Type-Options':'nosniff'}});
 }
 export async function GET(request){
+ if(new URL(request.url).searchParams.get('view')==='1')return statsPage(request);
  if(!authorized(request))return json({error:'R4 sign-in required'},401);
  const q=new URL(request.url).searchParams;
  try{
