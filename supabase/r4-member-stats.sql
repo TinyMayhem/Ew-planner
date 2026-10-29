@@ -45,7 +45,7 @@ create table if not exists public.utw_stat_ds (
  screenshot_path text not null check (char_length(screenshot_path) between 1 and 300),
  notes text not null default '' check (char_length(notes)<=500),
  created_at timestamptz not null default now(),
- check (first_member is distinct from second_member and first_member is distinct from third_member and second_member is distinct from third_member)
+ check ((second_member is null or second_member<>first_member) and (third_member is null or (third_member<>first_member and (second_member is null or third_member<>second_member))))
 );
 create index if not exists utw_stat_ds_date_idx on public.utw_stat_ds(event_date desc);
 create table if not exists public.utw_stat_exceptions (
