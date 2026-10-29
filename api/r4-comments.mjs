@@ -1,5 +1,6 @@
 import {createHash} from 'node:crypto';
 import {authorizedAlliance,weeks} from './r4-planner.mjs';
+import {sessionUser} from '../lib/r4-auth.mjs';
 
 const headers={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
 const json=(data,status=200)=>Response.json(data,{status,headers});
@@ -11,6 +12,7 @@ const validKey=key=>{
 const taskKeysForWeek=week=>weeks[week].groups.flatMap((g,group)=>g.items.map((_,item)=>week+'-'+group+'-'+item));
 const formatComment=c=>({id:c.id,task_key:c.task_key,author:c.author,body:c.body,created_at:c.created_at});
 const requestedAlliance=v=>v===null?'utw':['utw','von'].includes(v)?v:null;
+const denied=async request=>json({error:'No access to this alliance discussion'},(await sessionUser(request).catch(()=>null))?403:401);
 const cleanText=(value,max)=>typeof value==='string'&&value.trim().length>=1&&value.trim().length<=max&&!/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)?value.trim():null;
 const configured=()=>Boolean(process.env.SUPABASE_URL&&process.env.SUPABASE_SECRET_KEY);
 async function db(path,options={}){
@@ -37,7 +39,7 @@ export async function GET(request){
   const url=new URL(request.url);
   const alliance=requestedAlliance(url.searchParams.get('alliance'));
   if(!alliance)return json({error:'Invalid alliance'},400);
-  if(!await authorizedAlliance(request,alliance))return json({error:'No access to this alliance discussion'},403);
+  if(!await authorizedAlliance(request,alliance))return denied(request);
   const w=url.searchParams.get('week');
   if(!/^[0-9]$/.test(w)||Number(w)>=weeks.length)return json({error:'Invalid week.'},400);
   const week=Number(w);
