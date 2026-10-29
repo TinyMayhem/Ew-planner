@@ -9,6 +9,11 @@ test('email-free username rules and password hashing',()=>{
  assert.equal(r4Username('not allowed @ example'),null);
  assert.ok(strongPassword('temporary-for-r4-2026'));
  assert.equal(strongPassword('short'),false);
+ assert.equal(strongPassword('123456789'),false);
+ assert.equal(strongPassword('1234567890'),true);
+ assert.equal(strongPassword('12345678901'),true);
+ assert.throws(()=>passwordHash('123456789'),/10 to 128/);
+ assert.equal(passwordMatches('1234567890',passwordHash('1234567890')),true);
  const hash=passwordHash('temporary-for-r4-2026');
  assert.notEqual(hash,'temporary-for-r4-2026');
  assert.equal(passwordMatches('temporary-for-r4-2026',hash),true);
