@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {signedCookie,r4Username} from '../lib/r4-auth.mjs';
 import {weeks} from '../api/r4-planner.mjs';
 import {isFactionTask,scopeForTask} from '../lib/r4-workspace.mjs';
-import {GET as checkGET,POST as checkPOST} from '../api/r4-checks.mjs';
+import {GET as checkGET,POST as checkPOST} from '../api/r4-comments.mjs';
 import {GET as commentGET,POST as commentPOST} from '../api/r4-comments.mjs';
 import {GET as statsGET} from '../api/r4-stats.mjs';
 
@@ -72,25 +72,25 @@ test('only faction land planning groups are cross-alliance shared',()=>{
  assert.equal(scopeForTask('von','0-200-0',weeks),null);
 });
 test('shared faction tick is visible to both, UTW-only tick not visible to VON',()=>environment(async({state})=>{
- const post=(user,taskKey,completed)=>checkPOST(request(user,'/api/r4-checks','POST',{alliance:user,action:'toggle',taskKey,completed}));
+ const post=(user,taskKey,completed)=>checkPOST(request(user,'/api/r4-comments?checks=1','POST',{alliance:user,action:'toggle',taskKey,completed}));
  assert.equal((await post('von','0-0-0',true)).status,200);
  assert.equal((await post('utw','0-1-0',true)).status,200);
  assert.equal(state.get('faction|0-0-0').completed,true);
  assert.equal(state.get('utw|0-1-0').completed,true);
- const von=await checkGET(request('von','/api/r4-checks?alliance=von&week=0'));
+ const von=await checkGET(request('von','/api/r4-comments?checks=1&alliance=von&week=0'));
  assert.equal(von.status,200);
  assert.deepEqual((await von.json()).items.map(x=>x.task_key),['0-0-0']);
- const utw=await checkGET(request('utw','/api/r4-checks?alliance=utw&week=0'));
+ const utw=await checkGET(request('utw','/api/r4-comments?checks=1&alliance=utw&week=0'));
  assert.deepEqual((await utw.json()).items.map(x=>x.task_key),['0-0-0','0-1-0']);
- assert.equal((await checkGET(request('von','/api/r4-checks?alliance=utw&week=0'))).status,403);
- assert.equal((await checkGET(new Request(site+'/api/r4-checks?alliance=von&week=0'))).status,401);
+ assert.equal((await checkGET(request('von','/api/r4-comments?checks=1&alliance=utw&week=0'))).status,403);
+ assert.equal((await checkGET(new Request(site+'/api/r4-comments?checks=1&alliance=von&week=0'))).status,401);
  assert.equal((await statsGET(request('von','/api/r4-stats?week=2026-10-26'))).status,401);
 }));
 test('reset one alliance week clears shared faction and own private tasks only',()=>environment(async({state})=>{
  state.set('faction|0-0-0',{scope:'faction',task_key:'0-0-0',completed:true});
  state.set('utw|0-1-0',{scope:'utw',task_key:'0-1-0',completed:true});
  state.set('von|0-1-0',{scope:'von',task_key:'0-1-0',completed:true});
- const response=await checkPOST(request('von','/api/r4-checks','POST',{alliance:'von',action:'reset_week',week:0}));
+ const response=await checkPOST(request('von','/api/r4-comments?checks=1','POST',{alliance:'von',action:'reset_week',week:0}));
  assert.equal(response.status,200);
  assert.equal(state.get('faction|0-0-0').completed,false);
  assert.equal(state.get('von|0-1-0').completed,false);
@@ -109,8 +109,8 @@ test('faction comment is shared but private discussion is never exposed to the o
  assert.equal(changes[1].alliance,'von');
 }));
 test('site checklist import validates source keys and requires access',()=>environment(async()=>{
- const result=await checkPOST(request('utw','/api/r4-checks','POST',{action:'import_checked',alliance:'utw',keys:['0-0-0','0-1-0']}));
+ const result=await checkPOST(request('utw','/api/r4-comments?checks=1','POST',{action:'import_checked',alliance:'utw',keys:['0-0-0','0-1-0']}));
  assert.equal(result.status,200);
- assert.equal((await checkPOST(request('von','/api/r4-checks','POST',{action:'import_checked',alliance:'utw',keys:['0-0-0']}))).status,403);
- assert.equal((await checkPOST(request('utw','/api/r4-checks','POST',{action:'import_checked',alliance:'utw',keys:['0-0-0','0-0-0']}))).status,400);
+ assert.equal((await checkPOST(request('von','/api/r4-comments?checks=1','POST',{action:'import_checked',alliance:'utw',keys:['0-0-0']}))).status,403);
+ assert.equal((await checkPOST(request('utw','/api/r4-comments?checks=1','POST',{action:'import_checked',alliance:'utw',keys:['0-0-0','0-0-0']}))).status,400);
 }));
