@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {authorizedAccess,weeks} from './r4-planner.mjs';
+import {authorizedAlliance,weeks} from './r4-planner.mjs';
 
 const headers={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
 const json=(data,status=200)=>Response.json(data,{status,headers});
@@ -10,6 +10,7 @@ const validKey=key=>{
 };
 const taskKeysForWeek=week=>weeks[week].groups.flatMap((g,group)=>g.items.map((_,item)=>week+'-'+group+'-'+item));
 const formatComment=c=>({id:c.id,task_key:c.task_key,author:c.author,body:c.body,created_at:c.created_at});
+const requestedAlliance=v=>v===null?'utw':['utw','von'].includes(v)?v:null;
 const cleanText=(value,max)=>typeof value==='string'&&value.trim().length>=1&&value.trim().length<=max&&!/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(value)?value.trim():null;
 const configured=()=>Boolean(process.env.SUPABASE_URL&&process.env.SUPABASE_SECRET_KEY);
 async function db(path,options={}){
@@ -33,8 +34,10 @@ async function rateLimited(request){
   return count>30;
 }
 export async function GET(request){
-  if(!await authorizedAccess(request))return json({error:'R4 sign-in required.'},401);
   const url=new URL(request.url);
+  const alliance=requestedAlliance(url.searchParams.get('alliance'));
+  if(!alliance)return json({error:'Invalid alliance'},400);
+  if(!await authorizedAlliance(request,alliance))return json({error:'No access to this alliance discussion'},403);
   const w=url.searchParams.get('week');
   if(!/^[0-9]$/.test(w)||Number(w)>=weeks.length)return json({error:'Invalid week.'},400);
   const week=Number(w);
@@ -42,6 +45,7 @@ export async function GET(request){
     const params=new URLSearchParams({
       select:'id,task_key,author,body,created_at',
       task_key:'like.'+week+'-*',
+      alliance:'eq.'+alliance,
       order:'created_at.desc',
       limit:'500'
     });
@@ -52,7 +56,6 @@ export async function GET(request){
   }catch{return json({error:'Shared discussions are not available. Check the R4 database setup.'},503)}
 }
 export async function POST(request){
-  if(!await authorizedAccess(request))return json({error:'R4 sign-in required.'},401);
   if(request.headers.get('origin')!==new URL(request.url).origin)return json({error:'Invalid request origin.'},403);
   if(!request.headers.get('content-type')?.startsWith('application/json'))return json({error:'JSON required.'},415);
   let body;
@@ -61,6 +64,9 @@ export async function POST(request){
     if(raw.length>3000)return json({error:'Comment is too long.'},413);
     body=JSON.parse(raw);
   }catch{return json({error:'Invalid comment request.'},400)}
+  const alliance=requestedAlliance(body.alliance??null);
+  if(!alliance)return json({error:'Invalid alliance'},400);
+  if(!await authorizedAlliance(request,alliance))return json({error:'No access to this alliance discussion'},403);
   if(!validKey(body.taskKey))return json({error:'Invalid checklist task.'},400);
   const author=cleanText(body.author,40),message=cleanText(body.body,1200);
   if(!author||!message)return json({error:'Enter an in-game name and a comment (maximum 1200 characters).'},400);
@@ -69,7 +75,7 @@ export async function POST(request){
     const result=await db('utw_r4_comments',{
       method:'POST',
       headers:{Prefer:'return=representation'},
-      body:JSON.stringify({task_key:body.taskKey,author,body:message})
+      body:JSON.stringify({task_key:body.taskKey,author,body:message,alliance})
     });
     if(!Array.isArray(result)||result.length!==1)throw Error('Invalid data');
     return json({comment:formatComment(result[0])},201);
