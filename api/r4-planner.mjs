@@ -32,7 +32,7 @@ const plannerFor=(alliance,role)=>{
    ?'<div class="r4-note"><strong>Alliance workspace</strong><p><a class="r4-btn'+(isVon?'':' primary')+'" href="/r4-planner?alliance=utw">UTW checklist</a> <a class="r4-btn'+(isVon?' primary':'')+'" href="/r4-planner?alliance=von">VON checklist</a></p></div>'
    :'<p class="r4-brow">'+(isVon?'VON':'UTW')+' operations checklist</p>';
   dashboard=dashboard.replace('<h2>Choose a week</h2>',switcher+'<h2>Choose a week</h2>');
-  dashboard=dashboard.replace('Checkmarks stay on this browser.', 'Checkmarks are saved separately for each alliance on this browser.');
+  if(isVon)dashboard=dashboard.replace('Checkmarks stay on this browser.', 'Checkmarks are saved separately for each alliance on this browser.');
   const tasks=isVon?weeks.map(w=>({...w,groups:w.groups.map(g=>({...g,name:g.name.replaceAll('UTW','VON'),items:g.items.map(t=>t.replaceAll('UTW','VON'))}))})):weeks;
   const html=shell(dashboard+'<script>const alliance='+JSON.stringify(alliance)+';const weeks='+JSON.stringify(tasks).replace(/</g,'\u003c')+';'+CLIENT_JS+'</script>');
   return isVon?html.replace('<title>Season 6 R4 Command Centre | UTW Hub</title>','<title>Season 6 VON Operations | UTW Hub</title>'):html;
