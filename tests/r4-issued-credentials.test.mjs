@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {scryptSync} from 'node:crypto';
+import {readFileSync} from 'node:fs';
 import {r4Username,passwordMatches,verifyCredentials} from '../lib/r4-auth.mjs';
 
 const dummyHash=password=>{const salt='4fa09fe4b6b2402197e56f9a';return salt+':'+scryptSync(password,salt,64).toString('hex')};
@@ -42,7 +43,9 @@ test('expired temporary passcodes cannot activate R4, active temporary accounts 
   for(const [k,v] of Object.entries(saved))process.env[k]=v;
  }
 });
-test('owner can be a named admin account without a management page',()=>{
- const sql=process.env.UTW_R4_PASSWORD||'';
- assert.equal(typeof sql,'string');
+test('owner privilege is restricted to named administrator and management page remains disabled',()=>{
+ const planner=readFileSync(new URL('../api/r4-planner.mjs',import.meta.url),'utf8');
+ const audit=readFileSync(new URL('../lib/r4-audit-page.mjs',import.meta.url),'utf8');
+ assert.match(planner,/account_create','account_toggle','account_reset/);
+ assert.match(audit,/account\.role!=='admin'/);
 });
