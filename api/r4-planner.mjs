@@ -118,7 +118,7 @@ export async function POST(request){
    if(!actor)return new Response(userLogin('Please sign in again.'),{status:401,headers:NO_STORE});
    if(!actor.must_change_password&&!passwordMatches(f.get('current_password'),actor.password_hash))return new Response(changePage('Current password is incorrect.',false),{status:401,headers:NO_STORE});
    if(!strongPassword(f.get('password'))||passwordMatches(f.get('password'),actor.password_hash))return new Response(changePage('Use a new password of at least 12 characters.',actor.must_change_password),{status:400,headers:NO_STORE});
-   const account=await updateAccount(actor.id,{password_hash:passwordHash(f.get('password')),must_change_password:false,session_version:actor.session_version+1});
+   const account=await updateAccount(actor.id,{password_hash:passwordHash(f.get('password')),must_change_password:false,temporary_expires_at:null,session_version:actor.session_version+1});
    return locationCookie(request,account);
   }
   if(['account_create','account_toggle','account_reset'].includes(action))return new Response('R4 account administration is handled privately by the UTW owner through ChatGPT.',{status:403,headers:NO_STORE});
