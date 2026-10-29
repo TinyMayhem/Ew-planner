@@ -77,8 +77,9 @@ function dsHistory(){
 const activeException=(id,source,date)=>state.data.exceptions.filter(x=>x.active&&x.member_id===id&&x.starts_on<=date&&x.ends_on>=date&&(x.scope==='all'||x.scope===source));
 const recentAwards=(id,date)=>state.data.awards.filter(x=>x.member_id===id&&x.train_date<=date&&x.train_date>=dateAdd(date,-7));
 function suggested(){
- const source=$('train-source').value,date=$('train-date').value,week=monday(date);
- if(!validDate(date)||week!==state.week)return [];
+ const source=$('train-source').value,date=$('train-date').value;
+ if(!validDate(date)||monday(date)!==state.week)return [];
+ const week=state.week;
  if(source==='ds'){
   const ds=state.data.ds.filter(x=>x.event_date<=date).sort((a,b)=>b.event_date.localeCompare(a.event_date)||b.created_at.localeCompare(a.created_at))[0];
   return ds?[ds.first_member,ds.second_member,ds.third_member].filter(Boolean).map((id,i)=>({id,points:null,place:i+1,context:'DS on '+ds.event_date})):[];
@@ -115,7 +116,7 @@ function exceptionList(){
  if(!active.length){root.append(elEmpty('No active exceptions.'));return}
  for(const x of active){const line=text('div',null,'stat-row');
   line.append(text('strong',memberName(x.member_id)+' · '+x.scope.toUpperCase()),text('p',x.starts_on+' to '+x.ends_on+' · '+x.reason,'stat-muted'));
-  const button=text('button','Clear exception','stat-button');button.addEventListener('click',()=>action(async()=>{if(!confirm('Clear this exception?'))return;await post({action:'clear_exception',id:x.id})},'Exception updated.'));
+  const button=text('button','Clear exception','stat-button');button.addEventListener('click',()=>{if(confirm('Clear this exception?'))action(()=>post({action:'clear_exception',id:x.id}),'Exception cleared.')});
   line.append(button);root.append(line);
  }
 }
