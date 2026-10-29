@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {signedCookie} from '../lib/r4-auth.mjs';
-import {GET as plannerGET} from '../api/r4-planner.mjs';
+import {GET as plannerGET,departments} from '../api/r4-planner.mjs';
 import {GET,POST} from '../api/r4-comments.mjs';
 import {cleanAssignment} from '../lib/r4-roles.mjs';
 
@@ -51,7 +51,7 @@ test('Both alliance R4 boards offer Roles alongside weeks',()=>fixture(async()=>
   assert.match(html,/r4-roles-panel/);
   assert.match(html,/assets\/r4-roles\.js/);
   assert.match(html,/r4-role-grid/);
-  assert.match(html,/Trade Post Operations/);
+  assert.ok(departments.some(d=>d.name==='Trade Post Operations'));
  }
 }));
 test('Alliances only see their own role assignments, owner can see both',()=>fixture(async queries=>{
