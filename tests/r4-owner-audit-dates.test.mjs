@@ -43,13 +43,14 @@ test('R4 personal user cannot read audit even if signed in; owner can',async()=>
   process.env.UTW_R4_PASSWORD='shared-long-test-password';
   globalThis.fetch=async url=>{
    if(String(url).includes('utw_r4_accounts'))return Response.json([account]);
+   if(String(url).includes('rpc/utw_buddy_rate_limit'))return Response.json(1);
    if(String(url).includes('utw_stat_audit'))return Response.json([]);
    return Response.json([]);
   };
   const request=(url,options={})=>new Request(base+url,{...options,headers:{Cookie:'utw_r4_user='+signedCookie(account),...options.headers}});
   assert.equal((await auditView(request('/r4-audit'))).status,403);
   assert.equal((await statsGet(request('/api/r4-stats?audit=1'))).status,403);
-  assert.equal((await statsPost(request('/api/r4-stats',{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify({action:'undo_audit',id:1})}))).status,403===401?401:403);
+  assert.equal((await statsPost(request('/api/r4-stats',{method:'POST',headers:{Origin:base,'Content-Type':'application/json'},body:JSON.stringify({action:'undo_audit',id:1})}))).status,403);
   account.role='admin';
   assert.equal((await auditView(request('/r4-audit'))).status,200);
   const result=await statsGet(request('/api/r4-stats?audit=1'));
