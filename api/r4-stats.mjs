@@ -1,6 +1,6 @@
 
 import {createHash,randomUUID} from 'node:crypto';
-import {authorized} from './r4-planner.mjs';
+import {authorizedAccess} from './r4-planner.mjs';
 import {GET as statsPage} from '../lib/r4-stats-page.mjs';
 
 const HEADERS={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
@@ -63,7 +63,7 @@ async function evidence(request,id){
 }
 export async function GET(request){
  if(new URL(request.url).searchParams.get('view')==='1')return statsPage(request);
- if(!authorized(request))return json({error:'R4 sign-in required'},401);
+ if(!await authorizedAccess(request))return json({error:'R4 sign-in required'},401);
  const q=new URL(request.url).searchParams;
  try{
   if(q.get('image'))return await evidence(request,q.get('image'));
@@ -119,7 +119,7 @@ async function dsUpload(form){
  return json({ok:true},201);
 }
 export async function POST(request){
- if(!authorized(request))return json({error:'R4 sign-in required'},401);
+ if(!await authorizedAccess(request))return json({error:'R4 sign-in required'},401);
  if(!authorizeWrite(request))return json({error:'Invalid request origin'},403);
  try{
   await rateLimit(request);
