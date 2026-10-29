@@ -32,15 +32,15 @@ async function rateLimit(request){
 }
 function sendErr(e){const m=e?.message||'Unexpected error';if(m.startsWith('Too many'))return json({error:m},429);if(m.includes('duplicate key')||m.includes('unique constraint'))return json({error:'This entry already exists. Check existing names, uploads, or train slots.'},409);return json({error:'Unable to complete this request. '+m.replace(/https?:\/\/\S+/g,'').slice(0,160)},503)}
 async function storage(path,options={}){const {url,secret}=sb();const res=await fetch(url+'/storage/v1/object/'+path,{...options,headers:{apikey:secret,...options.headers},signal:AbortSignal.timeout(18000)});return res}
-async function getData(week){
+async function getData(week,season){
  const end=dateAdd(week,6),startHistory=dateAdd(week,-35);
  const [members,aliases,allImports,ds,exceptions,awards]=await Promise.all([
   list('utw_stat_members',{select:'id,display_name,created_at',order:'display_name.asc',limit:'1000'}),
   list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'}),
-  list('utw_stat_imports',{select:'id,metric,period,filename,row_count,created_at',period:'gte.'+week,order:'created_at.desc',limit:'500'}),
-  list('utw_stat_ds',{select:'*',event_date:'gte.'+week,order:'event_date.desc',limit:'200'}),
+  list('utw_stat_imports',{select:'id,metric,period,filename,row_count,created_at,season_id',season_id:'eq.'+season,period:'gte.'+week,order:'created_at.desc',limit:'500'}),
+  list('utw_stat_ds',{select:'*',season_id:'eq.'+season,event_date:'gte.'+week,order:'event_date.desc',limit:'200'}),
   list('utw_stat_exceptions',{select:'*',order:'created_at.desc',limit:'1000'}),
-  list('utw_stat_awards',{select:'*',train_date:'gte.'+startHistory,order:'train_date.desc',limit:'500'})
+  list('utw_stat_awards',{select:'*',season_id:'eq.'+season,train_date:'gte.'+startHistory,order:'train_date.desc',limit:'500'})
  ]);
  if([members,aliases,allImports,ds,exceptions,awards].some(x=>!Array.isArray(x)))throw Error('Invalid database response');
  // Only the most recently uploaded CSV is active for a metric and date.
@@ -67,13 +67,19 @@ export async function GET(request){
  const q=new URL(request.url).searchParams;
  try{
   if(q.get('image'))return await evidence(request,q.get('image'));
+  const seasons=await list('utw_stat_seasons',{select:'id,label,sort_order',order:'sort_order.asc',limit:'50'});
+  const season=q.get('season')||'post-s5';
+  if(!seasons.some(s=>s.id===season))return json({error:'Invalid season'},400);
+  if(q.get('report')==='1')return json({season,rows:await db('rpc/utw_stat_season_report',{method:'POST',body:JSON.stringify({p_season:season})})});
   const week=q.get('week');
   if(!isMonday(week))return json({error:'Select a valid Monday to start the week'},400);
-  return json(await getData(week));
+  return json({...await getData(week,season),seasons,season});
  }catch(e){return sendErr(e)}
 }
 async function importCsv(body){
  const {metric,period,filename,rows}=body;
+ const season=body.season_id||'post-s5';
+ if(!/^[a-z0-9-]{2,30}$/.test(season)||(await list('utw_stat_seasons',{select:'id',id:'eq.'+season,limit:'1'})).length!==1)return json({error:'Invalid season'},400);
  if(!['vs_daily','vs_weekly','donations_weekly'].includes(metric)||!isoDate(period)||(metric!=='vs_daily'&&!isMonday(period)))return json({error:'Invalid upload type or date'},400);
  if(typeof filename!=='string'||filename.length>180||!filename.toLowerCase().endsWith('.csv'))return json({error:'Upload a named CSV file'},400);
  if(!Array.isArray(rows)||rows.length<1||rows.length>500)return json({error:'CSV must contain 1 to 500 rows'},400);
@@ -83,7 +89,7 @@ async function importCsv(body){
   if(!display||display.length>60||!Number.isSafeInteger(points)||points<0||seen.has(aliasKey))return json({error:'Invalid, missing, or duplicated member name / points in CSV. Fix the preview and retry.'},400);
   seen.add(aliasKey);cleanRows.push({name:display,alias_key:aliasKey,points});
  }
- const hash=createHash('sha256').update(JSON.stringify({metric,period,cleanRows})).digest('hex');
+ const hash=createHash('sha256').update(JSON.stringify({season,metric,period,cleanRows})).digest('hex');
  const existing=await list('utw_stat_aliases',{select:'alias_key',limit:'3000'});
  const known=new Set(existing.map(a=>a.alias_key));
  const fresh=cleanRows.filter(r=>!known.has(r.alias_key)).map(r=>({memberId:randomUUID(),name:r.name,aliasKey:r.alias_key}));
@@ -91,7 +97,7 @@ async function importCsv(body){
   await insert('utw_stat_members',fresh.map(x=>({id:x.memberId,display_name:x.name})));
   await insert('utw_stat_aliases',fresh.map(x=>({alias_key:x.aliasKey,alias:x.name,member_id:x.memberId})));
  }
- const created=await insert('utw_stat_imports',{metric,period,filename:clean(filename,180),file_hash:hash,row_count:cleanRows.length});
+ const created=await insert('utw_stat_imports',{season_id:season,metric,period,filename:clean(filename,180),file_hash:hash,row_count:cleanRows.length});
  if(created.length!==1)throw Error('Upload did not create a batch');
  const importId=created[0].id;
  try{
@@ -100,6 +106,8 @@ async function importCsv(body){
  return json({ok:true,rows:cleanRows.length,new_members:fresh.length},201);
 }
 async function dsUpload(form){
+ const season=form.get('season_id')||'post-s5';
+ if(!/^[a-z0-9-]{2,30}$/.test(season)||(await list('utw_stat_seasons',{select:'id',id:'eq.'+season,limit:'1'})).length!==1)return json({error:'Invalid season'},400);
  const eventDate=form.get('date'),first=form.get('first'),second=form.get('second')||null,third=form.get('third')||null;
  const opponent=clean(form.get('opponent'),80),notes=clean(form.get('notes'),500),file=form.get('screenshot');
  if(!isoDate(eventDate)||!uuid(first)||((second||third)&&![second,third].filter(Boolean).every(uuid))||new Set([first,second,third].filter(Boolean)).size!==[first,second,third].filter(Boolean).length)return json({error:'Select valid, different MVP / second / third members and a match date'},400);
@@ -114,7 +122,7 @@ async function dsUpload(form){
  const upload=await storage('utw-r4-ds-evidence/'+path,{method:'POST',headers:{'Content-Type':file.type,'x-upsert':'false'},body:bytes});
  if(!upload.ok)throw Error('Secure screenshot upload failed');
  try{
-  await insert('utw_stat_ds',{event_date:eventDate,first_member:first,second_member:second,third_member:third,opponent,notes,screenshot_path:path});
+  await insert('utw_stat_ds',{season_id:season,event_date:eventDate,first_member:first,second_member:second,third_member:third,opponent,notes,screenshot_path:path});
  }catch(e){await storage('utw-r4-ds-evidence/'+path,{method:'DELETE'}).catch(()=>{});throw e}
  return json({ok:true},201);
 }
@@ -159,8 +167,9 @@ export async function POST(request){
     return json({ok:true});
    }
    case 'award':{
+    const season=body.season_id||'post-s5';if(!/^[a-z0-9-]{2,30}$/.test(season)||(await list('utw_stat_seasons',{select:'id',id:'eq.'+season,limit:'1'})).length!==1)return json({error:'Invalid season'},400);
     if(!isoDate(body.train_date)||!uuid(body.member_id)||!['ds','donations','vs','manual'].includes(body.source)||!name(body.slot)||name(body.slot).length>50)return json({error:'Enter a valid train date, member, source and slot'},400);
-    await insert('utw_stat_awards',{train_date:body.train_date,member_id:body.member_id,source:body.source,slot:name(body.slot),reason:clean(body.reason,500)});
+    await insert('utw_stat_awards',{season_id:season,train_date:body.train_date,member_id:body.member_id,source:body.source,slot:name(body.slot),reason:clean(body.reason,500)});
     return json({ok:true},201);
    }
    case 'delete_award':{
