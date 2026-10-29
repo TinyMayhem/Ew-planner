@@ -103,7 +103,7 @@ async function dsUpload(form){
  const eventDate=form.get('date'),first=form.get('first'),second=form.get('second')||null,third=form.get('third')||null;
  const opponent=clean(form.get('opponent'),80),notes=clean(form.get('notes'),500),file=form.get('screenshot');
  if(!isoDate(eventDate)||!uuid(first)||((second||third)&&![second,third].filter(Boolean).every(uuid))||new Set([first,second,third].filter(Boolean)).size!==[first,second,third].filter(Boolean).length)return json({error:'Select valid, different MVP / second / third members and a match date'},400);
- if(!file||typeof file.arrayBuffer!=='function'||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size<100||file.size>5*1024*1024)return json({error:'Upload a JPG, PNG, or WebP screenshot under 5 MB'},400);
+ if(!file||typeof file.arrayBuffer!=='function'||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size<100||file.size>4*1024*1024)return json({error:'Upload a JPG, PNG, or WebP screenshot under 4 MB'},400);
  const bytes=new Uint8Array(await file.arrayBuffer());
  const isPng=bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71;
  const isJpg=bytes[0]===255&&bytes[1]===216&&bytes[2]===255;
@@ -126,7 +126,7 @@ export async function POST(request){
   const type=request.headers.get('content-type')||'';
   if(type.startsWith('multipart/form-data')){
    const declared=Number(request.headers.get('content-length')||0);
-   if(declared>5.5*1024*1024)return json({error:'Screenshot too large'},413);
+   if(declared>4.3*1024*1024)return json({error:'Screenshot too large'},413);
    const form=await request.formData();
    if(form.get('action')!=='ds')return json({error:'Unknown upload'},400);
    return await dsUpload(form);
