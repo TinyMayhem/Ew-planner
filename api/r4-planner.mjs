@@ -66,7 +66,7 @@ const htmlHead=(title,body)=>shell('<main class="container"><section class="r4-c
 const field=(label,id,type='text',attributes='')=>'<label for="'+id+'">'+label+'</label><input id="'+id+'" name="'+id+'" type="'+type+'" '+attributes+' required>';
 const btn=t=>'<button type="submit" class="r4-btn primary">'+t+'</button>';
 const form=(action,body)=>'<form action="/r4-planner" method="post"><input type="hidden" name="action" value="'+action+'">'+body+'</form>';
-function userLogin(error=''){return htmlHead('Sign in to R4', '<p>Use the username and personal password assigned privately by the UTW owner. No email needed.</p>'+form('user_login',field('Username','username','text','autocomplete="username" maxlength="30" pattern="[A-Za-z0-9_.-]{3,30}"')+field('Password','password','password','autocomplete="current-password" maxlength="128"')+btn('Sign in'))+'<p class="r4-error" role="alert">'+secureText(error)+'</p>')}
+function userLogin(error=''){return htmlHead('Sign in to R4', '<p>Use the username and personal password assigned privately by the UTW owner. No email needed.</p>'+form('user_login',field('Username','username','text','autocomplete="username" maxlength="30" pattern="[A-Za-z0-9_.-]{2,30}"')+field('Password','password','password','autocomplete="current-password" maxlength="128"')+btn('Sign in'))+'<p class="r4-error" role="alert">'+secureText(error)+'</p>')}
 function setupLogin(error=''){return htmlHead('Create the first R4 administrator','<p>This can only be done once, using the existing private Buddy Board admin password. After setup, the shared R4 passcode is disabled.</p>'+form('bootstrap',field('Buddy Board admin password','admin_password','password','autocomplete="current-password"')+field('Admin username','username','text','autocomplete="username" minlength="3" maxlength="30"')+field('Display name','display_name','text','maxlength="50"')+field('New personal password','password','password','autocomplete="new-password" minlength="12" maxlength="128"')+btn('Create administrator'))+'<p class="r4-error" role="alert">'+secureText(error)+'</p><a href="/r4-planner">Back to R4 login</a>')}
 function changePage(error='',first=true){return htmlHead('Change your password','<p>Choose a password of at least 12 characters. Temporary credentials cannot view R4 data until replaced.</p>'+form('change_password',(first?'':field('Current password','current_password','password','autocomplete="current-password"'))+field('New password','password','password','autocomplete="new-password" minlength="12" maxlength="128"')+btn('Save password and enter R4'))+'<p class="r4-error" role="alert">'+secureText(error)+'</p>')}
 function locationCookie(request,account,kind='active',redirect='/r4-planner'){return new Response(null,{status:303,headers:{'Location':redirect,'Set-Cookie':sessionSetCookie(request,account,kind),'Cache-Control':'no-store'}})}
@@ -109,7 +109,7 @@ export async function POST(request){
    return locationCookie(request,ready,'active','/r4-planner');
   }
   if(action==='user_login'){
-   await rateLogin(request);const account=await verifyCredentials(f.get('username'),f.get('password'));
+   await rateLogin(request,f.get('username'));const account=await verifyCredentials(f.get('username'),f.get('password'));
    if(!account)return new Response(userLogin('Incorrect username or password.'),{status:401,headers:NO_STORE});
    return locationCookie(request,account,account.must_change_password?'pending':'active',account.must_change_password?'/r4-planner?change=1':'/r4-planner');
   }
