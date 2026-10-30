@@ -91,7 +91,7 @@ test('Rejects malformed names, duplicate assignments and cross-site writes',()=>
 
 test('all ten R4 departments have collapsible, detailed role explanations',()=>{
  const src=readFileSync(new URL('../assets/r4-roles.js',import.meta.url),'utf8');
- const match=src.match(/const responsibilities=(\\{[\\s\\S]+?\\});\\s+const expandedDescriptions/);
+ const match=src.match(/const responsibilities=(\{[\s\S]+?\});\s+const expandedDescriptions/);
  assert.ok(match,'Responsibilities for the Roles page should be available');
  const descriptions=JSON.parse(match[1]);
  assert.deepEqual(Object.keys(descriptions).sort(),departments.map(d=>d.key).sort());
@@ -99,10 +99,10 @@ test('all ten R4 departments have collapsible, detailed role explanations',()=>{
   assert.ok(Array.isArray(duties)&&duties.length>=4,key+' must explain duties');
   assert.ok(duties.every(d=>typeof d==='string'&&d.length>25),key+' descriptions should be substantive');
  }
- assert.match(src,/el\\('details','r4-role-details'\\)/);
- assert.match(src,/el\\('summary','r4-role-summary','What this role entails'\\)/);
- assert.match(src,/details\\.append\\(summary,taskList\\)/);
- assert.match(src,/expandedDescriptions\\.add\\(key\\)/);
+ assert.match(src,/el\('details','r4-role-details'\)/);
+ assert.match(src,/el\('summary','r4-role-summary','What this role entails'\)/);
+ assert.match(src,/details\.append\(summary,taskList\)/);
+ assert.match(src,/expandedDescriptions\.add\(key\)/);
  assert.match(descriptions['land-war'].join(' '),/battle|war|tactical/i);
  assert.match(descriptions['trade-posts'].join(' '),/separate from land management/i);
  assert.match(descriptions['war-merit'].join(' '),/daily targets/i);
