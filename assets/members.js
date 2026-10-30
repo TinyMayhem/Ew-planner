@@ -5,7 +5,7 @@ function draw(){
  const tbody=$('trainRows');tbody.replaceChildren();
  const season=$('trainSeason').value,from=$('trainFrom').value,to=$('trainTo').value;
  const shown=trains.filter(x=>(season==='all'||x.season===season)&&(!from||x.date>=from)&&(!to||x.date<=to));
- for(const x of shown){const row=document.createElement('tr');for(const value of [x.date,x.slot,x.member,({ds:'Desert Storm',vs:'VS',donations:'Donations',manual:'R4 selection'})[x.source]||x.source])row.append(cell(value));tbody.append(row)}
+ for(const x of shown){const row=document.createElement('tr');for(const value of [x.date,x.slot,x.member,x.vip||'Not recorded',({ds:'Desert Storm',vs:'VS',donations:'Donations',manual:'R4 selection'})[x.source]||x.source])row.append(cell(value));tbody.append(row)}
  $('trainStatus').textContent=shown.length?shown.length+' dated train assignment(s) found.':'No recorded trains for this selection.';
 }
 async function refresh(){
