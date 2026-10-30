@@ -119,7 +119,7 @@ function directory(){
  if(!filtered.length)root.append(elEmpty('No matching members.'));
 }
 function memberFields(){
- for(const id of ['merge-from','merge-to','alias-member','ds-first','ds-second','ds-third','train-member','exception-member'])opt(id,id==='ds-second'||id==='ds-third');
+ for(const id of ['merge-from','merge-to','alias-member','ds-first','ds-second','ds-third','train-member','train-vip','exception-member'])opt(id,id==='ds-second'||id==='ds-third');
  directory();
 }
 function dsHistory(){
@@ -180,7 +180,17 @@ function exceptionList(){
 }
 function trainHistory(){
  const root=$('train-history');root.replaceChildren();if(!state.data.awards.length){root.append(elEmpty('No train assignments in this window.'));return}
- for(const award of state.data.awards){const row=text('div',null,'stat-row');row.append(text('strong',award.train_date+' · '+award.slot+' · '+memberName(award.member_id)));row.append(text('p',award.source.toUpperCase()+(award.reason?' · '+award.reason:''),'stat-muted'));
+ for(const award of state.data.awards){const row=text('div',null,'stat-row');row.append(text('strong',award.train_date+' · '+award.slot+' · Conductor: '+memberName(award.member_id)+' · VIP: '+(award.vip_member_id?memberName(award.vip_member_id):'Not recorded')));row.append(text('p',award.source.toUpperCase()+(award.reason?' · '+award.reason:''),'stat-muted'));
+  const edit=text('button','Edit conductor / VIP','stat-button');edit.type='button';edit.addEventListener('click',()=>{
+   const existing=row.querySelector('.train-edit');if(existing){existing.remove();return}
+   const fields=text('div',null,'train-edit stat-fields');
+   const makePicker=(labelText,selected)=>{const label=text('label',labelText),select=document.createElement('select');for(const m of members())select.append(new Option(m.display_name,m.id));if(selected)select.value=selected;label.append(select);fields.append(label);return select};
+   const conductor=makePicker('Conductor',award.member_id);
+   const vip=makePicker('VIP',award.vip_member_id);
+   const save=text('button','Save conductor + VIP','stat-button primary');save.type='button';
+   save.addEventListener('click',()=>{if(!conductor.value||!vip.value||conductor.value===vip.value){notice('Choose two different members for conductor and VIP.',true);return}action(()=>post({action:'update_award',id:award.id,member_id:conductor.value,vip_member_id:vip.value}),'Train conductor and VIP updated.')});
+   fields.append(save);row.append(fields);
+  });row.append(edit);
   const button=text('button','Remove mistaken assignment','stat-button');button.addEventListener('click',()=>{if(confirm('Delete this train assignment?'))action(()=>post({action:'delete_award',id:award.id}),'Assignment removed.')});row.append(button);root.append(row)
  }
 }
@@ -336,11 +346,11 @@ function wire(){
  $('alias-save').addEventListener('click',()=>action(()=>post({action:'alias',member_id:$('alias-member').value,alias:$('alias-name').value}),'Nickname added to the member.'));
  $('ds-form').addEventListener('submit',event=>{event.preventDefault();action(()=>{const form=new FormData($('ds-form'));form.set('action','ds');form.set('season_id',state.season);return post(form,true)},'DS evidence and podium saved.')});
  $('train-source').addEventListener('change',candidates);$('train-date').addEventListener('change',candidates);
- $('award').addEventListener('click',()=>{const source=$('train-source').value,date=$('train-date').value,id=$('train-member').value,reason=$('train-reason').value.trim();
-  if(!id||!date){notice('Select member and date.',true);return}
+ $('award').addEventListener('click',()=>{const source=$('train-source').value,date=$('train-date').value,id=$('train-member').value,vipId=$('train-vip').value,reason=$('train-reason').value.trim();
+  if(!id||!vipId||!date||id===vipId){notice('Select a date and two different members: conductor and VIP.',true);return}
   const blocked=activeException(id,source,date);
   if(blocked.length&&(!reason||!confirm('This player has an active exception. Save a manual override with the stated reason?'))){notice('An override reason and confirmation are required for an excepted member.',true);return}
-  action(()=>post({action:'award',season_id:state.season,train_date:date,slot:$('train-slot').value,member_id:id,source,reason}), 'Train assignment recorded.');
+  action(()=>post({action:'award',season_id:state.season,train_date:date,slot:$('train-slot').value,member_id:id,vip_member_id:vipId,source,reason}), 'Conductor and VIP recorded.');
  });
  $('exception-save').addEventListener('click',()=>action(()=>post({action:'exception',member_id:$('exception-member').value,scope:$('exception-scope').value,starts_on:$('exception-start').value,ends_on:$('exception-end').value,reason:$('exception-reason').value}), 'Exception saved.'));
  load();
