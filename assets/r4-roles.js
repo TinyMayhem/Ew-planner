@@ -17,6 +17,80 @@
     ['accountability','Operations & Accountability'],
     ['war-merit','War Merit & Daily Targets']
   ];
+  // Expandable explanations are guidance, not another set of assignments.
+  const responsibilities={
+    "diplomacy": [
+      "Coordinate UTW and VON diplomacy, decisions, and faction agreements.",
+      "Maintain positive relations among alliances on server 1395.",
+      "Negotiate with other servers on borders, access, truces, and cooperation.",
+      "Resolve conflicts and make sure the agreed rules reach leadership.",
+      "Bring major diplomatic commitments to alliance leadership for approval."
+    ],
+    "land-war": [
+      "Plan territory routes, city targets, capture order, and declarations.",
+      "Own attack and defense strategies, target selection, and tactical priorities.",
+      "Lead live war calls, rally coordination, and changes during battles.",
+      "Plan Fishing Ground and stronghold priorities with the allied land team.",
+      "Keep the season map and land outcomes up to date, including fallback routes."
+    ],
+    "trade-posts": [
+      "Take full ownership of Trade Post planning, separate from land management.",
+      "Organize Trade Post targets, capture schedules, allocations, and rotations.",
+      "Coordinate Trade Post decisions and support with VON.",
+      "Track ownership, results, participation, and upcoming opportunities.",
+      "Flag timing conflicts with city battles and prepare backup arrangements."
+    ],
+    "communications": [
+      "Prepare and send all alliance mails, general announcements, and weekly updates.",
+      "Turn approved land and war plans into clear battle instructions.",
+      "Create war attendance polls, event sign-ups, and timezone schedules.",
+      "Send reminders, confirm availability, and communicate last-minute changes.",
+      "Distribute updates from other departments without taking over their strategy."
+    ],
+    "research": [
+      "Research Season 6 mechanics, event unlocks, and relevant updates.",
+      "Prepare practical guides on Fishing Grounds, War Merit, faction tech, and donations.",
+      "Recommend efficient upgrades, resource spending, and progression priorities.",
+      "Check information against the in-game season calendar when possible.",
+      "Share findings with other departments; daily War Merit follow-up belongs to its own team."
+    ],
+    "members": [
+      "Welcome and onboard recruits and help members settle into the alliance.",
+      "Answer member questions and help resolve concerns or conflicts.",
+      "Monitor activity, absences, transfers, and membership changes.",
+      "Support member development and identify when someone needs assistance.",
+      "Coordinate with the statistics team when ongoing participation issues need review."
+    ],
+    "events": [
+      "Organize Desert Storm and other available alliance events.",
+      "Coordinate Marshal's Guard (MG) and Zombie Siege when those events are available.",
+      "Arrange event schedules, sign-ups, substitutes, and participation reminders.",
+      "Plan fun competitions and optional UTW/VON community activities.",
+      "Encourage participation, teamwork, and alliance morale."
+    ],
+    "stats-rewards": [
+      "Maintain member contribution, attendance, and performance records.",
+      "Monitor participation trends and share clear summaries with leadership.",
+      "Track ranking changes and help verify reward eligibility.",
+      "Support accurate reward planning and distribution records.",
+      "Coordinate with the War Merit team on daily gaps without duplicating their reminders."
+    ],
+    "accountability": [
+      "Keep pre-season and weekly operations checklists organized.",
+      "Make sure tasks have a clear owner, deadline, and backup.",
+      "Follow up on outstanding tasks and flag blockers early.",
+      "Watch for uneven workloads and recommend handing work to backups.",
+      "Check that departments share updates and complete their responsibilities."
+    ],
+    "war-merit": [
+      "Monitor members' War Merit progress against the daily targets set by leadership.",
+      "Identify who has met their target and who may need a reminder or help.",
+      "Coordinate ways for members to earn missing War Merit before daily reset.",
+      "Follow up with members who repeatedly fall behind and escalate patterns to R4.",
+      "Share participation updates with the statistics team, without assuming everyone has the same target."
+    ]
+  };
+  const expandedDescriptions=new Set();
   const list=document.getElementById('r4-roles-list');
   const status=document.getElementById('r4-roles-status');
   const weekHeader=document.getElementById('r4-week-header');
@@ -39,7 +113,17 @@
       const saved=records[key]||{};
       const card=el('form','r4-role-card');
       card.append(el('h3','',title));
-      if(key==='war-merit')card.append(el('p','r4-mute','Check individual War Merit progress daily, follow up on missed goals, coordinate opportunities to earn more, and report gaps to R4 leadership.'));
+      const details=el('details','r4-role-details');
+      details.open=expandedDescriptions.has(key);
+      const summary=el('summary','r4-role-summary','What this role entails');
+      const taskList=el('ul','r4-role-responsibilities');
+      for(const duty of responsibilities[key]||[])taskList.append(el('li','',duty));
+      details.append(summary,taskList);
+      details.addEventListener('toggle',()=>{
+        if(details.open)expandedDescriptions.add(key);
+        else expandedDescriptions.delete(key);
+      });
+      card.append(details);
       const fields=el('div','r4-role-fields');
       const leader=field(fields,'Leader',saved.leader);
       const backup=field(fields,'Backup',saved.backup);
