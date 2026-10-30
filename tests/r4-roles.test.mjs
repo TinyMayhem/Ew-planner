@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {signedCookie} from '../lib/r4-auth.mjs';
 import {GET as plannerGET,departments} from '../api/r4-planner.mjs';
 import {GET,POST} from '../api/r4-comments.mjs';
@@ -87,3 +88,22 @@ test('Rejects malformed names, duplicate assignments and cross-site writes',()=>
  assert.equal((await POST(post('utw','utw',{department_key:'invalid-department'}))).status,400);
  assert.equal((await POST(request('utw','/api/r4-comments?roles=1',{method:'POST',headers:{Origin:'https://evil.invalid','Content-Type':'application/json'},body:JSON.stringify({alliance:'utw'})}))).status,403);
 }));
+
+test('all ten R4 departments have collapsible, detailed role explanations',()=>{
+ const src=readFileSync(new URL('../assets/r4-roles.js',import.meta.url),'utf8');
+ const match=src.match(/const responsibilities=(\{[\s\S]+?\});\s+const expandedDescriptions/);
+ assert.ok(match,'Responsibilities for the Roles page should be available');
+ const descriptions=JSON.parse(match[1]);
+ assert.deepEqual(Object.keys(descriptions).sort(),departments.map(d=>d.key).sort());
+ for(const [key,duties] of Object.entries(descriptions)){
+  assert.ok(Array.isArray(duties)&&duties.length>=4,key+' must explain duties');
+  assert.ok(duties.every(d=>typeof d==='string'&&d.length>25),key+' descriptions should be substantive');
+ }
+ assert.match(src,/el\('details','r4-role-details'\)/);
+ assert.match(src,/el\('summary','r4-role-summary','What this role entails'\)/);
+ assert.match(src,/details\.append\(summary,taskList\)/);
+ assert.match(src,/expandedDescriptions\.add\(key\)/);
+ assert.match(descriptions['land-war'].join(' '),/battle|war|tactical/i);
+ assert.match(descriptions['trade-posts'].join(' '),/separate from land management/i);
+ assert.match(descriptions['war-merit'].join(' '),/daily targets/i);
+});
