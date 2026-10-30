@@ -27,7 +27,7 @@ function shell(body){return SHELL_HEAD+body+SHELL_TAIL}
 function login(error=''){return shell(LOGIN_HTML.replace('__ERROR__',error).replace('</section></main>','<p><a href="/r4-planner?setup=1">Set up individual R4 logins</a></p></section></main>'))}
 const duelFor=(alliance)=>{
  const name=alliance==='von'?'VON':'UTW';
- return shell('<section class="hero r4-hero"><div class="container"><span class="eyebrow">SERVER 1395 · R4 / R5 ONLY</span><h1>Alliance Duel</h1><p>'+name+' R4 Command Centre</p></div></section><main class="container"><section class="r4-card" style="margin:20px 0 28px"><p><a class="r4-btn primary" href="/r4-planner">← Back to R4 Command Centre</a></p><iframe src="/mirror" style="width:100%;height:85vh;border:0;border-radius:17px" title="Alliance Duel" loading="lazy"></iframe></section></main>');
+ return shell('<section class="hero r4-hero"><div class="container"><span class="eyebrow">SERVER 1395 · R4 / R5 ONLY</span><h1>Alliance Duel</h1><p>'+name+' R4 Command Centre</p></div></section><main class="container"><section class="r4-card" style="margin:20px 0 28px"><p><a class="r4-btn primary" href="/r4-planner">← Back to R4 Command Centre</a></p><iframe src="https://utw-alliance-hub.vercel.app/mirror" style="width:100%;height:85vh;border:0;border-radius:17px" title="Alliance Duel" loading="lazy"></iframe></section></main>');
 };
 const plannerFor=(alliance,role)=>{
   const isVon=alliance==='von';
