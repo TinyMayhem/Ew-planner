@@ -39,6 +39,7 @@
       const saved=records[key]||{};
       const card=el('form','r4-role-card');
       card.append(el('h3','',title));
+      if(key==='war-merit')card.append(el('p','r4-mute','Check individual War Merit progress daily, follow up on missed goals, coordinate opportunities to earn more, and report gaps to R4 leadership.'));
       const fields=el('div','r4-role-fields');
       const leader=field(fields,'Leader',saved.leader);
       const backup=field(fields,'Backup',saved.backup);
