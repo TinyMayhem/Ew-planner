@@ -79,8 +79,12 @@ async function oldPOST(request){
 }
 
 
-const htmlHead=(title,body)=>shell('<main class="container"><section class="r4-card r4-login"><span class="r4-brow">UTW R4 · Private leadership access</span><h1 style="font-size:32px">'+secureText(title)+'</h1>'+body+'</section></main>');
-const field=(label,id,type='text',attributes='')=>'<label for="'+id+'">'+label+'</label><input id="'+id+'" name="'+id+'" type="'+type+'" '+attributes+' required>';
+const PASSWORD_TOGGLE_SCRIPT='<script>(function(){document.querySelectorAll("[data-r4-password-toggle]").forEach(function(button){button.addEventListener("click",function(){const input=document.getElementById(button.getAttribute("aria-controls"));if(!input)return;const reveal=input.type==="password";input.type=reveal?"text":"password";button.textContent=reveal?"Hide":"Show";button.setAttribute("aria-label",reveal?"Hide password":"Show password");button.setAttribute("aria-pressed",String(reveal));});});})();</script>';
+const htmlHead=(title,body)=>shell('<main class="container"><section class="r4-card r4-login"><span class="r4-brow">UTW R4 · Private leadership access</span><h1 style="font-size:32px">'+secureText(title)+'</h1>'+body+'</section></main>'+PASSWORD_TOGGLE_SCRIPT);
+const field=(label,id,type='text',attributes='')=>{
+ const input='<input id="'+id+'" name="'+id+'" type="'+type+'" '+attributes+' required>';
+ return '<label for="'+id+'">'+label+'</label>'+(type==='password'?'<div class="r4-password-control">'+input+'<button type="button" class="r4-password-toggle" data-r4-password-toggle aria-controls="'+id+'" aria-label="Show password" aria-pressed="false">Show</button></div>':input);
+};
 const btn=t=>'<button type="submit" class="r4-btn primary">'+t+'</button>';
 const form=(action,body)=>'<form action="/r4-planner" method="post"><input type="hidden" name="action" value="'+action+'">'+body+'</form>';
 function userLogin(error=''){return htmlHead('Sign in to R4', '<p>Use the username and personal password assigned privately by the UTW owner. No email needed.</p>'+form('user_login',field('Username','username','text','autocomplete="username" maxlength="30" pattern="[A-Za-z0-9_.-]+( [A-Za-z0-9_.-]+)*"')+field('Password','password','password','autocomplete="current-password" maxlength="128"')+btn('Sign in'))+'<p class="r4-error" role="alert">'+secureText(error)+'</p>')}
