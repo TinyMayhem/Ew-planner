@@ -14,7 +14,8 @@
     ['members','Member Management'],
     ['events','Alliance Events & Member Engagement'],
     ['stats-rewards','Data, Statistics & Rewards'],
-    ['accountability','Operations & Accountability']
+    ['accountability','Operations & Accountability'],
+    ['war-merit','War Merit & Daily Targets']
   ];
   const list=document.getElementById('r4-roles-list');
   const status=document.getElementById('r4-roles-status');
