@@ -197,10 +197,19 @@ export async function POST(request){
    }
    case 'award':{
     const season=body.season_id||'post-s5';if(!/^[a-z0-9-]{2,30}$/.test(season)||(await list('utw_stat_seasons',{select:'id',id:'eq.'+season,limit:'1'})).length!==1)return json({error:'Invalid season'},400);
-    if(!isoDate(body.train_date)||!uuid(body.member_id)||!['ds','donations','vs','manual'].includes(body.source)||!name(body.slot)||name(body.slot).length>50)return json({error:'Enter a valid train date, member, source and slot'},400);
-    const created=await insert('utw_stat_awards',{season_id:season,train_date:body.train_date,member_id:body.member_id,source:body.source,slot:name(body.slot),reason:clean(body.reason,500)});
+    if(!isoDate(body.train_date)||!uuid(body.member_id)||!uuid(body.vip_member_id)||body.member_id===body.vip_member_id||!['ds','donations','vs','manual'].includes(body.source)||!name(body.slot)||name(body.slot).length>50)return json({error:'Choose different conductor and VIP members, a valid date, source and train slot'},400);
+    const created=await insert('utw_stat_awards',{season_id:season,train_date:body.train_date,member_id:body.member_id,vip_member_id:body.vip_member_id,source:body.source,slot:name(body.slot),reason:clean(body.reason,500)});
     await recordAudit(request,'award',{id:created[0].id,season,date:body.train_date,slot:body.slot,member_id:body.member_id},true);
     return json({ok:true},201);
+   }
+   case 'update_award':{
+    if(!uuid(body.id)||!uuid(body.member_id)||!uuid(body.vip_member_id)||body.member_id===body.vip_member_id)return json({error:'Choose different valid conductor and VIP members'},400);
+    const old=await list('utw_stat_awards',{select:'*',id:'eq.'+body.id,limit:'1'});
+    if(old.length!==1)return json({error:'Train assignment not found'},404);
+    const updated=await db('utw_stat_awards?'+urlParams({id:'eq.'+body.id,member_id:'eq.'+old[0].member_id,vip_member_id:old[0].vip_member_id?'eq.'+old[0].vip_member_id:'is.null'}),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({member_id:body.member_id,vip_member_id:body.vip_member_id})});
+    if(updated.length!==1)return json({error:'This train assignment changed. Refresh before editing.'},409);
+    await recordAudit(request,'update_award',{id:body.id,previous_conductor:old[0].member_id,previous_vip:old[0].vip_member_id,new_conductor:body.member_id,new_vip:body.vip_member_id,date:old[0].train_date,slot:old[0].slot},false);
+    return json({ok:true});
    }
    case 'delete_award':{
     if(!uuid(body.id))return json({error:'Invalid train assignment'},400);
