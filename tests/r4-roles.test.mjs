@@ -52,6 +52,8 @@ test('Both alliance R4 boards offer Roles alongside weeks',()=>fixture(async()=>
   assert.match(html,/assets\/r4-roles\.js/);
   assert.match(html,/r4-role-grid/);
   assert.ok(departments.some(d=>d.name==='Trade Post Operations'));
+  assert.equal(departments.length,10);
+  assert.deepEqual(departments.find(d=>d.key==='war-merit'),{key:'war-merit',name:'War Merit & Daily Targets'});
  }
 }));
 test('Alliances only see their own role assignments, owner can see both',()=>fixture(async queries=>{
@@ -74,6 +76,8 @@ test('Saves one leader, backup and multiple additional backups per department',(
  assert.equal((await POST(post('admin','utw',{department_key:'trade-posts'}))).status,200);
  assert.deepEqual(queries.filter(q=>q.method==='POST').map(q=>q.body.alliance),['von','utw']);
  assert.deepEqual(queries.filter(q=>q.method==='POST').map(q=>q.body.department_key),['land-war','trade-posts']);
+ assert.equal((await POST(post('utw','utw',{department_key:'war-merit',leader:'Merit Lead',backup:'Backup',additional_backups:['Extra 1','Extra 2']}))).status,200);
+ assert.equal(queries.at(-1).body.department_key,'war-merit');
 }));
 test('Rejects malformed names, duplicate assignments and cross-site writes',()=>fixture(async()=>{
  assert.equal(cleanAssignment({department_key:'unknown',leader:'Lead',backup:'Back',additional_backups:[]}),null);
