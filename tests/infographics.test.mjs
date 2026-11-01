@@ -19,7 +19,7 @@ test('private uploads, public downloads and only populated seasons',async()=>{
  const cookie='utw_admin='+sessionToken();const upload=await POST(req(form,cookie));assert.equal(upload.status,201);const {path}=await upload.json();
  const listing=await (await GET(new Request('https://utw.test/api/infographics'))).json();assert.deepEqual(listing.seasons,[5]);assert.equal(listing.files[0].title,'Tiny’s plans');assert.equal(listing.admin,false);
  const general=new FormData();general.set('title','Decor Bonus 101');general.set('season','general');general.set('file',new Blob([new Uint8Array([137,80,78,71,13,10,26,10])]),'decor.png');
- const generalUpload=await POST(req(general,cookie));assert.equal(generalUpload.status,201);const {path:generalPath}=await generalUpload.json();assert.match(generalPath,/^general\\//);
+ const generalUpload=await POST(req(general,cookie));assert.equal(generalUpload.status,201);const {path:generalPath}=await generalUpload.json();assert.ok(generalPath.startsWith("general/"));
  const generalListing=await (await GET(new Request('https://utw.test/api/infographics'))).json();assert.deepEqual(generalListing.seasons,[5,null]);assert.ok(generalListing.files.some(f=>f.season===null&&f.title==='Decor Bonus 101'));
  const download=await GET(new Request('https://utw.test/api/infographics?file='+encodeURIComponent(path)+'&download=1'));assert.equal(download.status,200);assert.match(download.headers.get('content-disposition'),/^attachment/);assert.equal((await download.arrayBuffer()).byteLength,8);
  assert.equal((await GET(new Request('https://utw.test/api/infographics?file=other-bucket/file.pdf'))).status,400);
