@@ -1,3 +1,4 @@
+import {sortInfographics} from './infographics-sort.mjs';
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let data={files:[],seasons:[],admin:false},selected='all';
 const fileURL=(file,download=false)=>file.url||('/api/infographics?file='+encodeURIComponent(file.path)+(download?'&download=1':''));
@@ -7,7 +8,7 @@ async function refresh(){try{
  const results=await Promise.allSettled([fetch('/api/infographics',{cache:'no-store'}).then(r=>r.json()),fetch('/assets/infographics/catalog.json',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json();})]);
  const live=results[0].status==='fulfilled'?results[0].value:{ready:false,files:[],admin:false};
  const imported=results[1].status==='fulfilled'&&Array.isArray(results[1].value)?results[1].value:[];
- const files=[...imported,...(live.files||[])].sort((a,b)=>b.season-a.season||a.title.localeCompare(b.title));
+ const files=sortInfographics([...imported,...(live.files||[])]);
  data={...live,ready:live.ready||imported.length>0,files,seasons:[...new Set(files.map(f=>f.season))]};
  render();
  }catch{$('status').textContent='Could not load the library. Try Refresh.';}}

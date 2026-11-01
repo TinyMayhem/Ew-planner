@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {GET,POST} from '../api/infographics.mjs';
+import {sortInfographics} from '../assets/infographics-sort.mjs';
 import {sessionToken} from '../lib/buddies.mjs';
 test('private uploads, public downloads and only populated seasons',async()=>{
  process.env.SUPABASE_URL='https://storage.test';process.env.SUPABASE_SECRET_KEY='test';process.env.UTW_SESSION_SECRET='test-session-secret';
@@ -25,4 +26,19 @@ test('private uploads, public downloads and only populated seasons',async()=>{
  assert.equal((await GET(new Request('https://utw.test/api/infographics?file=other-bucket/file.pdf'))).status,400);
  const removal=new Request('https://utw.test/api/infographics',{method:'POST',headers:{origin:'https://utw.test',cookie,'content-type':'application/json'},body:JSON.stringify({action:'remove',path})});assert.equal((await POST(removal)).status,200);const removeGeneral=new Request('https://utw.test/api/infographics',{method:'POST',headers:{origin:'https://utw.test',cookie,'content-type':'application/json'},body:JSON.stringify({action:'remove',path:generalPath})});assert.equal((await POST(removeGeneral)).status,200);assert.deepEqual((await (await GET(new Request('https://utw.test/api/infographics'))).json()).seasons,[]);
  }finally{global.fetch=old;}
+});
+
+test('infographic gallery sorts by upload date newest first across categories',()=>{
+ const items=[
+  {title:'A older general',season:null,uploadedAt:'2026-10-13T18:27:11Z'},
+  {title:'B earliest live',season:5,createdAt:'2026-10-16T03:09:34Z'},
+  {title:'C newer general',season:null,createdAt:'2026-11-01T17:15:38Z'},
+  {title:'D newest season',season:5,createdAt:'2026-11-01T17:16:10Z'},
+  {title:'Z undated',season:4},
+  {title:'A undated',season:5}
+ ];
+ assert.deepEqual(sortInfographics(items).map(f=>f.title),[
+  'D newest season','C newer general','B earliest live','A older general','Z undated','A undated'
+ ]);
+ assert.equal(items[0].title,'A older general','sort must not mutate original data');
 });
