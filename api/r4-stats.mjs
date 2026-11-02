@@ -4,6 +4,7 @@ import {authorizedAccess} from './r4-planner.mjs';
 import {sessionUser} from '../lib/r4-auth.mjs';
 import {GET as auditPage} from '../lib/r4-audit-page.mjs';
 import {GET as statsPage} from '../lib/r4-stats-page.mjs';
+import {stageRange} from '../assets/r4-train-rules.mjs';
 
 const HEADERS={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
 const json=(body,status=200)=>Response.json(body,{status,headers:HEADERS});
@@ -40,15 +41,15 @@ async function recordAudit(request,action,details,reversible=false){
 }
 async function owner(request){const user=await sessionUser(request);return user?.role==='admin'?user:null}
 async function storage(path,options={}){const {url,secret}=sb();const res=await fetch(url+'/storage/v1/object/'+path,{...options,headers:{apikey:secret,...options.headers},signal:AbortSignal.timeout(18000)});return res}
-async function getData(week,season){
- const end=dateAdd(week,6),startHistory=dateAdd(week,-35);
+async function getData(week,season,trainStage){
+ const end=dateAdd(week,6),trainRange=stageRange(trainStage);
  const [members,aliases,allImports,ds,exceptions,awards]=await Promise.all([
   list('utw_stat_members',{select:'id,display_name,created_at',order:'display_name.asc',limit:'1000'}),
   list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'}),
   list('utw_stat_imports',{select:'id,metric,period,filename,row_count,created_at,season_id',season_id:'eq.'+season,period:'gte.'+week,order:'created_at.desc',limit:'500'}),
   list('utw_stat_ds',{select:'*',season_id:'eq.'+season,event_date:'gte.'+week,order:'event_date.desc',limit:'200'}),
   list('utw_stat_exceptions',{select:'*',order:'created_at.desc',limit:'1000'}),
-  list('utw_stat_awards',{select:'*',season_id:'eq.'+season,train_date:'gte.'+startHistory,order:'train_date.desc',limit:'500'})
+  list('utw_stat_awards',{select:'*',train_date:'gte.'+trainRange.start,order:'train_date.asc',limit:'500'})
  ]);
  if([members,aliases,allImports,ds,exceptions,awards].some(x=>!Array.isArray(x)))throw Error('Invalid database response');
  // Only the most recently uploaded CSV is active for a metric and date.
@@ -56,7 +57,7 @@ async function getData(week,season){
  for(const imp of allImports){if(imp.period<=end){const k=imp.metric+':'+imp.period;if(!current.has(k))current.set(k,imp)}}
  const imports=[...current.values()],values=(await Promise.all(imports.map(i=>list('utw_stat_values',{select:'import_id,alias_key,original_name,points',import_id:'eq.'+i.id,limit:'501'})))).flat();
  if(imports.some(i=>values.filter(v=>v.import_id===i.id).length!==i.row_count))throw Error('CSV data appears incomplete');
- return {members,aliases,imports,values,ds:ds.filter(d=>d.event_date<=end),exceptions,awards};
+ return {members,aliases,imports,values,ds:ds.filter(d=>d.event_date<=end),exceptions,awards:awards.filter(a=>a.train_date<=trainRange.end),trainRange};
 }
 async function evidence(request,id){
  if(!uuid(id))return json({error:'Invalid evidence ID'},400);
@@ -93,7 +94,9 @@ export async function GET(request){
   }
   const week=q.get('week');
   if(!isMonday(week))return json({error:'Select a valid Monday to start the week'},400);
-  return json({...await getData(week,season),seasons,season});
+  const trainStage=q.get('train_stage')===null?15:Number(q.get('train_stage'));
+  if(!Number.isInteger(trainStage)||trainStage<13||trainStage>40)return json({error:'Invalid train calendar'},400);
+  return json({...await getData(week,season,trainStage),seasons,season});
  }catch(e){return sendErr(e)}
 }
 async function importCsv(body,request){
