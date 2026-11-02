@@ -31,6 +31,9 @@ export function trainWarnings(awards,proposed,displayName=id=>id){
   if(person.role==='Driver'&&matches.some(a=>a.member_id===person.id&&a.train_date>=weeklyStart&&a.train_date<=addDays(weeklyStart,6))){
    warnings.push(who+' has already driven a train this Monday-to-Sunday week.');
   }
+  if(person.role==='VIP'&&matches.some(a=>a.vip_member_id===person.id&&a.train_date>=weeklyStart&&a.train_date<=addDays(weeklyStart,6))){
+   warnings.push(who+' has already been a VIP passenger this Monday-to-Sunday week. Confirm the once-per-week VIP rule.');
+  }
   if(person.role==='Driver'&&/roulette/i.test(slot||'')&&matches.some(a=>a.member_id===person.id)){
    warnings.push(who+' is not eligible for roulette because they already drove in Stage '+stage+'.');
   }
