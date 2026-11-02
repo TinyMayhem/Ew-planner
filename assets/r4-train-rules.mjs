@@ -16,6 +16,9 @@ export function stageForDate(date){
 }
 export const weekStart=date=>addDays(date,-((new Date(toTime(date)).getUTCDay()+6)%7));
 export const trainRole=(award,id)=>award.member_id===id?'Driver':award.vip_member_id===id?'VIP':null;
+// R4-arranged trains run in their own eligibility lane. An R4 assignment
+// must never disqualify its recipient from a DS, donation, VS or roulette train.
+export const isR4Train=award=>award?.source==='r4'||/^R4(?:\\s|$)/i.test(String(award?.slot||award?.selection_label||'').trim());
 export function trainWarnings(awards,proposed,displayName=id=>id){
  const {train_date,member_id,vip_member_id,source,slot,id:editingId}=proposed;
  if(!train_date||!member_id||!vip_member_id)return [];
@@ -23,7 +26,7 @@ export function trainWarnings(awards,proposed,displayName=id=>id){
  const warnings=[];
  const people=[{id:member_id,role:'Driver'},{id:vip_member_id,role:'VIP'}];
  for(const person of people){
-  const matches=awards.filter(a=>a.id!==editingId&&a.train_date>=range.start&&a.train_date<=range.end&&trainRole(a,person.id));
+  const matches=awards.filter(a=>a.id!==editingId&&a.train_date>=range.start&&a.train_date<=range.end&&isR4Train(a)===isR4Train(proposed)&&trainRole(a,person.id));
   const who=displayName(person.id);
   for(const prior of matches){
    warnings.push(who+' already appeared as '+trainRole(prior,person.id)+' on '+prior.train_date+' (Stage '+stage+'). This '+person.role+' assignment repeats a person in the same calendar.');
