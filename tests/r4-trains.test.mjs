@@ -41,3 +41,28 @@ test('VIP passengers repeated in the same week are warned',()=>{
  const w=trainWarnings([a('1','2026-10-12','a','b')],a('2','2026-10-15','c','b'));
  assert.ok(w.some(s=>s.includes('VIP passenger this Monday-to-Sunday week')));
 });
+
+
+test('R4 driver remains eligible for DS train in the same week and calendar',()=>{
+ const r4=a('r4','2026-10-15','a','b','r4','R4 Mo');
+ const ds=a('ds','2026-10-16','a','c','ds','Desert Storm MVP');
+ assert.deepEqual(trainWarnings([r4],ds),[]);
+ assert.deepEqual(trainWarnings([ds],r4),[]);
+});
+test('two R4 trains still warn about a repeat within the R4 category',()=>{
+ const first=a('r4-1','2026-10-15','a','b','r4','R4 Mo');
+ const later=a('r4-2','2026-10-17','a','c','r4','R4 Tiny');
+ const issues=trainWarnings([first],later);
+ assert.ok(issues.some(s=>s.includes('already driven')));
+ assert.ok(issues.some(s=>s.includes('same calendar')));
+});
+test('historical R4 labels are recognized even before source migration',()=>{
+ const r4=a('r4','2026-10-15','a','b','manual','R4 Mo');
+ const ds=a('ds','2026-10-16','a','c','ds','DS MVP');
+ assert.deepEqual(trainWarnings([r4],ds),[]);
+});
+test('R4 recipient is not ruled out of regular roulette',()=>{
+ const r4=a('r4','2026-10-15','a','b','r4','R4 Mo');
+ const roulette=a('roulette','2026-10-16','a','c','manual','Roulette');
+ assert.deepEqual(trainWarnings([r4],roulette),[]);
+});
