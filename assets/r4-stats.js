@@ -235,7 +235,8 @@ function eligibilityWarnings(){
 }
 
 function openLegacyTrainEditor(award,card){
- const existing=card.querySelector('.train-edit');if(existing){existing.remove();return}
+ const root=$('train-editor');if(!root.hidden&&root.dataset.date===award.train_date){root.hidden=true;root.replaceChildren();return}
+ root.replaceChildren();root.dataset.date=award.train_date;root.hidden=false;
  const form=text('div',null,'train-edit train-legacy-editor');
  const title=text('strong','Edit '+award.train_date+' train','train-edit-heading');
  const known=document.createElement('datalist');known.id='train-names-'+award.train_date;
@@ -253,7 +254,7 @@ function openLegacyTrainEditor(award,card){
  if(award.originalDriverName)form.append(text('p','Original conductor: '+award.originalDriverName,'stat-muted'));
  const buttons=text('div',null,'train-editor-actions'),save=text('button','Save changed conductor / VIP','stat-button primary'),cancel=text('button','Cancel','stat-button');
  save.type='button';cancel.type='button';
- cancel.addEventListener('click',()=>form.remove());
+ cancel.addEventListener('click',()=>{root.replaceChildren();root.hidden=true});
  save.addEventListener('click',()=>{
   const newDriver=driver.value.trim(),newVip=vip.value.trim();
   if(!newDriver||!newVip||normalize(newDriver)===normalize(newVip)){notice('Choose two different names for conductor and VIP.',true);return}
@@ -264,10 +265,11 @@ function openLegacyTrainEditor(award,card){
   if(issues.length&&!confirm('Review potential rule conflicts:\\n\\n'+issues.join('\\n')+'\\n\\nSave this change anyway?'))return;
   action(()=>post({action:'update_legacy_train',train_date:award.train_date,expected_driver_name:award.driverName,expected_vip_name:award.vipName,driver_name:newDriver,vip_name:newVip,reason}), 'Train updated. Original driver and replacement reason retained in history.');
  });
- buttons.append(save,cancel);form.append(buttons);card.append(form);
+ buttons.append(save,cancel);form.append(buttons);root.append(form);root.scrollIntoView({block:'center'});
 }
 
 function trainCalendar(){
+ const editPanel=$('train-editor');editPanel.replaceChildren();editPanel.hidden=true;
  const root=$('train-calendar');root.replaceChildren();
  const range=stageRange(state.trainStage);$('train-stage-dates').textContent='Stage '+state.trainStage+' · '+range.start+' to '+range.end+' · 5 weeks / 35 days';
  const entries=trainRecords(),schedule=new Map();
@@ -283,9 +285,10 @@ function trainCalendar(){
    dateBtn.addEventListener('click',()=>{$('train-date').value=date;const type=current[0]?.source||((d===2||d===3||d===5)?'r4':d===0?'donations':d===1?'ds':d===6?'vs':'manual');$('train-source').value=['r4','ds','donations','vs'].includes(type)?type:'manual';$('train-slot').value=current[0]?.slot||trainLabel[d];candidates();eligibilityWarnings();$('train-date').scrollIntoView({block:'center'})});
    td.append(dateBtn,text('small',current[0]?.slot||trainLabel[d],'train-type'));
    for(const award of current){
-    const item=text('div',null,'train-entry'+(award.legacy?' train-archive-entry':''));
+    const item=text('div',null,'train-entry'+(award.legacy?' train-archive-entry':'')+(isR4Train(award)?' train-r4-entry':''));
     item.append(text('strong','D: '+award.driverName),text('span','VIP: '+award.vipName));
     if(award.legacy)item.append(text('small','Spreadsheet history','train-archive-note'));
+    if(isR4Train(award))item.append(text('small','R4 train · separate eligibility','train-archive-note'));
     if(award.notes)item.append(text('small',award.notes,'train-archive-note'));
     if(award.originalDriverName&&award.originalDriverName!==award.driverName)item.append(text('small','Originally: '+award.originalDriverName,'train-archive-note'));
     if(award.replacementReason)item.append(text('small','Change: '+award.replacementReason,'train-archive-note'));
