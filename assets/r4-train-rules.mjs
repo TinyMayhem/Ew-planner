@@ -18,7 +18,7 @@ export const weekStart=date=>addDays(date,-((new Date(toTime(date)).getUTCDay()+
 export const trainRole=(award,id)=>award.member_id===id?'Driver':award.vip_member_id===id?'VIP':null;
 // R4-arranged trains run in their own eligibility lane. An R4 assignment
 // must never disqualify its recipient from a DS, donation, VS or roulette train.
-export const isR4Train=award=>award?.source==='r4'||/^R4(?:\\s|$)/i.test(String(award?.slot||award?.selection_label||'').trim());
+export const isR4Train=award=>award?.source==='r4'||/^R4(?:\s|$)/i.test(String(award?.slot||award?.selection_label||'').trim());
 export function trainWarnings(awards,proposed,displayName=id=>id){
  const {train_date,member_id,vip_member_id,source,slot,id:editingId}=proposed;
  if(!train_date||!member_id||!vip_member_id)return [];
