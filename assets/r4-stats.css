@@ -103,3 +103,28 @@
  .stat-vs-detail{padding:4px 8px 10px}
  .stat-vs-table td,.stat-vs-table th{padding:8px 6px;font-size:12px}
 }
+
+
+/* Five-week train desk stage calendar */
+.train-calendar{overflow-x:auto;border:1px solid #c8b68b;border-radius:14px;margin:14px 0 16px;background:#fffdf6}
+.train-grid{width:100%;border-collapse:separate;border-spacing:0;min-width:770px;table-layout:fixed}
+.train-grid th{padding:12px 6px;background:#234b39;color:#fff7df;text-align:center;font-size:13px}
+.train-grid td{vertical-align:top;padding:9px 8px;border-right:1px solid #e3d4b3;border-bottom:1px solid #e3d4b3;min-height:106px}
+.train-grid td:last-child{border-right:0}
+.train-grid tbody tr:last-child td{border-bottom:0}
+.train-date-button{display:block;border:0;border-radius:7px;background:#e7f1e6;color:#24533b;padding:5px 9px;font-size:13px;font-weight:800;cursor:pointer;text-align:left}
+.train-date-button:hover,.train-date-button:focus-visible{outline:2px solid #c39749;background:#d4e7d3}
+.train-type{display:block;color:#6c725c;font-size:10px;line-height:1.3;margin:7px 0}
+.train-entry{display:flex;flex-direction:column;gap:3px;padding:7px 6px;margin-top:5px;border-radius:7px;background:#e9f0e4;color:#294f3b;overflow-wrap:anywhere;font-size:11px}
+.train-entry strong{font-size:11px}
+.train-entry-warning{border:1px solid #ca8c5f;background:#fff1df}
+.train-issue,.train-rule-warning{color:#8b4125!important}
+.train-issue{font-weight:750}
+.train-unassigned{font-style:italic;color:#999586;font-size:10px}
+.train-warning-title{color:#883d23;display:block;margin-top:8px}
+#train-eligibility-warnings,#train-stage-warnings{margin:9px 0}
+.train-rule-warning{font-size:13px;line-height:1.4;background:#fff0e5;border-left:3px solid #ce8d52;border-radius:5px;padding:7px 10px;margin:5px 0}
+.train-rules{margin-top:13px;border:1px solid #d7c39b;border-radius:12px;padding:12px 15px;background:#fdf6e6}
+.train-rules summary{cursor:pointer;color:#2d5742;font-weight:800}
+.train-rules li{margin:5px 0;line-height:1.5;font-size:13px}
+@media(max-width:760px){.train-grid{min-width:720px}.train-grid td{padding:7px 5px}.train-entry{padding:5px;font-size:10px}}
