@@ -245,7 +245,7 @@ function trainCalendar(){
   for(let d=0;d<7;d++){
    const date=trainAddDays(range.start,w*7+d),td=text('td',null,'train-cell'),current=schedule.get(date)||[];
    const dateBtn=text('button',date.slice(5),'train-date-button');dateBtn.type='button';dateBtn.title='Select '+date+' for train planning';
-   dateBtn.addEventListener('click',()=>{$('train-date').value=date; $('train-source').value=d===0?'donations':d===1?'ds':d===6?'vs':'manual';candidates();eligibilityWarnings();$('train-date').scrollIntoView({block:'center'})});
+   dateBtn.addEventListener('click',()=>{$('train-date').value=date;$('train-source').value=d===0?'donations':d===1?'ds':d===6?'vs':'manual';$('train-slot').value=current[0]?.slot||trainLabel[d];candidates();eligibilityWarnings();$('train-date').scrollIntoView({block:'center'})});
    td.append(dateBtn,text('small',current[0]?.slot||trainLabel[d],'train-type'));
    for(const award of current){
     const item=text('div',null,'train-entry'+(award.legacy?' train-archive-entry':''));
@@ -270,7 +270,7 @@ function trainCalendar(){
 }
 
 function trainHistory(){
- const root=$('train-history');root.replaceChildren();if(!state.data.awards.length){root.append(elEmpty('No train assignments in this window.'));return}
+ const root=$('train-history');root.replaceChildren();if(!state.data.awards.length){root.append(elEmpty('The spreadsheet archive is displayed above. No editable train assignments have been added for this Stage.'));return}
  for(const award of state.data.awards){const row=text('div',null,'stat-row');row.append(text('strong',award.train_date+' · '+award.slot+' · Conductor: '+memberName(award.member_id)+' · VIP: '+(award.vip_member_id?memberName(award.vip_member_id):'Not recorded')));row.append(text('p',award.source.toUpperCase()+(award.reason?' · '+award.reason:''),'stat-muted'));
   const edit=text('button','Edit conductor / VIP','stat-button');edit.type='button';edit.addEventListener('click',()=>{
    const existing=row.querySelector('.train-edit');if(existing){existing.remove();return}
@@ -279,7 +279,7 @@ function trainHistory(){
    const conductor=makePicker('Conductor',award.member_id);
    const vip=makePicker('VIP',award.vip_member_id);
    const save=text('button','Save conductor + VIP','stat-button primary');save.type='button';
-   save.addEventListener('click',()=>{if(!conductor.value||!vip.value||conductor.value===vip.value){notice('Choose two different members for conductor and VIP.',true);return}action(()=>post({action:'update_award',id:award.id,member_id:conductor.value,vip_member_id:vip.value}),'Train conductor and VIP updated.')});
+   save.addEventListener('click',()=>{if(!conductor.value||!vip.value||conductor.value===vip.value){notice('Choose two different members for conductor and VIP.',true);return}const proposed={id:award.id,train_date:award.train_date,member_id:legacyKey(memberName(conductor.value)),vip_member_id:legacyKey(memberName(vip.value)),source:award.source,slot:award.slot};const issues=trainWarnings(trainRecords().filter(a=>a.id!==award.id),proposed,labelForTrainKey);if(issues.length&&!confirm('Review train warnings before editing:\n\n'+issues.join('\n')+'\n\nSave the change anyway?'))return;action(()=>post({action:'update_award',id:award.id,member_id:conductor.value,vip_member_id:vip.value}),'Train conductor and VIP updated.')});
    fields.append(save);row.append(fields);
   });row.append(edit);
   const button=text('button','Remove mistaken assignment','stat-button');button.addEventListener('click',()=>{if(confirm('Delete this train assignment?'))action(()=>post({action:'delete_award',id:award.id}),'Assignment removed.')});row.append(button);root.append(row)
