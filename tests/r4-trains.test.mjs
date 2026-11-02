@@ -35,3 +35,9 @@ test('editing the same saved assignment does not flag itself',()=>{
  const item=a('same','2026-10-15','a','b');
  assert.deepEqual(trainWarnings([item],item),[]);
 });
+
+
+test('VIP passengers repeated in the same week are warned',()=>{
+ const w=trainWarnings([a('1','2026-10-12','a','b')],a('2','2026-10-15','c','b'));
+ assert.ok(w.some(s=>s.includes('VIP passenger this Monday-to-Sunday week')));
+});
