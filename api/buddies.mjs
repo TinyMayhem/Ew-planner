@@ -1,4 +1,5 @@
 import {emptyBoard,hash,publicBoard,publicMember,memberByToken,register,update,assign,publish,adminPasswordOK,sessionToken,validSession,invalidatePairs,pagePasswordOK} from '../lib/buddies.mjs';
+import {stageForDate,stageRange} from '../assets/r4-train-rules.mjs';
 const configured=()=>Boolean(process.env.SUPABASE_URL&&process.env.SUPABASE_SECRET_KEY&&process.env.UTW_ADMIN_PASSWORD?.length>=16&&process.env.UTW_SESSION_SECRET?.length>=32);
 async function database(path,options={}) {
  try {
@@ -31,7 +32,32 @@ async function save(board,revision){
  return Array.isArray(rows)&&rows.length===1;
 }
 const pageAllowed=request=>!process.env.UTW_PAGE_PASSWORD||validSession(request.headers.get('cookie'),'page')||validSession(request.headers.get('cookie'));
-export async function GET(request){if(!pageAllowed(request))return json({ready:false,locked:true,message:'Enter the alliance password to open the buddy board.'});if(!configured())return json({ready:false,message:'Buddy signup is not open yet. Check the production settings.',setupNeeded:[!process.env.SUPABASE_URL&&'SUPABASE_URL',!process.env.SUPABASE_SECRET_KEY&&'SUPABASE_SECRET_KEY',!(process.env.UTW_ADMIN_PASSWORD?.length>=16)&&'UTW_ADMIN_PASSWORD must have at least 16 characters',!(process.env.UTW_SESSION_SECRET?.length>=32)&&'UTW_SESSION_SECRET must have at least 32 characters'].filter(Boolean)});try{if(new URL(request.url).searchParams.get('view')==='trains'){const [records,players,seasons]=await Promise.all([database('utw_stat_awards?select=train_date,slot,member_id,vip_member_id,season_id,source&order=train_date.desc,slot.asc&limit=500'),database('utw_stat_members?select=id,display_name&limit=1000'),database('utw_stat_seasons?select=id,label,sort_order&order=sort_order.asc')]);const names=new Map(players.map(p=>[p.id,p.display_name]));return json({ready:true,trains:records.map(r=>({date:r.train_date,slot:r.slot,member:names.get(r.member_id)||'Former member',vip:r.vip_member_id?(names.get(r.vip_member_id)||'Former member'):'Not recorded',season:r.season_id,source:r.source})),seasons});}const {board}=await readBoard();const token=request.headers.get('authorization')?.replace(/^Bearer /,'');const member=token?memberByToken(board,token):null;if(token&&!member)return json({error:'This edit link is invalid. Ask Tiny to recover your entry.'},401);const admin=validSession(request.headers.get('cookie'));return json({ready:true,admin,...publicBoard(board,admin),myMember:member?publicMember(member):null});}catch(error){console.error('UTW buddy read failed:',error.message);return json({ready:false,error:'The shared board is temporarily unavailable. Try again.'},503);}}
+export async function GET(request){if(!pageAllowed(request))return json({ready:false,locked:true,message:'Enter the alliance password to open the buddy board.'});if(!configured())return json({ready:false,message:'Buddy signup is not open yet. Check the production settings.',setupNeeded:[!process.env.SUPABASE_URL&&'SUPABASE_URL',!process.env.SUPABASE_SECRET_KEY&&'SUPABASE_SECRET_KEY',!(process.env.UTW_ADMIN_PASSWORD?.length>=16)&&'UTW_ADMIN_PASSWORD must have at least 16 characters',!(process.env.UTW_SESSION_SECRET?.length>=32)&&'UTW_SESSION_SECRET must have at least 32 characters'].filter(Boolean)});try{if(new URL(request.url).searchParams.get('view')==='trains'){
+ const [records,legacy,players,seasons]=await Promise.all([
+  database('utw_stat_awards?select=train_date,slot,member_id,vip_member_id,season_id,source&order=train_date.asc,slot.asc&limit=500'),
+  database('utw_stat_train_legacy?select=train_date,driver_name,vip_name,source,selection_label&order=train_date.asc&limit=500'),
+  database('utw_stat_members?select=id,display_name&limit=1000'),
+  database('utw_stat_seasons?select=id,label,sort_order&order=sort_order.asc')
+ ]);
+ if(![records,legacy,players,seasons].every(Array.isArray))throw Error('Invalid train archive response');
+ const names=new Map(players.map(p=>[p.id,p.display_name]));
+ const actualDates=new Set(records.map(r=>r.train_date));
+ // The R4 Train Desk wins when a schedule date has been replaced or updated.
+ // Old screenshot entries remain available until a final assignment is recorded.
+ const actual=records.map(r=>({
+  date:r.train_date,slot:r.slot,member:names.get(r.member_id)||'Former member',
+  vip:r.vip_member_id?(names.get(r.vip_member_id)||'Former member'):'Not recorded',
+  season:r.season_id,source:r.source,stage:stageForDate(r.train_date)
+ }));
+ const history=legacy.filter(r=>!actualDates.has(r.train_date)).map(r=>({
+  date:r.train_date,slot:r.selection_label,member:r.driver_name,vip:r.vip_name,
+  season:'post-s5',source:r.source,stage:stageForDate(r.train_date)
+ }));
+ const trains=[...actual,...history].sort((a,b)=>a.date.localeCompare(b.date)||a.slot.localeCompare(b.slot));
+ const stages=[...new Set(trains.map(r=>r.stage))].sort((a,b)=>b-a).map(stageRange);
+ // Do not expose private VS scores, reasons for replacements or R4 audit fields.
+ return json({ready:true,trains,stages,seasons});
+ }const {board}=await readBoard();const token=request.headers.get('authorization')?.replace(/^Bearer /,'');const member=token?memberByToken(board,token):null;if(token&&!member)return json({error:'This edit link is invalid. Ask Tiny to recover your entry.'},401);const admin=validSession(request.headers.get('cookie'));return json({ready:true,admin,...publicBoard(board,admin),myMember:member?publicMember(member):null});}catch(error){console.error('UTW buddy read failed:',error.message);return json({ready:false,error:'The shared board is temporarily unavailable. Try again.'},503);}}
 export async function POST(request){if(!configured())return json({error:'Buddy signup is not open yet. Your submission has not been saved.'},503);const origin=request.headers.get('origin');if(!origin||origin!==new URL(request.url).origin)return json({error:'Request must come from the UTW site.'},403);if(!request.headers.get('content-type')?.startsWith('application/json'))return json({error:'JSON request required.'},415);let body;try{const text=await request.text();if(text.length>12000)return json({error:'Submission is too large.'},413);body=JSON.parse(text);}catch{return json({error:'Invalid submission.'},400);}try{
  if(await limited(request,['login','pageLogin'].includes(body.action)?'login':'write',['login','pageLogin'].includes(body.action)?10:60))return json({error:'Too many attempts. Try again in 15 minutes.'},429);
  const cookieAttributes='; HttpOnly; SameSite=Strict; Path=/'+(new URL(request.url).protocol==='https:'?'; Secure':'');
