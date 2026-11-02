@@ -180,23 +180,63 @@ function exceptionList(){
  }
 }
 
+
 const trainLabel=['Top donation','DS MVP','R4 vote / participation','R4 choice','Roulette / R5 choice','R4 choice','VS MVP'];
 const weekdays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+// A small set of recognizable historical aliases makes the original spreadsheet
+// comparable to renamed current members. Ambiguous names remain distinct.
+const knownLegacyNames={
+ 'ganoosh':'gan00sh','devi':'đevi','neoo':'mynameisneoo',
+ 'frost':'frost','crum':'crum','rylis':'rylispro',
+ 'savvy':'savvyvandromee','xgamer':'xgamer20',
+ 'subzero':'subz3ro','izard':'iz4rd','leo':'leonob',
+ 'hippie':'tragicallyhippie','mo':'movich mo',
+ 'seabeast':'seabeast from wren','mxk':'mxk',
+ 'silentkiller':'silentkiller90z','sochwi':'sochwi당취평',
+ 'barber':'barber 이발사','minimum':'mininimum ᓚᘏᗢ',
+ 'gb':'mfkn gb','king todd0':'king toddo',
+ 'smotpoker':'commander smotpoker'
+};
+function legacyKey(value){
+ const k=normalize(value).normalize('NFKD').replace(/[\u0300-\u036f]/g,'');
+ return knownLegacyNames[k]||k;
+}
+function trainRecords(){
+ const liveDates=new Set((state.data?.awards||[]).map(a=>a.train_date));
+ const legacy=(state.data?.trainLegacy||[]).filter(a=>!liveDates.has(a.train_date)).map(a=>({
+  id:'legacy:'+a.train_date,train_date:a.train_date,member_id:legacyKey(a.driver_name),vip_member_id:legacyKey(a.vip_name),
+  source:a.source,slot:a.selection_label,legacy:true,driverName:a.driver_name,vipName:a.vip_name,notes:a.notes
+ }));
+ const live=(state.data?.awards||[]).map(a=>({
+  ...a,member_id:legacyKey(memberName(a.member_id)),vip_member_id:a.vip_member_id?legacyKey(memberName(a.vip_member_id)):'',
+  driverName:memberName(a.member_id),vipName:a.vip_member_id?memberName(a.vip_member_id):'Not recorded',legacy:false
+ }));
+ return [...legacy,...live].sort((a,b)=>a.train_date.localeCompare(b.train_date));
+}
+function labelForTrainKey(key){
+ const record=trainRecords().find(a=>a.member_id===key||a.vip_member_id===key);
+ return record?(record.member_id===key?record.driverName:record.vipName):key;
+}
 function currentTrainWarnings(){
  if(!state.data)return [];
- return trainWarnings(state.data.awards,{train_date:$('train-date').value,member_id:$('train-member').value,vip_member_id:$('train-vip').value,source:$('train-source').value,slot:$('train-slot').value},memberName);
+ const driver=$('train-member').value,vip=$('train-vip').value;
+ if(!driver||!vip)return [];
+ const driverName=memberName(driver),vipName=memberName(vip);
+ const label=key=>key===legacyKey(driverName)?driverName:key===legacyKey(vipName)?vipName:labelForTrainKey(key);
+ return trainWarnings(trainRecords(),{train_date:$('train-date').value,member_id:legacyKey(driverName),vip_member_id:legacyKey(vipName),source:$('train-source').value,slot:$('train-slot').value},label);
 }
 function eligibilityWarnings(){
  const root=$('train-eligibility-warnings');root.replaceChildren();
  if(!state.data)return;
  const issues=currentTrainWarnings();
- if(issues.length){const title=text('strong','⚠ '+issues.length+' train rule warning'+(issues.length===1?'':'s'),'train-warning-title');root.append(title);issues.forEach(s=>root.append(text('p',s,'train-rule-warning')));}
- const note=text('p','R4 must also verify hive position, rank/passenger limits, Wednesday first-timer preference, and any leader-approved exceptions.','stat-muted');root.append(note);
+ if(issues.length){root.append(text('strong','⚠ '+issues.length+' train rule warning'+(issues.length===1?'':'s'),'train-warning-title'));issues.forEach(s=>root.append(text('p',s,'train-rule-warning')))}
+ root.append(text('p','R4 must also verify hive position, member rank, passenger frequency, Wednesday first-timer preference and approved exceptions.','stat-muted'));
 }
 function trainCalendar(){
  const root=$('train-calendar');root.replaceChildren();
  const range=stageRange(state.trainStage);$('train-stage-dates').textContent='Stage '+state.trainStage+' · '+range.start+' to '+range.end+' · 5 weeks / 35 days';
- const schedule=new Map();for(const item of state.data.awards){if(!schedule.has(item.train_date))schedule.set(item.train_date,[]);schedule.get(item.train_date).push(item)}
+ const entries=trainRecords(),schedule=new Map();
+ for(const item of entries){if(!schedule.has(item.train_date))schedule.set(item.train_date,[]);schedule.get(item.train_date).push(item)}
  const table=text('table',null,'train-grid'),thead=text('thead'),header=text('tr'),tbody=text('tbody');
  weekdays.forEach(day=>header.append(text('th',day)));thead.append(header);
  const stageIssues=[];
@@ -205,14 +245,15 @@ function trainCalendar(){
   for(let d=0;d<7;d++){
    const date=trainAddDays(range.start,w*7+d),td=text('td',null,'train-cell'),current=schedule.get(date)||[];
    const dateBtn=text('button',date.slice(5),'train-date-button');dateBtn.type='button';dateBtn.title='Select '+date+' for train planning';
-   dateBtn.addEventListener('click',()=>{$('train-date').value=date; $('train-source').value=d===0?'donations':d===1?'ds':d===6?'vs':'manual';candidates();eligibilityWarnings();$('train-date').scrollIntoView({block:'center'});});
-   td.append(dateBtn,text('small',trainLabel[d],'train-type'));
+   dateBtn.addEventListener('click',()=>{$('train-date').value=date; $('train-source').value=d===0?'donations':d===1?'ds':d===6?'vs':'manual';candidates();eligibilityWarnings();$('train-date').scrollIntoView({block:'center'})});
+   td.append(dateBtn,text('small',current[0]?.slot||trainLabel[d],'train-type'));
    for(const award of current){
-    const item=text('div',null,'train-entry');
-    const driver=memberName(award.member_id),vip=award.vip_member_id?memberName(award.vip_member_id):'Not recorded';
-    item.append(text('strong','D: '+driver),text('span','VIP: '+vip));
-    const prior=state.data.awards.filter(a=>a.id!==award.id&&a.train_date<award.train_date);
-    const issues=trainWarnings(prior,award,memberName);
+    const item=text('div',null,'train-entry'+(award.legacy?' train-archive-entry':''));
+    item.append(text('strong','D: '+award.driverName),text('span','VIP: '+award.vipName));
+    if(award.legacy)item.append(text('small','Spreadsheet history','train-archive-note'));
+    if(award.notes)item.append(text('small',award.notes,'train-archive-note'));
+    const previous=entries.filter(a=>a.train_date<award.train_date);
+    const issues=trainWarnings(previous,award,labelForTrainKey);
     if(issues.length){item.classList.add('train-entry-warning');item.append(text('small','⚠ Review repeat recipient','train-issue'));stageIssues.push(...issues)}
     td.append(item);
    }
@@ -223,9 +264,9 @@ function trainCalendar(){
  }
  table.append(thead,tbody);root.append(table);
  const warnings=$('train-stage-warnings');warnings.replaceChildren();
- if(stageIssues.length){warnings.append(text('strong','⚠ '+stageIssues.length+' historical rule warning'+(stageIssues.length===1?'':'s'),'train-warning-title'));
-  const details=document.createElement('details');const summary=text('summary','Review historical warnings');details.append(summary);stageIssues.forEach(issue=>details.append(text('p',issue,'train-rule-warning')));warnings.append(details);
- }else warnings.append(text('p','No repeat-recipient warnings among the saved assignments in this Stage. Other eligibility checks still require R4 review.','stat-muted'));
+ if(stageIssues.length){warnings.append(text('strong','⚠ '+stageIssues.length+' possible eligibility warning'+(stageIssues.length===1?'':'s')+' in this Stage','train-warning-title'));
+  const details=document.createElement('details');const summary=text('summary','Review flagged historical assignments');details.append(summary);stageIssues.forEach(issue=>details.append(text('p',issue,'train-rule-warning')));warnings.append(details);
+ }else warnings.append(text('p','No repeat-recipient warnings found in this Stage. Other eligibility checks still require R4 review.','stat-muted'));
 }
 
 function trainHistory(){
