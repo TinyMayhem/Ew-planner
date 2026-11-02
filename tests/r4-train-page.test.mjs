@@ -18,3 +18,19 @@ test('the API keeps the legacy archive on the private data path',()=>{
  assert.match(source,/utw_stat_train_legacy/);
  assert.match(source,/authorizedAccess\(request\)/);
 });
+
+test('train editor supports historical conductor replacements and preserves original name',()=>{
+ const client=readFileSync('assets/r4-stats.js','utf8');
+ const server=readFileSync('api/r4-stats.mjs','utf8');
+ assert.match(client,/function openLegacyTrainEditor/);
+ assert.match(client,/update_legacy_train/);
+ assert.match(client,/originalDriverName/);
+ assert.match(client,/No-show/);
+ assert.match(server,/original_driver_name/);
+ assert.match(server,/recordAudit\(request,'update_legacy_train'/);
+});
+test('dedicated R4 source is selectable independently from DS',()=>{
+ const page=readFileSync('lib/r4-stats-page.mjs','utf8');
+ assert.match(page,/<option value="r4">R4 train/);
+ assert.match(page,/same person from receiving an eligible DS train/);
+});
