@@ -43,21 +43,22 @@ async function owner(request){const user=await sessionUser(request);return user?
 async function storage(path,options={}){const {url,secret}=sb();const res=await fetch(url+'/storage/v1/object/'+path,{...options,headers:{apikey:secret,...options.headers},signal:AbortSignal.timeout(18000)});return res}
 async function getData(week,season,trainStage){
  const end=dateAdd(week,6),trainRange=stageRange(trainStage);
- const [members,aliases,allImports,ds,exceptions,awards]=await Promise.all([
+ const [members,aliases,allImports,ds,exceptions,awards,trainLegacy]=await Promise.all([
   list('utw_stat_members',{select:'id,display_name,created_at',order:'display_name.asc',limit:'1000'}),
   list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'}),
   list('utw_stat_imports',{select:'id,metric,period,filename,row_count,created_at,season_id',season_id:'eq.'+season,period:'gte.'+week,order:'created_at.desc',limit:'500'}),
   list('utw_stat_ds',{select:'*',season_id:'eq.'+season,event_date:'gte.'+week,order:'event_date.desc',limit:'200'}),
   list('utw_stat_exceptions',{select:'*',order:'created_at.desc',limit:'1000'}),
-  list('utw_stat_awards',{select:'*',train_date:'gte.'+trainRange.start,order:'train_date.asc',limit:'500'})
+  list('utw_stat_awards',{select:'*',train_date:'gte.'+trainRange.start,order:'train_date.asc',limit:'500'}),
+  list('utw_stat_train_legacy',{select:'train_date,stage_no,driver_name,vip_name,source,selection_label,notes',train_date:'gte.'+trainRange.start,order:'train_date.asc',limit:'40'})
  ]);
- if([members,aliases,allImports,ds,exceptions,awards].some(x=>!Array.isArray(x)))throw Error('Invalid database response');
+ if([members,aliases,allImports,ds,exceptions,awards,trainLegacy].some(x=>!Array.isArray(x)))throw Error('Invalid database response');
  // Only the most recently uploaded CSV is active for a metric and date.
  const current=new Map();
  for(const imp of allImports){if(imp.period<=end){const k=imp.metric+':'+imp.period;if(!current.has(k))current.set(k,imp)}}
  const imports=[...current.values()],values=(await Promise.all(imports.map(i=>list('utw_stat_values',{select:'import_id,alias_key,original_name,points',import_id:'eq.'+i.id,limit:'501'})))).flat();
  if(imports.some(i=>values.filter(v=>v.import_id===i.id).length!==i.row_count))throw Error('CSV data appears incomplete');
- return {members,aliases,imports,values,ds:ds.filter(d=>d.event_date<=end),exceptions,awards:awards.filter(a=>a.train_date<=trainRange.end),trainRange};
+ return {members,aliases,imports,values,ds:ds.filter(d=>d.event_date<=end),exceptions,awards:awards.filter(a=>a.train_date<=trainRange.end),trainLegacy:trainLegacy.filter(a=>a.train_date<=trainRange.end),trainRange};
 }
 async function evidence(request,id){
  if(!uuid(id))return json({error:'Invalid evidence ID'},400);
