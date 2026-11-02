@@ -1,9 +1,10 @@
 import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv} from './r4-csv-utils.mjs';
 import {archivedWeeks,vsWeekSlots,vsLeaderboard,weekOf,scoreFlag} from './r4-vs-archive.mjs';
+import {stageForDate,stageRange,trainWarnings,addDays as trainAddDays} from './r4-train-rules.mjs';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
-const state={data:null,week:'',season:'post-s5',archiveImports:[],csvQueue:[],candidates:[]};
+const state={data:null,week:'',season:'post-s5',trainStage:15,archiveImports:[],csvQueue:[],candidates:[]};
 let csvBusy=false,nextCsvId=0;
 const text=(tag,content,cls)=>{const el=document.createElement(tag);if(content!==undefined&&content!==null)el.textContent=String(content);if(cls)el.className=cls;return el};
 const dateAdd=(s,days)=>new Date(Date.parse(s+'T00:00:00Z')+days*86400000).toISOString().slice(0,10);
@@ -133,7 +134,7 @@ function dsHistory(){
  }
 }
 const activeException=(id,source,date)=>state.data.exceptions.filter(x=>x.active&&x.member_id===id&&x.starts_on<=date&&x.ends_on>=date&&(x.scope==='all'||x.scope===source));
-const recentAwards=(id,date)=>state.data.awards.filter(x=>x.member_id===id&&x.train_date<=date&&x.train_date>=dateAdd(date,-7));
+const recentAwards=(id,date)=>state.data.awards.filter(x=>(x.member_id===id||x.vip_member_id===id)&&x.train_date<=date&&x.train_date>=dateAdd(date,-7));
 function suggested(){
  const source=$('train-source').value,date=$('train-date').value;
  if(!validDate(date)||monday(date)!==state.week)return [];
@@ -178,6 +179,55 @@ function exceptionList(){
   line.append(button);root.append(line);
  }
 }
+
+const trainLabel=['Top donation','DS MVP','R4 vote / participation','R4 choice','Roulette / R5 choice','R4 choice','VS MVP'];
+const weekdays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+function currentTrainWarnings(){
+ if(!state.data)return [];
+ return trainWarnings(state.data.awards,{train_date:$('train-date').value,member_id:$('train-member').value,vip_member_id:$('train-vip').value,source:$('train-source').value,slot:$('train-slot').value},memberName);
+}
+function eligibilityWarnings(){
+ const root=$('train-eligibility-warnings');root.replaceChildren();
+ if(!state.data)return;
+ const issues=currentTrainWarnings();
+ if(issues.length){const title=text('strong','⚠ '+issues.length+' train rule warning'+(issues.length===1?'':'s'),'train-warning-title');root.append(title);issues.forEach(s=>root.append(text('p',s,'train-rule-warning')));}
+ const note=text('p','R4 must also verify hive position, rank/passenger limits, Wednesday first-timer preference, and any leader-approved exceptions.','stat-muted');root.append(note);
+}
+function trainCalendar(){
+ const root=$('train-calendar');root.replaceChildren();
+ const range=stageRange(state.trainStage);$('train-stage-dates').textContent='Stage '+state.trainStage+' · '+range.start+' to '+range.end+' · 5 weeks / 35 days';
+ const schedule=new Map();for(const item of state.data.awards){if(!schedule.has(item.train_date))schedule.set(item.train_date,[]);schedule.get(item.train_date).push(item)}
+ const table=text('table',null,'train-grid'),thead=text('thead'),header=text('tr'),tbody=text('tbody');
+ weekdays.forEach(day=>header.append(text('th',day)));thead.append(header);
+ const stageIssues=[];
+ for(let w=0;w<5;w++){
+  const row=text('tr');
+  for(let d=0;d<7;d++){
+   const date=trainAddDays(range.start,w*7+d),td=text('td',null,'train-cell'),current=schedule.get(date)||[];
+   const dateBtn=text('button',date.slice(5),'train-date-button');dateBtn.type='button';dateBtn.title='Select '+date+' for train planning';
+   dateBtn.addEventListener('click',()=>{$('train-date').value=date; $('train-source').value=d===0?'donations':d===1?'ds':d===6?'vs':'manual';candidates();eligibilityWarnings();$('train-date').scrollIntoView({block:'center'});});
+   td.append(dateBtn,text('small',trainLabel[d],'train-type'));
+   for(const award of current){
+    const item=text('div',null,'train-entry');
+    const driver=memberName(award.member_id),vip=award.vip_member_id?memberName(award.vip_member_id):'Not recorded';
+    item.append(text('strong','D: '+driver),text('span','VIP: '+vip));
+    const prior=state.data.awards.filter(a=>a.id!==award.id&&a.train_date<award.train_date);
+    const issues=trainWarnings(prior,award,memberName);
+    if(issues.length){item.classList.add('train-entry-warning');item.append(text('small','⚠ Review repeat recipient','train-issue'));stageIssues.push(...issues)}
+    td.append(item);
+   }
+   if(!current.length)td.append(text('small','Unassigned','train-unassigned'));
+   row.append(td);
+  }
+  tbody.append(row);
+ }
+ table.append(thead,tbody);root.append(table);
+ const warnings=$('train-stage-warnings');warnings.replaceChildren();
+ if(stageIssues.length){warnings.append(text('strong','⚠ '+stageIssues.length+' historical rule warning'+(stageIssues.length===1?'':'s'),'train-warning-title'));
+  const details=document.createElement('details');const summary=text('summary','Review historical warnings');details.append(summary);stageIssues.forEach(issue=>details.append(text('p',issue,'train-rule-warning')));warnings.append(details);
+ }else warnings.append(text('p','No repeat-recipient warnings among the saved assignments in this Stage. Other eligibility checks still require R4 review.','stat-muted'));
+}
+
 function trainHistory(){
  const root=$('train-history');root.replaceChildren();if(!state.data.awards.length){root.append(elEmpty('No train assignments in this window.'));return}
  for(const award of state.data.awards){const row=text('div',null,'stat-row');row.append(text('strong',award.train_date+' · '+award.slot+' · Conductor: '+memberName(award.member_id)+' · VIP: '+(award.vip_member_id?memberName(award.vip_member_id):'Not recorded')));row.append(text('p',award.source.toUpperCase()+(award.reason?' · '+award.reason:''),'stat-muted'));
@@ -194,12 +244,12 @@ function trainHistory(){
   const button=text('button','Remove mistaken assignment','stat-button');button.addEventListener('click',()=>{if(confirm('Delete this train assignment?'))action(()=>post({action:'delete_award',id:award.id}),'Assignment removed.')});row.append(button);root.append(row)
  }
 }
-function render(){if(!state.data)return;overview();archive();imports();memberFields();dsHistory();exceptionList();trainHistory();candidates()}
+function render(){if(!state.data)return;overview();archive();imports();memberFields();dsHistory();exceptionList();trainHistory();trainCalendar();candidates();eligibilityWarnings()}
 async function load(){
  const week=$('week').value;state.season=$('season').value;
  if(!validDate(week)||monday(week)!==week){notice('Select a Monday for the week.',true);return}
  state.week=week;$('sync').textContent='Loading…';
- try{const [r,archiveResponse]=await Promise.all([fetch('/api/r4-stats?week='+encodeURIComponent(week)+'&season='+encodeURIComponent(state.season),{credentials:'same-origin',cache:'no-store'}),fetch('/api/r4-stats?archive=1&season='+encodeURIComponent(state.season),{credentials:'same-origin',cache:'no-store'})]);if(r.status===401||archiveResponse.status===401){location.href='/r4-planner';return}const [data,history]=await Promise.all([r.json(),archiveResponse.json()]);if(!r.ok)throw Error(data.error||'Data unavailable');if(!archiveResponse.ok)throw Error(history.error||'Archive unavailable');state.data=data;state.archiveImports=history.imports||[];const season=$('season');const prev=season.value;season.replaceChildren(...(data.seasons||[]).map(x=>new Option(x.label,x.id)));if([...season.options].some(x=>x.value===prev))season.value=prev;render();$('sync').textContent='Synced · '+new Date().toLocaleTimeString()}catch(e){$('sync').textContent='Unavailable';notice(e.message,true)}
+ try{const [r,archiveResponse]=await Promise.all([fetch('/api/r4-stats?week='+encodeURIComponent(week)+'&season='+encodeURIComponent(state.season)+'&train_stage='+encodeURIComponent(state.trainStage),{credentials:'same-origin',cache:'no-store'}),fetch('/api/r4-stats?archive=1&season='+encodeURIComponent(state.season),{credentials:'same-origin',cache:'no-store'})]);if(r.status===401||archiveResponse.status===401){location.href='/r4-planner';return}const [data,history]=await Promise.all([r.json(),archiveResponse.json()]);if(!r.ok)throw Error(data.error||'Data unavailable');if(!archiveResponse.ok)throw Error(history.error||'Archive unavailable');state.data=data;state.archiveImports=history.imports||[];const season=$('season');const prev=season.value;season.replaceChildren(...(data.seasons||[]).map(x=>new Option(x.label,x.id)));if([...season.options].some(x=>x.value===prev))season.value=prev;render();$('sync').textContent='Synced · '+new Date().toLocaleTimeString()}catch(e){$('sync').textContent='Unavailable';notice(e.message,true)}
 }
 function csvIssue(item){
  if(item.status==='invalid')return item.error;
@@ -326,6 +376,7 @@ async function uploadCsvQueue(){
 }
 function wire(){
  const today=serverToday(),week=monday(today);
+ state.trainStage=stageForDate(today);for(let stage=13;stage<=30;stage++){const range=stageRange(stage);$('train-stage').append(new Option('Stage '+stage+' · '+range.start+' to '+range.end,stage))}$('train-stage').value=String(state.trainStage);
  $('week').value=week;$('ds-date').value=today;$('train-date').value=today;$('exception-start').value=today;$('exception-end').value=today;
  $('reload').addEventListener('click',load);
  $('season').value='post-s5';$('season').addEventListener('change',load);
@@ -345,11 +396,15 @@ function wire(){
  });
  $('alias-save').addEventListener('click',()=>action(()=>post({action:'alias',member_id:$('alias-member').value,alias:$('alias-name').value}),'Nickname added to the member.'));
  $('ds-form').addEventListener('submit',event=>{event.preventDefault();action(()=>{const form=new FormData($('ds-form'));form.set('action','ds');form.set('season_id',state.season);return post(form,true)},'DS evidence and podium saved.')});
- $('train-source').addEventListener('change',candidates);$('train-date').addEventListener('change',candidates);
+ $('train-stage').addEventListener('change',()=>{state.trainStage=Number($('train-stage').value);load()});
+ $('train-source').addEventListener('change',()=>{candidates();eligibilityWarnings()});
+ $('train-date').addEventListener('change',()=>{const stage=stageForDate($('train-date').value);if(stage!==state.trainStage){state.trainStage=stage;$('train-stage').value=String(stage);load()}else{candidates();eligibilityWarnings()}});
+ $('train-member').addEventListener('change',eligibilityWarnings);$('train-vip').addEventListener('change',eligibilityWarnings);$('train-slot').addEventListener('input',eligibilityWarnings);
  $('award').addEventListener('click',()=>{const source=$('train-source').value,date=$('train-date').value,id=$('train-member').value,vipId=$('train-vip').value,reason=$('train-reason').value.trim();
   if(!id||!vipId||!date||id===vipId){notice('Select a date and two different members: conductor and VIP.',true);return}
-  const blocked=activeException(id,source,date);
-  if(blocked.length&&(!reason||!confirm('This player has an active exception. Save a manual override with the stated reason?'))){notice('An override reason and confirmation are required for an excepted member.',true);return}
+  const blocked=[...activeException(id,source,date),...activeException(vipId,source,date)];
+  if(blocked.length&&(!reason||!confirm('A selected player has an active exception. Save a manual override with the stated reason?'))){notice('An override reason and confirmation are required for an excepted member.',true);return}
+  const warnings=currentTrainWarnings();if(warnings.length&&!confirm('Review train eligibility warnings:\n\n'+warnings.join('\n')+'\n\nRecord this assignment anyway?'))return;
   action(()=>post({action:'award',season_id:state.season,train_date:date,slot:$('train-slot').value,member_id:id,vip_member_id:vipId,source,reason}), 'Conductor and VIP recorded.');
  });
  $('exception-save').addEventListener('click',()=>action(()=>post({action:'exception',member_id:$('exception-member').value,scope:$('exception-scope').value,starts_on:$('exception-start').value,ends_on:$('exception-end').value,reason:$('exception-reason').value}), 'Exception saved.'));
