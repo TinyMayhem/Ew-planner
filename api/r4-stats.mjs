@@ -210,9 +210,14 @@ export async function POST(request){
     if(!uuid(body.id)||!uuid(body.member_id)||!uuid(body.vip_member_id)||body.member_id===body.vip_member_id)return json({error:'Choose different valid conductor and VIP members'},400);
     const old=await list('utw_stat_awards',{select:'*',id:'eq.'+body.id,limit:'1'});
     if(old.length!==1)return json({error:'Train assignment not found'},404);
-    const updated=await db('utw_stat_awards?'+urlParams({id:'eq.'+body.id,member_id:'eq.'+old[0].member_id,vip_member_id:old[0].vip_member_id?'eq.'+old[0].vip_member_id:'is.null'}),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({member_id:body.member_id,vip_member_id:body.vip_member_id})});
+    const editReason=clean(body.reason,200);
+    if(old[0].member_id!==body.member_id&&!editReason)return json({error:'Explain why the conductor changed (for example, no-show)'},400);
+    if(typeof body.reason==='string'&&body.reason.trim().length>200)return json({error:'Replacement reason must be under 200 characters'},400);
+    const previousNote=old[0].reason||'';
+    const combinedReason=editReason?[previousNote,editReason].filter(Boolean).join(' | ').slice(-500):previousNote;
+    const updated=await db('utw_stat_awards?'+urlParams({id:'eq.'+body.id,member_id:'eq.'+old[0].member_id,vip_member_id:old[0].vip_member_id?'eq.'+old[0].vip_member_id:'is.null'}),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({member_id:body.member_id,vip_member_id:body.vip_member_id,reason:combinedReason})});
     if(updated.length!==1)return json({error:'This train assignment changed. Refresh before editing.'},409);
-    await recordAudit(request,'update_award',{id:body.id,previous_conductor:old[0].member_id,previous_vip:old[0].vip_member_id,new_conductor:body.member_id,new_vip:body.vip_member_id,date:old[0].train_date,slot:old[0].slot},false);
+    await recordAudit(request,'update_award',{id:body.id,previous_conductor:old[0].member_id,previous_vip:old[0].vip_member_id,new_conductor:body.member_id,new_vip:body.vip_member_id,date:old[0].train_date,slot:old[0].slot,reason:editReason},false);
     return json({ok:true});
    }
    case 'update_legacy_train':{
