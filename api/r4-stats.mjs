@@ -50,7 +50,7 @@ async function getData(week,season,trainStage){
   list('utw_stat_ds',{select:'*',season_id:'eq.'+season,event_date:'gte.'+week,order:'event_date.desc',limit:'200'}),
   list('utw_stat_exceptions',{select:'*',order:'created_at.desc',limit:'1000'}),
   list('utw_stat_awards',{select:'*',train_date:'gte.'+trainRange.start,order:'train_date.asc',limit:'500'}),
-  list('utw_stat_train_legacy',{select:'train_date,stage_no,driver_name,vip_name,source,selection_label,notes',train_date:'gte.'+trainRange.start,order:'train_date.asc',limit:'40'})
+  list('utw_stat_train_legacy',{select:'train_date,stage_no,driver_name,vip_name,source,selection_label,notes,original_driver_name,replacement_reason,updated_at,updated_by',train_date:'gte.'+trainRange.start,order:'train_date.asc',limit:'40'})
  ]);
  if([members,aliases,allImports,ds,exceptions,awards,trainLegacy].some(x=>!Array.isArray(x)))throw Error('Invalid database response');
  // Only the most recently uploaded CSV is active for a metric and date.
@@ -201,7 +201,7 @@ export async function POST(request){
    }
    case 'award':{
     const season=body.season_id||'post-s5';if(!/^[a-z0-9-]{2,30}$/.test(season)||(await list('utw_stat_seasons',{select:'id',id:'eq.'+season,limit:'1'})).length!==1)return json({error:'Invalid season'},400);
-    if(!isoDate(body.train_date)||!uuid(body.member_id)||!uuid(body.vip_member_id)||body.member_id===body.vip_member_id||!['ds','donations','vs','manual'].includes(body.source)||!name(body.slot)||name(body.slot).length>50)return json({error:'Choose different conductor and VIP members, a valid date, source and train slot'},400);
+    if(!isoDate(body.train_date)||!uuid(body.member_id)||!uuid(body.vip_member_id)||body.member_id===body.vip_member_id||!['ds','donations','vs','manual','r4'].includes(body.source)||!name(body.slot)||name(body.slot).length>50)return json({error:'Choose different conductor and VIP members, a valid date, source and train slot'},400);
     const created=await insert('utw_stat_awards',{season_id:season,train_date:body.train_date,member_id:body.member_id,vip_member_id:body.vip_member_id,source:body.source,slot:name(body.slot),reason:clean(body.reason,500)});
     await recordAudit(request,'award',{id:created[0].id,season,date:body.train_date,slot:body.slot,member_id:body.member_id},true);
     return json({ok:true},201);
@@ -214,6 +214,30 @@ export async function POST(request){
     if(updated.length!==1)return json({error:'This train assignment changed. Refresh before editing.'},409);
     await recordAudit(request,'update_award',{id:body.id,previous_conductor:old[0].member_id,previous_vip:old[0].vip_member_id,new_conductor:body.member_id,new_vip:body.vip_member_id,date:old[0].train_date,slot:old[0].slot},false);
     return json({ok:true});
+   }
+   case 'update_legacy_train':{
+    const date=body.train_date,driver=name(body.driver_name),vip=name(body.vip_name),reason=clean(body.reason,300);
+    if(!isoDate(date)||!driver||!vip||key(driver)===key(vip)||reason.length<1||typeof body.reason!=='string'||body.reason.trim().length>300)
+     return json({error:'Choose two different names and give a short reason for changing the historic train.'},400);
+    const oldRows=await list('utw_stat_train_legacy',{select:'*',train_date:'eq.'+date,limit:'1'});
+    if(oldRows.length!==1)return json({error:'Historical train entry not found'},404);
+    const old=oldRows[0];
+    if(old.driver_name!==body.expected_driver_name||old.vip_name!==body.expected_vip_name)
+     return json({error:'This train assignment has changed. Refresh to see the latest record.'},409);
+    if(driver===old.driver_name&&vip===old.vip_name)return json({error:'No changes to save'},400);
+    const actor=await sessionUser(request).catch(()=>null);
+    const payload={
+      driver_name:driver,vip_name:vip,replacement_reason:reason,
+      original_driver_name:old.original_driver_name||(driver!==old.driver_name?old.driver_name:null),
+      updated_at:new Date().toISOString(),updated_by:actor?.username||'Shared R4'
+    };
+    const updated=await db('utw_stat_train_legacy?'+urlParams({
+      train_date:'eq.'+date,
+      updated_at:old.updated_at?'eq.'+old.updated_at:'is.null'
+    }),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify(payload)});
+    if(!Array.isArray(updated)||updated.length!==1)return json({error:'This entry changed before your edit could be saved. Refresh and try again.'},409);
+    await recordAudit(request,'update_legacy_train',{date,previous_driver:old.driver_name,new_driver:driver,previous_vip:old.vip_name,new_vip:vip,reason},false);
+    return json({ok:true,train:updated[0]});
    }
    case 'delete_award':{
     if(!uuid(body.id))return json({error:'Invalid train assignment'},400);
