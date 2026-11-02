@@ -1,6 +1,6 @@
 import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv} from './r4-csv-utils.mjs';
 import {archivedWeeks,vsWeekSlots,vsLeaderboard,weekOf,scoreFlag} from './r4-vs-archive.mjs';
-import {stageForDate,stageRange,trainWarnings,addDays as trainAddDays} from './r4-train-rules.mjs';
+import {stageForDate,stageRange,trainWarnings,isR4Train,addDays as trainAddDays} from './r4-train-rules.mjs';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
@@ -134,7 +134,7 @@ function dsHistory(){
  }
 }
 const activeException=(id,source,date)=>state.data.exceptions.filter(x=>x.active&&x.member_id===id&&x.starts_on<=date&&x.ends_on>=date&&(x.scope==='all'||x.scope===source));
-const recentAwards=(id,date)=>state.data.awards.filter(x=>(x.member_id===id||x.vip_member_id===id)&&x.train_date<=date&&x.train_date>=dateAdd(date,-7));
+const recentAwards=(id,date,source,slot)=>state.data.awards.filter(x=>(x.member_id===id||x.vip_member_id===id)&&x.train_date<=date&&x.train_date>=dateAdd(date,-7)&&isR4Train(x)===isR4Train({source,slot}));
 function suggested(){
  const source=$('train-source').value,date=$('train-date').value;
  if(!validDate(date)||monday(date)!==state.week)return [];
@@ -154,10 +154,10 @@ function suggested(){
 function candidates(){
  const root=$('candidates'),date=$('train-date').value,source=$('train-source').value;root.replaceChildren();
  const candidate=suggested();state.candidates=candidate;
- if(source==='manual'){root.append(elEmpty('Manual choice. Select any member and add a reason.'));return}
+ if(source==='manual'||source==='r4'){root.append(elEmpty(source==='r4'?'R4 train: select a conductor and VIP. DS and regular train eligibility remains separate.':'Manual choice. Select any member and add a reason.'));return}
  if(!candidate.length){root.append(elEmpty('No matching source results yet. Upload the relevant CSV or DS result, or choose Manual.'));return}
  let recommended=false;
- for(const c of candidate){const blocked=activeException(c.id,source,date),recent=recentAwards(c.id,date);
+ for(const c of candidate){const blocked=activeException(c.id,source,date),recent=recentAwards(c.id,date,source,$('train-slot').value);
   const row=text('div',null,'stat-candidate');const info=text('div');info.append(text('strong','#'+c.place+' '+memberName(c.id)));
   if(c.points!==null)info.append(text('div',fmt(c.points)+' points','stat-muted'));
   if(c.context)info.append(text('div',c.context,'stat-muted'));
@@ -169,6 +169,7 @@ function candidates(){
  }
  const first=candidate.find(c=>!activeException(c.id,source,date).length);
  if(first)$('train-member').value=first.id;
+ eligibilityWarnings();
 }
 function exceptionList(){
  const root=$('exceptions');root.replaceChildren();const active=state.data.exceptions.filter(x=>x.active).sort((a,b)=>b.starts_on.localeCompare(a.starts_on));
@@ -205,7 +206,7 @@ function trainRecords(){
  const liveDates=new Set((state.data?.awards||[]).map(a=>a.train_date));
  const legacy=(state.data?.trainLegacy||[]).filter(a=>!liveDates.has(a.train_date)).map(a=>({
   id:'legacy:'+a.train_date,train_date:a.train_date,member_id:legacyKey(a.driver_name),vip_member_id:legacyKey(a.vip_name),
-  source:a.source,slot:a.selection_label,legacy:true,driverName:a.driver_name,vipName:a.vip_name,notes:a.notes
+  source:a.source,slot:a.selection_label,legacy:true,driverName:a.driver_name,vipName:a.vip_name,notes:a.notes,originalDriverName:a.original_driver_name,replacementReason:a.replacement_reason,updatedBy:a.updated_by
  }));
  const live=(state.data?.awards||[]).map(a=>({
   ...a,member_id:legacyKey(memberName(a.member_id)),vip_member_id:a.vip_member_id?legacyKey(memberName(a.vip_member_id)):'',
@@ -232,6 +233,40 @@ function eligibilityWarnings(){
  if(issues.length){root.append(text('strong','⚠ '+issues.length+' train rule warning'+(issues.length===1?'':'s'),'train-warning-title'));issues.forEach(s=>root.append(text('p',s,'train-rule-warning')))}
  root.append(text('p','R4 must also verify hive position, member rank, passenger frequency, Wednesday first-timer preference and approved exceptions.','stat-muted'));
 }
+
+function openLegacyTrainEditor(award,card){
+ const existing=card.querySelector('.train-edit');if(existing){existing.remove();return}
+ const form=text('div',null,'train-edit train-legacy-editor');
+ const title=text('strong','Edit '+award.train_date+' train','train-edit-heading');
+ const known=document.createElement('datalist');known.id='train-names-'+award.train_date;
+ const names=[...new Set([...members().map(m=>m.display_name),...(state.data?.trainLegacy||[]).flatMap(r=>[r.driver_name,r.vip_name])])].filter(Boolean);
+ names.sort((a,b)=>a.localeCompare(b)).forEach(n=>known.append(new Option(n)));
+ const field=(labelText,value)=>{const label=text('label',labelText),input=document.createElement('input');input.type='text';input.maxLength=100;input.value=value;input.setAttribute('list',known.id);label.append(input);form.append(label);return input};
+ form.append(title,known);
+ const driver=field('Actual conductor',award.driverName),vip=field('VIP passenger',award.vipName);
+ const whyLabel=text('label','Reason for change'),why=document.createElement('select');
+ for(const v of ['No-show','Leader adjustment','Correction','Other'])why.append(new Option(v,v));
+ whyLabel.append(why);form.append(whyLabel);
+ const detailLabel=text('label','Additional details (optional)'),detail=document.createElement('input');
+ detail.type='text';detail.maxLength=250;detail.placeholder='e.g. Bob was unavailable and Spuddy took over';
+ detailLabel.append(detail);form.append(detailLabel);
+ if(award.originalDriverName)form.append(text('p','Original conductor: '+award.originalDriverName,'stat-muted'));
+ const buttons=text('div',null,'train-editor-actions'),save=text('button','Save changed conductor / VIP','stat-button primary'),cancel=text('button','Cancel','stat-button');
+ save.type='button';cancel.type='button';
+ cancel.addEventListener('click',()=>form.remove());
+ save.addEventListener('click',()=>{
+  const newDriver=driver.value.trim(),newVip=vip.value.trim();
+  if(!newDriver||!newVip||normalize(newDriver)===normalize(newVip)){notice('Choose two different names for conductor and VIP.',true);return}
+  if(newDriver===award.driverName&&newVip===award.vipName){notice('Change the conductor or VIP before saving.',true);return}
+  const reason=why.value+(detail.value.trim()?': '+detail.value.trim():'');
+  const proposed={...award,member_id:legacyKey(newDriver),vip_member_id:legacyKey(newVip)};
+  const issues=trainWarnings(trainRecords().filter(a=>a.id!==award.id),proposed,labelForTrainKey);
+  if(issues.length&&!confirm('Review potential rule conflicts:\\n\\n'+issues.join('\\n')+'\\n\\nSave this change anyway?'))return;
+  action(()=>post({action:'update_legacy_train',train_date:award.train_date,expected_driver_name:award.driverName,expected_vip_name:award.vipName,driver_name:newDriver,vip_name:newVip,reason}), 'Train updated. Original driver and replacement reason retained in history.');
+ });
+ buttons.append(save,cancel);form.append(buttons);card.append(form);
+}
+
 function trainCalendar(){
  const root=$('train-calendar');root.replaceChildren();
  const range=stageRange(state.trainStage);$('train-stage-dates').textContent='Stage '+state.trainStage+' · '+range.start+' to '+range.end+' · 5 weeks / 35 days';
@@ -245,13 +280,16 @@ function trainCalendar(){
   for(let d=0;d<7;d++){
    const date=trainAddDays(range.start,w*7+d),td=text('td',null,'train-cell'),current=schedule.get(date)||[];
    const dateBtn=text('button',date.slice(5),'train-date-button');dateBtn.type='button';dateBtn.title='Select '+date+' for train planning';
-   dateBtn.addEventListener('click',()=>{$('train-date').value=date;$('train-source').value=d===0?'donations':d===1?'ds':d===6?'vs':'manual';$('train-slot').value=current[0]?.slot||trainLabel[d];candidates();eligibilityWarnings();$('train-date').scrollIntoView({block:'center'})});
+   dateBtn.addEventListener('click',()=>{$('train-date').value=date;const type=current[0]?.source||((d===2||d===3||d===5)?'r4':d===0?'donations':d===1?'ds':d===6?'vs':'manual');$('train-source').value=['r4','ds','donations','vs'].includes(type)?type:'manual';$('train-slot').value=current[0]?.slot||trainLabel[d];candidates();eligibilityWarnings();$('train-date').scrollIntoView({block:'center'})});
    td.append(dateBtn,text('small',current[0]?.slot||trainLabel[d],'train-type'));
    for(const award of current){
     const item=text('div',null,'train-entry'+(award.legacy?' train-archive-entry':''));
     item.append(text('strong','D: '+award.driverName),text('span','VIP: '+award.vipName));
     if(award.legacy)item.append(text('small','Spreadsheet history','train-archive-note'));
     if(award.notes)item.append(text('small',award.notes,'train-archive-note'));
+    if(award.originalDriverName&&award.originalDriverName!==award.driverName)item.append(text('small','Originally: '+award.originalDriverName,'train-archive-note'));
+    if(award.replacementReason)item.append(text('small','Change: '+award.replacementReason,'train-archive-note'));
+    if(award.legacy){const edit=text('button','Edit conductor / VIP','stat-button train-edit-button');edit.type='button';edit.addEventListener('click',()=>openLegacyTrainEditor(award,item));item.append(edit)}
     const previous=entries.filter(a=>a.train_date<award.train_date);
     const issues=trainWarnings(previous,award,labelForTrainKey);
     if(issues.length){item.classList.add('train-entry-warning');item.append(text('small','⚠ Review repeat recipient','train-issue'));stageIssues.push(...issues)}
