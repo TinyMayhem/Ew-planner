@@ -128,3 +128,17 @@
 .train-rules summary{cursor:pointer;color:#2d5742;font-weight:800}
 .train-rules li{margin:5px 0;line-height:1.5;font-size:13px}
 @media(max-width:760px){.train-grid{min-width:720px}.train-grid td{padding:7px 5px}.train-entry{padding:5px;font-size:10px}}
+
+
+/* R4 trains are a separate eligibility category and not DS-blocking. */
+.train-r4-entry{background:#efe8cb;border:1px solid #c0a260}
+.train-archive-note{font-size:10px;line-height:1.4}
+.train-edit-button{margin-top:5px;padding:6px 8px;font-size:11px;white-space:normal}
+.train-editor-panel{border:1px solid #bba36c;background:#fff8e8;padding:16px;border-radius:14px;margin:13px 0}
+.train-editor-panel[hidden]{display:none!important}
+.train-legacy-editor{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:end}
+.train-legacy-editor .train-edit-heading,.train-legacy-editor .stat-muted,.train-editor-actions{grid-column:1/-1}
+.train-legacy-editor label{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:700;color:#355b46}
+.train-legacy-editor input,.train-legacy-editor select{width:100%;min-width:0;border:1px solid #c9b58a;border-radius:8px;background:#fffdf6;color:#1f4734;font:inherit;padding:10px}
+.train-editor-actions{display:flex;gap:9px;flex-wrap:wrap}
+@media(max-width:600px){.train-legacy-editor{grid-template-columns:1fr}}
