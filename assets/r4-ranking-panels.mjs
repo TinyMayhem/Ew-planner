@@ -84,3 +84,38 @@ export function panelCropRects(width,panel){
   original:rect(.028,.97,0,1)
  };
 }
+
+
+// Last War draws zero as an isolated, outlined black oval at the far
+// right edge of a blue card. This is a fallback ONLY when OCR was blank.
+// It cannot be mistaken for a blank score since visible ink is required.
+export function detectVisibleZeroGlyph(image,panel){
+ if(panel.kind!=='blue')return false;
+ const {width,height,data}=image;
+ const rect=panelCropRects(width,panel).score;
+ const minX=Math.max(0,rect.x),maxX=Math.min(width,rect.x+rect.w);
+ const minY=Math.max(0,rect.y),maxY=Math.min(height,rect.y+rect.h);
+ let left=width,right=0,top=height,bottom=0,ink=0;
+ const dark=(x,y)=>{
+  const p=(y*width+x)*4;
+  return Math.max(data[p],data[p+1],data[p+2])<110;
+ };
+ for(let y=minY;y<maxY;y++)for(let x=minX;x<maxX;x++){
+  if(!dark(x,y))continue;
+  ink++;left=Math.min(left,x);right=Math.max(right,x);top=Math.min(top,y);bottom=Math.max(bottom,y);
+ }
+ const w=right-left+1,h=bottom-top+1;
+ if(ink<35||ink>width*.45||w<width*.009||w>width*.036||h<panel.height*.08||h>panel.height*.24||
+    right<width*.88)return false;
+ // A zero has two solid side walls separated by a light interior at its midline.
+ // A thin 1 or another single-stroke glyph must not become a zero.
+ const midY=Math.round((top+bottom)/2);
+ let leftSide=false,rightSide=false,centerGap=false;
+ for(let x=left;x<=right;x++){
+  if(dark(x,midY)){
+   if(x<left+w*.38)leftSide=true;
+   if(x>left+w*.62)rightSide=true;
+  }else if(x>left+w*.40&&x<left+w*.60)centerGap=true;
+ }
+ return leftSide&&rightSide&&centerGap;
+}
