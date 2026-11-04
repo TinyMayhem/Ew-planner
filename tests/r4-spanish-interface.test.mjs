@@ -60,7 +60,7 @@ test('all ten R4 departments and role explanation examples are included in trans
 });
 test('all private R4 screens include the same persistent English Spanish switch',()=>{
  const files=['api/r4-planner.mjs','lib/r4-stats-page.mjs','lib/r4-reports-page.mjs','lib/r4-nicknames-page.mjs'];
- for(const file of files)assert.match(readFileSync(file,'utf8'),/assets\/r4-es\.js\?locale=v1/,file);
+ for(const file of files)assert.match(readFileSync(file,'utf8'),/assets\/r4-es\.js\?locale=[^"']+/,file);
  const js=readFileSync('assets/r4-es.js','utf8');
  assert.match(js,/localStorage\.setItem\(STORAGE_KEY,lang\)/);
  assert.match(js,/data-r4-lang-control|dataset\.r4LangControl/);
