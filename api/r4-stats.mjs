@@ -5,6 +5,7 @@ import {sessionUser} from '../lib/r4-auth.mjs';
 import {GET as auditPage} from '../lib/r4-audit-page.mjs';
 import {GET as statsPage} from '../lib/r4-stats-page.mjs';
 import {GET as reportsPage} from '../lib/r4-reports-page.mjs';
+import {GET as nicknamesPage} from '../lib/r4-nicknames-page.mjs';
 import {buildMemberPerformance} from '../lib/member-performance.mjs';
 import {stageRange,stageForDate,weekStart} from '../assets/r4-train-rules.mjs';
 import {buildTrainAdvice} from '../lib/train-advice.mjs';
@@ -79,6 +80,7 @@ export async function GET(request){
  if(view==='1')return statsPage(request);
  if(view==='audit')return auditPage(request);
  if(view==='reports')return reportsPage(request);
+ if(view==='nicknames')return nicknamesPage(request);
  if(!await authorizedAccess(request))return json({error:'R4 sign-in required'},401);
  const q=new URL(request.url).searchParams;
  try{
@@ -112,6 +114,14 @@ export async function GET(request){
    if(!raw||!Array.isArray(raw.members)||!Array.isArray(raw.snapshots)||!Array.isArray(raw.observations))
     throw Error('Invalid report data');
    return json({from:from||null,to:to||null,season:season||'all',...buildMemberPerformance(raw,settings)});
+  }
+  if(q.get('nicknames')==='1'){
+   const [members,aliases]=await Promise.all([
+    list('utw_stat_members',{select:'id,display_name',order:'display_name.asc',limit:'1000'}),
+    list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'5000'})
+   ]);
+   if(!Array.isArray(members)||!Array.isArray(aliases))throw Error('Member nickname list unavailable');
+   return json({members,aliases});
   }
   if(q.get('scan_recent')==='1'){
    const [imports,ds]=await Promise.all([
@@ -265,10 +275,32 @@ export async function POST(request){
    case 'import':return await importCsv(body,request);
    case 'alias':{
     const alias=name(body.alias),memberId=body.member_id;
-    if(alias.length<1||alias.length>60||!uuid(memberId))return json({error:'Enter a valid alias and member'},400);
+    if(alias.length<1||alias.length>60||!uuid(memberId))return json({error:'Enter a valid nickname and member'},400);
+    const [member,claimed]=await Promise.all([
+     list('utw_stat_members',{select:'id,display_name',id:'eq.'+memberId,limit:'1'}),
+     list('utw_stat_aliases',{select:'alias_key,alias,member_id',alias_key:'eq.'+key(alias),limit:'1'})
+    ]);
+    if(member.length!==1)return json({error:'Choose an existing member'},404);
+    if(claimed.length){
+     if(claimed[0].member_id===memberId)return json({ok:true,alreadyLinked:true});
+     return json({error:'This nickname belongs to another member. Confirm that the people are the same before merging.',existing_member_id:claimed[0].member_id},409);
+    }
     await insert('utw_stat_aliases',{alias_key:key(alias),alias,member_id:memberId});
     await recordAudit(request,'alias',{alias_key:key(alias),alias,member_id:memberId},true);
     return json({ok:true},201);
+   }
+   case 'delete_alias':{
+    const alias=name(body.alias),memberId=body.member_id;
+    if(!alias||alias.length>60||!uuid(memberId))return json({error:'Choose a valid nickname and member'},400);
+    const [member,found]=await Promise.all([
+     list('utw_stat_members',{select:'id,display_name',id:'eq.'+memberId,limit:'1'}),
+     list('utw_stat_aliases',{select:'alias_key,alias,member_id',alias_key:'eq.'+key(alias),limit:'1'})
+    ]);
+    if(member.length!==1||found.length!==1||found[0].member_id!==memberId)return json({error:'Nickname not linked to that member'},404);
+    if(key(member[0].display_name)===key(alias))return json({error:'Main member names cannot be removed. Add alternate nicknames instead.'},400);
+    await del('utw_stat_aliases',{alias_key:'eq.'+key(alias),member_id:'eq.'+memberId});
+    await recordAudit(request,'delete_alias',{alias_key:key(alias),alias:found[0].alias,member_id:memberId},false);
+    return json({ok:true});
    }
    case 'merge':{
     if(!uuid(body.source)||!uuid(body.target)||body.source===body.target)return json({error:'Choose two distinct members'},400);
