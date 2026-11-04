@@ -84,6 +84,9 @@ function createSwitcher(){
  wrapper.append(label,select);navigation.append(wrapper);
 }
 function start(){
+ if(!document.querySelector('link[data-r4-language-styles]')){
+  const link=document.createElement('link');link.rel='stylesheet';link.href='/assets/r4-es.css';link.dataset.r4LanguageStyles='1';document.head.append(link);
+ }
  createSwitcher();
  // Watch the planner's lazy-loaded weekly checklists and role descriptions.
  observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','title','aria-label']});
