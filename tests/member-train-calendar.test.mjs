@@ -39,11 +39,12 @@ test('member train calendar keeps the member gate, combines screenshots and save
   const response=await GET(request('utw_page='+sessionToken('page')));
   assert.equal(response.status,200);
   const data=await response.json();
-  assert.deepEqual(data.stages.map(s=>s.stage),[15,14,13]);
-  assert.equal(data.stages[0].start,'2026-10-12');
-  assert.equal(data.stages[0].end,'2026-11-15');
-  assert.equal(data.stages[1].start,'2026-09-07');
-  assert.equal(data.stages[1].end,'2026-10-11');
+  assert.deepEqual(data.stages.map(s=>s.stage),[16,15,14,13,12,11,10,9,8,7]);
+  assert.equal(data.stages[0].start,'2026-11-16');
+  assert.equal(data.stages[0].end,'2026-12-20');
+  assert.equal(data.stages[1].start,'2026-10-12');
+  assert.equal(data.stages[1].end,'2026-11-15');
+  assert.equal(data.stages[9].start,'2025-12-29');
   assert.equal(data.trains.length,4);
   assert.equal(data.trains.find(t=>t.date==='2026-11-01').member,'Corrected Driver');
   assert.equal(data.trains.find(t=>t.date==='2026-09-07').vip,'Spuddy');
@@ -61,7 +62,8 @@ test('Members Den defaults to the latest two full five-week calendars with old d
  assert.match(html,/id="trainCalendars"/);
  assert.match(html,/id="trainRows"/);
  assert.match(html,/type="module" src="\/assets\/members\.js"/);
- assert.match(js,/stages\.slice\(0,2\)/);
+ assert.match(js,/stages\.filter\(s=>s\.start<=serverDate\)\.slice\(0,2\)/);
+ assert.match(js,/trainLabelForDate/);
  assert.match(js,/week<5/);
  assert.match(js,/day<7/);
  assert.match(js,/stageCalendar\(stage,entries\)/);
