@@ -57,7 +57,7 @@ test('roster matching normalizes stylized and accented names without silently ap
  assert.deepEqual(matchRoster('MXK',members).name,'MXĶ');
  assert.deepEqual(matchRoster('Jax',members).name,'Jãx');
  assert.equal(matchRoster('JMotty',members).type,'exact');
- assert.equal(matchRoster('ge JMotty',members).type,'unknown');
+ assert.equal(matchRoster('ge JMotty',members).type,'suggested'); // offered for manual review only
 });
 test('column OCR uses geometry-aware recognition, and the review page shows original row strips',()=>{
  const scan=readFileSync('assets/r4-ocr-browser.mjs','utf8');
