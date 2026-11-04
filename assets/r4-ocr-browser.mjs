@@ -1,4 +1,4 @@
-import {detectRankingPanels,parsePanelPoints,splitMontageByPanel,panelCropRects,detectVisibleZeroGlyph} from './r4-ranking-panels.mjs?version=scan-v5-20261104';
+import {detectRankingPanels,parsePanelPoints,splitMontageByPanel,panelCropRects,detectVisibleZeroGlyph} from './r4-ranking-panels.mjs?version=podium-v51-20261104';
 // Local-only, column-specific OCR for Last War ranking screenshots.
 // A single OCR pass over the whole screenshot is not reliable: it pairs ranks,
 // avatars, [UTW] tags and scores from different visual rows.
@@ -176,7 +176,7 @@ async function scanCards(worker,file,roster,aliases,onProgress=()=>{}){
   const imagePixels=ctx.getImageData(0,0,canvas.width,canvas.height);
   const panels=detectRankingPanels(imagePixels);
   if(!panels.length)return null;
-  onProgress('found '+panels.length+' blue/green ranking rows');
+  onProgress('found '+panels.length+' colored ranking cards');
   const nameMontage=montageForRankedCards(bitmap,panels,'name');
   const scoreMontage=montageForRankedCards(bitmap,panels,'score');
   onProgress('reading names from '+panels.length+' isolated rows');
@@ -240,7 +240,7 @@ async function scanCards(worker,file,roster,aliases,onProgress=()=>{}){
    rows,ocrText:'ISOLATED RANKING ROWS:\n'+debug.join('\n')+
     '\n\nNAME OCR:\n'+(nameData.text||'')+'\n\nSCORE OCR:\n'+(scoreData.text||''),
    unread:rows.filter(r=>!r.ocrGuess||r.points===null).map(r=>r.ocrGuess||'(unreadable)'),
-   diagnostics:'Scanner v5 · '+panels.length+' actual game cards (blue/green) · '+withPoints+
+   diagnostics:'Scanner v5 · '+panels.length+' actual game cards (podium, blue and green) · '+withPoints+
     ' scores, including '+rows.filter(r=>r.points===0).length+' recorded zeros'+
     (panels.some(p=>p.isPinned)?' · green pinned row recognized':''),
    quality,qualityMessage,layout:'last-war-ranked-panels'
