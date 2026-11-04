@@ -103,7 +103,7 @@ async function fetchReport(){
  if(from)params.set('from',from);
  if($('report-season').value)params.set('season',$('report-season').value);
  try{
-  const res=await fetch('/api/r4-reports?'+params.toString(),{credentials:'same-origin',cache:'no-store'});
+  const res=await fetch('/api/r4-stats?member_report=1&'+params.toString(),{credentials:'same-origin',cache:'no-store'});
   const data=await res.json();
   if(res.status===401){location.href='/r4-planner';return}
   if(!res.ok)throw Error(data.error||'Could not load member reports');
