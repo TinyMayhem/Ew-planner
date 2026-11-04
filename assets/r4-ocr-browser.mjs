@@ -174,9 +174,13 @@ async function scanCards(worker,file,roster,aliases,onProgress=()=>{}){
   const ctx=canvas.getContext('2d',{willReadFrequently:true});
   ctx.drawImage(bitmap,0,0);
   const imagePixels=ctx.getImageData(0,0,canvas.width,canvas.height);
-  const panels=detectRankingPanels(imagePixels);
+  const detected=detectRankingPanels(imagePixels);
+  // The green footer is the uploader's own pinned rank, not part of the
+  // scrolling leaderboard. Never send it to OCR or the save preview.
+  const panels=detected.filter(panel=>!panel.isPinned);
+  const skippedPinned=detected.length-panels.length;
   if(!panels.length)return null;
-  onProgress('found '+panels.length+' colored ranking cards');
+  onProgress('found '+panels.length+' ranked cards'+(skippedPinned?' · skipped '+skippedPinned+' green self-row':''));
   const nameMontage=montageForRankedCards(bitmap,panels,'name');
   const scoreMontage=montageForRankedCards(bitmap,panels,'score');
   onProgress('reading names from '+panels.length+' isolated rows');
@@ -242,7 +246,7 @@ async function scanCards(worker,file,roster,aliases,onProgress=()=>{}){
    unread:rows.filter(r=>!r.ocrGuess||r.points===null).map(r=>r.ocrGuess||'(unreadable)'),
    diagnostics:'Scanner v5 · '+panels.length+' actual game cards (podium, blue and green) · '+withPoints+
     ' scores, including '+rows.filter(r=>r.points===0).length+' recorded zeros'+
-    (panels.some(p=>p.isPinned)?' · green pinned row recognized':''),
+    (skippedPinned?' · '+skippedPinned+' green pinned self-row'+(skippedPinned===1?'':'s')+' automatically excluded':''),
    quality,qualityMessage,layout:'last-war-ranked-panels'
   };
  }finally{bitmap.close?.()}
