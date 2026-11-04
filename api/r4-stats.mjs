@@ -4,6 +4,8 @@ import {authorizedAccess} from './r4-planner.mjs';
 import {sessionUser} from '../lib/r4-auth.mjs';
 import {GET as auditPage} from '../lib/r4-audit-page.mjs';
 import {GET as statsPage} from '../lib/r4-stats-page.mjs';
+import {GET as reportsPage} from '../lib/r4-reports-page.mjs';
+import {buildMemberPerformance} from '../lib/member-performance.mjs';
 import {stageRange,stageForDate,weekStart} from '../assets/r4-train-rules.mjs';
 import {buildTrainAdvice} from '../lib/train-advice.mjs';
 
@@ -76,6 +78,7 @@ export async function GET(request){
  const view=new URL(request.url).searchParams.get('view');
  if(view==='1')return statsPage(request);
  if(view==='audit')return auditPage(request);
+ if(view==='reports')return reportsPage(request);
  if(!await authorizedAccess(request))return json({error:'R4 sign-in required'},401);
  const q=new URL(request.url).searchParams;
  try{
@@ -83,6 +86,32 @@ export async function GET(request){
   if(q.get('audit')==='1'){
    if(!await owner(request))return json({error:'Owner account required'},403);
    return json({events:await list('utw_stat_audit',{select:'id,action,actor,created_at,reversible,undone_at,undone_by,details',order:'created_at.desc,id.desc',limit:'400'})});
+  }
+  if(q.get('member_report')==='1'){
+   const from=q.get('from'),to=q.get('to'),season=q.get('season');
+   if((from&&!isoDate(from))||(to&&!isoDate(to))||(from&&to&&from>to)||
+      (season&&!/^[a-z0-9-]{2,30}$/.test(season)))return json({error:'Choose a valid report date range and season'},400);
+   const intValue=(text,defaultValue,min,max)=>{
+    if(text===null)return defaultValue;
+    if(!/^\\d+$/.test(text))return null;
+    const value=Number(text);
+    return Number.isSafeInteger(value)&&value>=min&&value<=max?value:null;
+   };
+   const settings={
+    dailyMinimum:intValue(q.get('daily'),7200000,0,1000000000000),
+    weeklyMinimum:intValue(q.get('weekly'),42000000,0,1000000000000),
+    donationMinimum:intValue(q.get('donations'),1,0,1000000000000),
+    minSamples:intValue(q.get('samples'),2,1,100),
+    missPercent:intValue(q.get('percent'),50,1,100),
+    rosterOnly:q.get('roster')!=='all'
+   };
+   if(Object.values(settings).some(x=>x===null))return json({error:'Check the minimums and consistency settings'},400);
+   const raw=await db('rpc/utw_stat_member_report_data',{
+    method:'POST',body:JSON.stringify({p_from:from||null,p_to:to||null,p_season:season||null})
+   });
+   if(!raw||!Array.isArray(raw.members)||!Array.isArray(raw.snapshots)||!Array.isArray(raw.observations))
+    throw Error('Invalid report data');
+   return json({from:from||null,to:to||null,season:season||'all',...buildMemberPerformance(raw,settings)});
   }
   if(q.get('scan_recent')==='1'){
    const [imports,ds]=await Promise.all([
