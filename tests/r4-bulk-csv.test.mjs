@@ -42,7 +42,7 @@ test('bulk importer keeps file-level mapping and uses existing authorized import
  const html=readFileSync(new URL('../lib/r4-stats-page.mjs',import.meta.url),'utf8');
  const app=readFileSync(new URL('../assets/r4-stats.js',import.meta.url),'utf8');
  assert.match(html,/id="csv-file"[^>]+multiple/);
- assert.match(html,/type="module" src="\/assets\/r4-stats.js"/);
+ assert.match(html,/type="module" src="\/assets\/r4-stats\.js(?:\?version=[^"]+)?"/);
  assert.match(html,/id="csv-batch"/);
  assert.match(app,/item\.metric/);
  assert.match(app,/item\.period/);
