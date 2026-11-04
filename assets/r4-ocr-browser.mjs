@@ -3,6 +3,7 @@
 // avatars, [UTW] tags and scores from different visual rows.
 import {columnRects,textLines,scoreAnchors,alignRankColumns,cleanRankName} from './r4-ocr-columns.mjs';
 import {matchRoster} from './r4-ocr-parser.mjs';
+import {hasEastAsianScript} from './r4-ocr-languages.mjs';
 
 function cropScaled(bitmap,rect,targetWidth=650){
  const scale=Math.min(3,Math.max(1,targetWidth/rect.w));
@@ -21,8 +22,8 @@ function rankStrip(bitmap,rect){
  canvas.getContext('2d').drawImage(bitmap,x,y,width,height,0,0,canvas.width,canvas.height);
  return canvas.toDataURL('image/jpeg',.84);
 }
-async function recognizeBlock(worker,canvas){
- await worker.setParameters({tessedit_pageseg_mode:'6',tessedit_char_whitelist:''});
+async function recognizeBlock(worker,canvas,scoreOnly=false){
+ await worker.setParameters({tessedit_pageseg_mode:'6',tessedit_char_whitelist:scoreOnly?'0123456789,.' : ''});
  return (await worker.recognize(canvas,{}, {blocks:true})).data;
 }
 function orderedLines(data,scale){
@@ -34,14 +35,14 @@ export async function scanRankingScreenshot(worker,file,roster,aliases,onProgres
   const rects=columnRects(bitmap.width,bitmap.height);
   onProgress('reading points column');
   const pointsImage=cropScaled(bitmap,rects.score,570);
-  const pointsData=await recognizeBlock(worker,pointsImage.canvas);
+  const pointsData=await recognizeBlock(worker,pointsImage.canvas,true);
   const pointLines=orderedLines(pointsData,pointsImage.scale);
   const heading=pointLines.find(x=>/\bpoints\b/i.test(x.text));
   let scores=scoreAnchors({lines:pointLines});
   if(heading?.y!==null)scores=scores.filter(x=>x.y>heading.y+Math.max(heading.h||0,bitmap.height*.01));
   onProgress('reading names column');
   const namesImage=cropScaled(bitmap,rects.name,740);
-  const namesData=await recognizeBlock(worker,namesImage.canvas);
+  const namesData=await recognizeBlock(worker,namesImage.canvas,false);
   const nameLines=orderedLines(namesData,namesImage.scale);
   let rows=alignRankColumns({names:nameLines,scores,height:bitmap.height,roster,aliases});
   const uncertain=rows.filter(r=>!r.name).length;
@@ -64,7 +65,7 @@ export async function scanRankingScreenshot(worker,file,roster,aliases,onProgres
     const match=matchRoster(guess,roster,aliases);
     if(match.type==='exact'||match.type==='suggested'){
      row.ocrGuess=guess;row.name=match.name;row.matchType=match.type;
-     row.confirmed=match.type==='exact'&&!row.needsScoreCheck;
+     row.confirmed=match.type==='exact'&&!row.needsScoreCheck&&!hasEastAsianScript(guess);
     }
    }
   }
