@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {buildMemberPerformance,selectMemberReports} from '../lib/member-performance.mjs';
 import {GET as pageGet} from '../lib/r4-reports-page.mjs';
-import {GET as reportGet} from '../api/r4-reports.mjs';
+import {GET as reportGet} from '../api/r4-stats.mjs';
 
 const raw={
  members:[{id:'a',name:'TinyMayhem'},{id:'b',name:'Devi'},{id:'c',name:'FormerMember'}],
@@ -80,7 +80,7 @@ test('UTW reports page and data API deny unauthenticated visitors',async()=>{
  const res=await pageGet(new Request('https://site.test/r4-reports'));
  assert.equal(res.status,303);
  assert.equal(res.headers.get('location'),'/r4-planner');
- const data=await reportGet(new Request('https://site.test/api/r4-reports?to=2026-11-03'));
+ const data=await reportGet(new Request('https://site.test/api/r4-stats?member_report=1&to=2026-11-03'));
  assert.equal(data.status,401);
 });
 test('authenticated reports validate dates and securely query the reporting function',async()=>{
@@ -91,16 +91,19 @@ test('authenticated reports validate dates and securely query the reporting func
  const expiry=String(Date.now()+60000);
  const signature=createHmac('sha256',process.env.UTW_SESSION_SECRET).update('r4-planner:'+expiry).digest('hex');
  const headers={cookie:'utw_r4='+expiry+'.'+signature};
- const invalid=await reportGet(new Request('https://site.test/api/r4-reports?from=2026-99-99&to=2026-11-03',{headers}));
- assert.equal(invalid.status,400);
  let path='',payload=null;
  const before=globalThis.fetch;
  globalThis.fetch=async(url,options)=>{
-  path=String(url);payload=JSON.parse(options.body);
-  return Response.json(raw);
+  if(String(url).includes('/rpc/utw_stat_member_report_data')){
+   path=String(url);payload=JSON.parse(options.body);return Response.json(raw);
+  }
+  // An empty legacy R4 account directory allows the existing signed test cookie.
+  return Response.json([]);
  };
  try{
-  const res=await reportGet(new Request('https://site.test/api/r4-reports?to=2026-11-03&daily=7200000&weekly=42000000&donations=1',{headers}));
+  const invalid=await reportGet(new Request('https://site.test/api/r4-stats?member_report=1&from=2026-99-99&to=2026-11-03',{headers}));
+  assert.equal(invalid.status,400);
+  const res=await reportGet(new Request('https://site.test/api/r4-stats?member_report=1&to=2026-11-03&daily=7200000&weekly=42000000&donations=1',{headers}));
   assert.equal(res.status,200);
   const report=await res.json();
   assert.equal(report.summary.repeatedDaily,1);
@@ -117,7 +120,7 @@ test('private reports route, filters, and export module are valid',()=>{
  const code=readFileSync('assets/r4-reports.js','utf8');
  for(const id of ['report-from','report-to','report-preset','report-view','report-export'])assert(code.includes(id));
  assert.match(code,/show/i);
- for(const file of ['assets/r4-reports.js','lib/member-performance.mjs','api/r4-reports.mjs']){
+ for(const file of ['assets/r4-reports.js','lib/member-performance.mjs','api/r4-stats.mjs']){
   const result=spawnSync(process.execPath,['--check',file],{encoding:'utf8'});
   assert.equal(result.status,0,result.stderr);
  }
