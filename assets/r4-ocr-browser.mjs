@@ -160,7 +160,7 @@ async function retrySingleCard(worker,bitmap,panel,kind){
 }
 
 function rosterGuess(value,roster,aliases){
- const guess=cleanRankName(value.replace(/^\s*\d{1,3}\s+[.)]?\s*/,'').trim());
+ const guess=cleanRankName(value.trim());
  const match=matchRoster(guess,roster,aliases);
  return {name:match.name||guess,ocrGuess:guess,matchType:match.type,
   confirmed:match.type==='exact'&&!hasEastAsianScript(guess)};
