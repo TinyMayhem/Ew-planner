@@ -84,6 +84,14 @@ export async function GET(request){
    if(!await owner(request))return json({error:'Owner account required'},403);
    return json({events:await list('utw_stat_audit',{select:'id,action,actor,created_at,reversible,undone_at,undone_by,details',order:'created_at.desc,id.desc',limit:'400'})});
   }
+  if(q.get('scan_recent')==='1'){
+   const [imports,ds]=await Promise.all([
+    list('utw_stat_imports',{select:'id,metric,period,filename,row_count,created_at',filename:'like.Screenshot_%',order:'created_at.desc',limit:'30'}),
+    list('utw_stat_ds',{select:'id,event_date,notes,created_at',notes:'ilike.Screenshot scanner%',order:'created_at.desc',limit:'20'})
+   ]);
+   if(!Array.isArray(imports)||!Array.isArray(ds))throw Error('Screenshot upload history unavailable');
+   return json({imports,ds});
+  }
   if(q.get('train_advice')==='1'){
    const date=q.get('date'),mode=q.get('mode'),slot=clean(q.get('slot'),100);
    if(!isoDate(date)||date<'2025-12-29'||stageForDate(date)>40||
