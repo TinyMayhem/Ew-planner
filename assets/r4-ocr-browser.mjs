@@ -1,4 +1,4 @@
-import {detectRankingPanels,parsePanelPoints,splitMontageByPanel,panelCropRects} from './r4-ranking-panels.mjs?version=scan-v5-20261104';
+import {detectRankingPanels,parsePanelPoints,splitMontageByPanel,panelCropRects,detectVisibleZeroGlyph} from './r4-ranking-panels.mjs?version=scan-v5-20261104';
 // Local-only, column-specific OCR for Last War ranking screenshots.
 // A single OCR pass over the whole screenshot is not reliable: it pairs ranks,
 // avatars, [UTW] tags and scores from different visual rows.
@@ -173,7 +173,8 @@ async function scanCards(worker,file,roster,aliases,onProgress=()=>{}){
   canvas.width=bitmap.width;canvas.height=bitmap.height;
   const ctx=canvas.getContext('2d',{willReadFrequently:true});
   ctx.drawImage(bitmap,0,0);
-  const panels=detectRankingPanels(ctx.getImageData(0,0,canvas.width,canvas.height));
+  const imagePixels=ctx.getImageData(0,0,canvas.width,canvas.height);
+  const panels=detectRankingPanels(imagePixels);
   if(!panels.length)return null;
   onProgress('found '+panels.length+' blue/green ranking rows');
   const nameMontage=montageForRankedCards(bitmap,panels,'name');
@@ -214,6 +215,17 @@ async function scanCards(worker,file,roster,aliases,onProgress=()=>{}){
     const score=parsePanelPoints(await retrySingleCard(worker,bitmap,panels[i],'score'));
     rows[i].points=score.points;rows[i].needsScoreCheck=score.uncertain;
     rows[i].confirmed=false;
+   }
+  }
+  // Tiny one-character zeros can vanish even in a focused OCR pass.
+  // Only infer zero if the printed glyph is actually visible and oval-shaped.
+  for(let i=0;i<rows.length;i++){
+   if(rows[i].points!==null)continue;
+   if(detectVisibleZeroGlyph(imagePixels,panels[i])){
+    rows[i].points=0;
+    rows[i].needsScoreCheck=true;
+    rows[i].confirmed=false;
+    rows[i].raw+=' | visually detected 0 (verify)';
    }
   }
   // Pinned self-entry is not an extra ranking place in the scrolling list.
