@@ -237,17 +237,18 @@ function labelForTrainKey(key){
 function currentTrainWarnings(){
  if(!state.data)return [];
  const driver=$('train-member').value,vip=$('train-vip').value;
- if(!driver||!vip)return [];
- const driverName=memberName(driver),vipName=memberName(vip);
- const label=key=>key===legacyKey(driverName)?driverName:key===legacyKey(vipName)?vipName:labelForTrainKey(key);
- return trainWarnings(trainRecords(),{train_date:$('train-date').value,member_id:legacyKey(driverName),vip_member_id:legacyKey(vipName),source:$('train-source').value,slot:$('train-slot').value},label);
+ if(!driver&&!vip)return [];
+ const driverName=driver?memberName(driver):'',vipName=vip?memberName(vip):'';
+ const label=key=>driver&&key===legacyKey(driverName)?driverName:vip&&key===legacyKey(vipName)?vipName:labelForTrainKey(key);
+ return trainWarnings(trainRecords(),{train_date:$('train-date').value,member_id:driver?legacyKey(driverName):'',vip_member_id:vip?legacyKey(vipName):'',source:$('train-source').value,slot:$('train-slot').value},label);
 }
 function eligibilityWarnings(){
  const root=$('train-eligibility-warnings');root.replaceChildren();
  if(!state.data)return;
  const issues=currentTrainWarnings();
  if(issues.length){root.append(text('strong','⚠ '+issues.length+' train rule warning'+(issues.length===1?'':'s'),'train-warning-title'));issues.forEach(s=>root.append(text('p',s,'train-rule-warning')))}
- root.append(text('p','R4 must also verify hive position, member rank, passenger frequency, Wednesday first-timer preference and approved exceptions.','stat-muted'));
+ root.append(text('p','Conductor: once per five-week stage. VIP: once per Monday-to-Sunday week. These roles are independent; R4 trains are a separate category.','stat-muted'));
+ root.append(text('p','R4 must also verify hive position, member rank, Wednesday first-timer preference and approved exceptions.','stat-muted'));
 }
 
 function openLegacyTrainEditor(award,card){
