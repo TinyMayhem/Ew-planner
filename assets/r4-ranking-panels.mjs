@@ -1,21 +1,27 @@
-// Find Last War ranking row cards by their stable blue/green backgrounds.
-// This provides row boundaries independently of OCR, even for zero scores.
+// Find Last War ranking cards by their stable podium, blue and green backgrounds.
+// The first three ranks are gold, silver and bronze; other rows are blue,
+// with a separate green pinned self-ranking row. OCR stays row-isolated.
 const isBlue=(r,g,b)=>r>=145&&r<=243&&g>=150&&g<=247&&b>g+8&&b>r+12;
 const isGreen=(r,g,b)=>g>=155&&g>r+24&&g>b+24;
+const isGold=(r,g,b)=>r>=225&&g>=170&&g<=245&&b>=40&&b<155&&r>g+12&&g>b+45;
+const isBronze=(r,g,b)=>r>=215&&g>=160&&g<=229&&b>=120&&b<215&&r>g+18&&g>b+9;
+const isSilver=(r,g,b)=>r>=175&&r<=242&&g>=190&&g<=242&&b>=245&&b>=g+18&&b>=r+25;
 const median=v=>{const a=v.slice().sort((x,y)=>x-y);return a.length?a[Math.floor(a.length/2)]:0};
 export function detectRankingPanels({width,height,data}){
  if(!Number.isInteger(width)||!Number.isInteger(height)||width<180||height<300||!data||data.length<width*height*4)return [];
  const xs=[.06,.09,.62,.69,.88].map(f=>Math.min(width-1,Math.max(1,Math.round(width*f))));
  function colorAt(y){
-  const counts={blue:0,green:0}; 
+  const counts={gold:0,silver:0,bronze:0,blue:0,green:0};
   for(const x of xs){
    const i=(y*width+x)*4,r=data[i],g=data[i+1],b=data[i+2];
-   if(isBlue(r,g,b))counts.blue++;
+   if(isGold(r,g,b))counts.gold++;
+   else if(isBronze(r,g,b))counts.bronze++;
+   else if(isSilver(r,g,b))counts.silver++;
+   else if(isBlue(r,g,b))counts.blue++;
    else if(isGreen(r,g,b))counts.green++;
   }
-  if(counts.blue>=2&&counts.blue>=counts.green)return 'blue';
-  if(counts.green>=2&&counts.green>counts.blue)return 'green';
-  return null;
+  const best=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+  return best[1]>=2?best[0]:null;
  }
  const colors=Array.from({length:height},(_,y)=>colorAt(y)),runs=[];
  let active=null,start=0,miss=0;
