@@ -22,32 +22,50 @@ export const trainRole=(award,id)=>award.member_id===id?'Driver':award.vip_membe
 // R4-arranged trains run in their own eligibility lane. An R4 assignment
 // must never disqualify its recipient from a DS, donation, VS or roulette train.
 export const isR4Train=award=>award?.source==='r4'||/^R4(?:\s|$)/i.test(String(award?.slot||award?.selection_label||'').trim());
+// Conductor and VIP are separate entitlements, not one combined "had train" flag.
+// One conductor assignment per five-week stage; one VIP assignment per calendar
+// week. R4-appointed trains retain their own separate eligibility lane.
 export function trainWarnings(awards,proposed,displayName=id=>id){
  const {train_date,member_id,vip_member_id,source,slot,id:editingId}=proposed;
- if(!train_date||!member_id||!vip_member_id)return [];
+ if(!train_date||(!member_id&&!vip_member_id))return [];
  const stage=stageForDate(train_date),range=stageRange(stage),weeklyStart=weekStart(train_date);
- const warnings=[];
- const people=[{id:member_id,role:'Driver'},{id:vip_member_id,role:'VIP'}];
- for(const person of people){
-  if(String(person.id).trim().toLowerCase()==='not recorded')continue;
-  const matches=awards.filter(a=>a.id!==editingId&&a.train_date>=range.start&&a.train_date<=range.end&&isR4Train(a)===isR4Train(proposed)&&trainRole(a,person.id));
-  const who=displayName(person.id);
-  for(const prior of matches){
-   warnings.push(who+' already appeared as '+trainRole(prior,person.id)+' on '+prior.train_date+' (Stage '+stage+'). This '+person.role+' assignment repeats a person in the same calendar.');
+ const weeklyEnd=addDays(weeklyStart,6),r4Lane=isR4Train(proposed),warnings=[];
+ const sameLane=awards.filter(a=>a.id!==editingId&&
+  a.train_date>=range.start&&a.train_date<=range.end&&
+  isR4Train(a)===r4Lane);
+ const valid=id=>id&&String(id).trim().toLowerCase()!=='not recorded';
+ if(valid(member_id)){
+  const name=displayName(member_id);
+  const previous=sameLane.filter(a=>a.member_id===member_id);
+  for(const prior of previous){
+   warnings.push(name+' already drove on '+prior.train_date+
+    ' (Stage '+stage+'). A conductor cannot drive twice in the same five-week stage.');
   }
-  if(person.role==='Driver'&&matches.some(a=>a.member_id===person.id&&a.train_date>=weeklyStart&&a.train_date<=addDays(weeklyStart,6))){
-   warnings.push(who+' has already driven a train this Monday-to-Sunday week.');
-  }
-  if(person.role==='VIP'&&matches.some(a=>a.vip_member_id===person.id&&a.train_date>=weeklyStart&&a.train_date<=addDays(weeklyStart,6))){
-   warnings.push(who+' has already been a VIP passenger this Monday-to-Sunday week. Confirm the once-per-week VIP rule.');
-  }
-  if(person.role==='Driver'&&/roulette/i.test(slot||'')&&matches.some(a=>a.member_id===person.id)){
-   warnings.push(who+' is not eligible for roulette because they already drove in Stage '+stage+'.');
-  }
-  if(['ds','donations','vs'].includes(source)&&matches.some(a=>a.source===source)){
-   const label={ds:'DS MVP',donations:'Top donor',vs:'Top VS'}[source];
-   warnings.push(who+' has already received a '+label+' train assignment in Stage '+stage+'.');
+  if(source==='donations'||source==='ds'||source==='vs'){
+   const winner=previous.find(a=>a.source===source);
+   if(winner){
+    const label={ds:'DS MVP',donations:'Top donor',vs:'Top VS'}[source];
+    warnings.push(name+' already received a '+label+' conductor assignment on '+winner.train_date+' in Stage '+stage+'.');
+   }
   }
  }
+ if(valid(vip_member_id)){
+  const name=displayName(vip_member_id);
+  const previous=sameLane.filter(a=>a.vip_member_id===vip_member_id);
+  const thisWeek=previous.filter(a=>a.train_date>=weeklyStart&&a.train_date<=weeklyEnd);
+  for(const prior of thisWeek){
+   warnings.push(name+' was already a VIP on '+prior.train_date+
+    '. A VIP cannot be selected again in the same Monday-to-Sunday week.');
+  }
+  if(source==='donations'||source==='ds'||source==='vs'){
+   const winner=previous.find(a=>a.source===source);
+   if(winner){
+    const label={ds:'DS MVP',donations:'Top donor',vs:'Top VS'}[source];
+    warnings.push(name+' already received a '+label+' VIP assignment on '+winner.train_date+' in Stage '+stage+'.');
+   }
+  }
+ }
+ if(valid(member_id)&&valid(vip_member_id)&&member_id===vip_member_id)
+  warnings.push(displayName(member_id)+' cannot be both conductor and VIP on the same train.');
  return [...new Set(warnings)];
 }
