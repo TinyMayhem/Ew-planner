@@ -51,12 +51,12 @@ export async function GET(request){if(!pageAllowed(request))return json({ready:f
  }));
  const history=legacy.filter(r=>!actualDates.has(r.train_date)).map(r=>({
   date:r.train_date,slot:r.selection_label,member:r.driver_name,vip:r.vip_name,
-  season:'post-s5',source:r.source,stage:stageForDate(r.train_date)
+  season:stageForDate(r.train_date)<13?'history-2026':'post-s5',source:r.source,stage:stageForDate(r.train_date)
  }));
  const trains=[...actual,...history].sort((a,b)=>a.date.localeCompare(b.date)||a.slot.localeCompare(b.slot));
- const stages=[...new Set(trains.map(r=>r.stage))].sort((a,b)=>b-a).map(stageRange);
+ const stages=[...new Set([...trains.map(r=>r.stage),...Array.from({length:10},(_,i)=>i+7)])].sort((a,b)=>b-a).map(stageRange);
  // Do not expose private VS scores, reasons for replacements or R4 audit fields.
- return json({ready:true,trains,stages,seasons});
+ return json({ready:true,trains,stages,seasons:[{id:'history-2026',label:'Stages 7–12 · Historical train archive'},...seasons]});
  }const {board}=await readBoard();const token=request.headers.get('authorization')?.replace(/^Bearer /,'');const member=token?memberByToken(board,token):null;if(token&&!member)return json({error:'This edit link is invalid. Ask Tiny to recover your entry.'},401);const admin=validSession(request.headers.get('cookie'));return json({ready:true,admin,...publicBoard(board,admin),myMember:member?publicMember(member):null});}catch(error){console.error('UTW buddy read failed:',error.message);return json({ready:false,error:'The shared board is temporarily unavailable. Try again.'},503);}}
 export async function POST(request){if(!configured())return json({error:'Buddy signup is not open yet. Your submission has not been saved.'},503);const origin=request.headers.get('origin');if(!origin||origin!==new URL(request.url).origin)return json({error:'Request must come from the UTW site.'},403);if(!request.headers.get('content-type')?.startsWith('application/json'))return json({error:'JSON request required.'},415);let body;try{const text=await request.text();if(text.length>12000)return json({error:'Submission is too large.'},413);body=JSON.parse(text);}catch{return json({error:'Invalid submission.'},400);}try{
  if(await limited(request,['login','pageLogin'].includes(body.action)?'login':'write',['login','pageLogin'].includes(body.action)?10:60))return json({error:'Too many attempts. Try again in 15 minutes.'},429);
