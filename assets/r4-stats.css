@@ -188,3 +188,29 @@
  .ocr-start .stat-fields{grid-template-columns:1fr}
  .ocr-table{min-width:540px}
 }
+
+/* Reliable ranking scan: every editable row displays its original image strip. */
+.ocr-diagnostic{font-size:12px;line-height:1.45;font-weight:700;color:#31573e;background:#eaf3e5;padding:9px 11px;border-radius:8px}
+.ocr-member-list{display:grid;gap:10px;margin:12px 0}
+.ocr-member-card{min-width:0;border:1px solid #d9ceb3;border-radius:12px;padding:10px;background:#f5f7ef;display:grid;gap:9px}
+.ocr-member-card.ocr-uncertain{background:#fff3e9;border-color:#d7a885}
+.ocr-member-head{color:#2d523e;font-size:12px}
+.ocr-member-card.ocr-uncertain .ocr-member-head{color:#9d4a30}
+.ocr-row-sample{display:block;max-width:100%;border:1px solid #b6a987;border-radius:9px;overflow:hidden;background:#d5def0}
+.ocr-row-sample img{display:block;width:100%;height:auto;max-height:150px;object-fit:contain;object-position:center}
+.ocr-member-fields{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(105px,1fr);gap:10px}
+.ocr-member-field{display:flex;flex-direction:column;gap:5px;min-width:0;color:#385542;font-size:12px;font-weight:750}
+.ocr-member-field input{min-width:0;width:100%;min-height:42px;padding:9px;border-radius:8px;border:1px solid #b8ae95;background:#fff;color:#294a36;font:inherit}
+.ocr-member-field .ocr-match{font-weight:500;line-height:1.25;overflow-wrap:anywhere}
+.ocr-member-controls{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.ocr-member-controls .ocr-check{display:flex;gap:8px;align-items:center;font-size:12px;font-weight:750;color:#315740}
+.ocr-member-controls .ocr-check input{width:19px;height:19px;accent-color:#2c7350}
+.ocr-image-card{overflow:hidden}
+.ocr-image-contents{overflow:visible}
+@media(max-width:600px){
+ .ocr-image-layout{display:flex;flex-direction:column;gap:12px}
+ .ocr-thumb{max-height:250px}
+ .ocr-member-card{padding:9px}
+ .ocr-member-fields{grid-template-columns:minmax(0,1.2fr) minmax(100px,1fr);gap:7px}
+ .ocr-row-sample img{max-height:110px}
+}
