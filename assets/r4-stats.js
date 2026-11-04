@@ -138,6 +138,7 @@ const activeException=(id,source,date)=>state.data.exceptions.filter(x=>x.active
 const recentAwards=(id,date,source,slot)=>state.data.awards.filter(x=>(x.member_id===id||x.vip_member_id===id)&&x.train_date<=date&&x.train_date>=dateAdd(date,-7)&&isR4Train(x)===isR4Train({source,slot}));
 function inferTrainMode(label,savedSource=''){
  const v=String(label||'').toLowerCase();
+ if(/^no vs train/.test(v))return 'manual';
  if(/no train for a while|never had|r4 vote/.test(v))return 'never';
  if(/top donat|donation/.test(v))return 'donations';
  if(/ds mvp|desert storm|event mvp|event top 2/.test(v))return 'ds';
