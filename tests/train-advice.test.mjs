@@ -60,7 +60,7 @@ test('weekly regular driver conflicts block another regular assignment',()=>{
  const a=buildTrainAdvice({...args,legacy:[t('2026-11-18','Tiny','Mo','manual','Roulette')],
   scoreboard:[{member_id:'tiny',points:9},{member_id:'devi',points:8}]});
  assert.equal(a.recommended.id,'devi');
- assert.match(a.rejected[0].reasons.join(' '),/this week/);
+ assert.match(a.rejected[0].reasons.join(' '),/once per stage/);
 });
 test('Stage 16 preserves the 35-day dates and only proposes the newer third-week hosts',()=>{
  assert.deepEqual(stageRange(16),{stage:16,start:'2026-11-16',end:'2026-12-20'});
@@ -88,4 +88,40 @@ test('latest VS roster excludes departed historical members from never-had sugge
  const advice=buildTrainAdvice({...args,mode:'never',date:'2026-11-25',rosterIds:['devi','mo'],rosterDate:'2026-11-21'});
  assert.equal(advice.candidates.length,2);
  assert(!advice.candidates.some(x=>x.id==='tiny'));
+});
+
+test('previous VIP turns do not disqualify a ranked conductor later in the same stage',()=>{
+ const advice=buildTrainAdvice({...args,legacy:[
+  t('2026-11-16','Devi','TinyMayhem','vs','VS points')
+ ],scoreboard:[{member_id:'tiny',points:20000000},{member_id:'devi',points:15000000}],scoreDate:'2026-11-21'});
+ assert.equal(advice.recommended.id,'tiny');
+ assert.equal(advice.candidates.find(c=>c.id==='tiny').eligible,true);
+ assert.equal(advice.candidates.find(c=>c.id==='devi').eligible,false);
+});
+test('a conductor from the first week is excluded from later weeks of the same stage',()=>{
+ const advice=buildTrainAdvice({...args,date:'2026-12-12',legacy:[
+  t('2026-11-18','TinyMayhem','Mo','manual','Roulette')
+ ],scoreboard:[{member_id:'tiny',points:20000000},{member_id:'devi',points:15000000}],scoreDate:'2026-12-11'});
+ assert.equal(advice.recommended.id,'devi');
+ assert.match(advice.rejected[0].reasons.join(' '),/2026-11-18/);
+ assert.match(advice.rejected[0].reasons.join(' '),/Stage 16/);
+});
+test('prior R4 VIP does not disqualify R4 conductor, but prior R4 conductor does',()=>{
+ const label='R4 Tiny';
+ const justVip=buildTrainAdvice({...args,date:'2026-12-01',mode:'r4',slot:label,
+  legacy:[t('2026-11-19','Mo','TinyMayhem','r4','R4 Mo')]});
+ assert.equal(justVip.recommended.id,'tiny');
+ const priorDriver=buildTrainAdvice({...args,date:'2026-12-01',mode:'r4',slot:label,
+  legacy:[t('2026-11-19','TinyMayhem','Mo','r4','R4 Mo')]});
+ assert.equal(priorDriver.recommended,null);
+ assert.ok(priorDriver.rejected[0].reasons.some(x=>x.includes('once per stage')));
+});
+test('VIP on a regular train does not disqualify R4 candidate and vice versa',()=>{
+ const r4=buildTrainAdvice({...args,date:'2026-12-01',mode:'r4',slot:'R4 Tiny',
+  legacy:[t('2026-11-18','TinyMayhem','Mo','vs','VS winner')]});
+ assert.equal(r4.recommended.id,'tiny');
+ const regular=buildTrainAdvice({...args,date:'2026-12-01',mode:'vs',slot:'VS winner',
+  legacy:[t('2026-11-19','TinyMayhem','Mo','r4','R4 Mo')],
+  scoreboard:[{member_id:'tiny',points:9999999}]});
+ assert.equal(regular.recommended.id,'tiny');
 });
