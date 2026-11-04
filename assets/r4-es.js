@@ -2,7 +2,7 @@
 // service, no modifications to saved data, and no translation of player names.
 import {translateR4Text} from './r4-es-core.mjs';
 import {ES_CHECKLIST} from './r4-es-checklists.mjs';
-import {ES_EXTRA,DYNAMIC_ES} from './r4-es-extra.mjs';
+import {ES_EXTRA,NICKNAME_ES,DYNAMIC_ES} from './r4-es-extra.mjs?rev=nickname-dropdown-v2';
 const STORAGE_KEY='utw-r4-interface-language';
 const SUPPORTED=['en','es'];
 const originals=new WeakMap(),attributeOriginals=new WeakMap();
@@ -10,7 +10,7 @@ const SKIP='script, style, textarea, code, pre, [contenteditable="true"], .r4-co
 function translated(raw){
  const source=String(raw??''),trimmed=source.trim();
  if(!trimmed)return source;
- let result=ES_CHECKLIST[trimmed]||ES_EXTRA[trimmed];
+ let result=ES_CHECKLIST[trimmed]||ES_EXTRA[trimmed]||NICKNAME_ES[trimmed];
  if(!result){
   const shared=trimmed.match(/^(.+) · 🤝 UTW \+ VON shared$/);
   if(shared)result=(ES_CHECKLIST[shared[1]]||ES_EXTRA[shared[1]]||translateR4Text(shared[1],'es'))+' · 🤝 Compartido entre UTW y VON';
