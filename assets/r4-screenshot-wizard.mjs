@@ -1,6 +1,6 @@
-import {parseRankLines,matchRoster,normalizeIgn,validateConfirmedRows} from './r4-ocr-parser.mjs';
-import {scanRankingScreenshot} from './r4-ocr-browser.mjs';
-import {languagesForOcr,describeLanguagePacks,OCR_LANGUAGE_MODES} from './r4-ocr-languages.mjs';
+import {parseRankLines,matchRoster,normalizeIgn,validateConfirmedRows} from './r4-ocr-parser.mjs?version=scan-v4-20261104';
+import {scanRankingScreenshot} from './r4-ocr-browser.mjs?version=scan-v4-20261104';
+import {languagesForOcr,describeLanguagePacks,OCR_LANGUAGE_MODES} from './r4-ocr-languages.mjs?version=scan-v4-20261104';
 import {weekStart,validTarget} from './r4-csv-utils.mjs';
 
 // The scanner works in the browser. Screenshots leave the device only for DS evidence.
