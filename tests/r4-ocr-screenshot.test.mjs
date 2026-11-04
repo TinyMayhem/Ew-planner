@@ -26,11 +26,11 @@ test('OCR matcher never silently approves fuzzy guesses',()=>{
  assert.equal(matchRoster('TinyMayhemx',members).type,'suggested');
  assert.equal(matchRoster('??',members).type,'unknown');
 });
-test('confirmation rejects missing names, points and duplicates across 11 screenshots',()=>{
- const imgs=Array.from({length:11},(_,i)=>({rows:[{name:'Member'+i,points:100+i,confirmed:true}]}));
- assert.equal(validateConfirmedRows(imgs).length,11);
+test('confirmation checks names and scores and safely deduplicates repeated green rows across 11 screenshots',()=>{
+ const imgs=Array.from({length:11},(_,i)=>({rows:[{name:'Member'+i,points:100+i,confirmed:true},{name:'TinyMayhem',points:11355742,confirmed:true}]}));
+ assert.equal(validateConfirmedRows(imgs).length,12);
  imgs[1].rows[0].name='Member0';
- assert.throws(()=>validateConfirmedRows(imgs),/Duplicate name/);
+ assert.throws(()=>validateConfirmedRows(imgs),/Conflicting scores/);
  imgs[1].rows[0].name='Member1';imgs[2].rows[0].confirmed=false;
  assert.throws(()=>validateConfirmedRows(imgs),/Confirm the name/);
 });
