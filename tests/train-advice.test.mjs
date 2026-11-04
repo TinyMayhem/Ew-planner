@@ -5,7 +5,7 @@ import {stageRange} from '../assets/r4-train-rules.mjs';
 import {trainLabelForDate} from '../assets/r4-train-schedule.mjs';
 
 const m=(id,name)=>({id,display_name:name});
-const members=[m('tiny','TinyMayhem'),m('devi','Đevi'),m('mo','Movich Mo'),m('crum','Crüm'),m('new','New Recruit')];
+const members=[m('tiny','TinyMayhem'),m('devi','Ɖevi'),m('mo','Movich Mo'),m('crum','Crüm'),m('new','New Recruit')];
 const aliases=[{alias:'Tiny',alias_key:'tiny',member_id:'tiny'}];
 const t=(date,driver,vip,source='manual',slot='Train')=>({train_date:date,driver_name:driver,vip_name:vip,source,selection_label:slot});
 const args={date:'2026-11-22',mode:'vs',slot:'VS MVP',members,aliases,legacy:[],awards:[],exceptions:[]};
@@ -13,10 +13,10 @@ test('VS ranking skips a prior same-stage VS recipient and shows the replacement
  const advice=buildTrainAdvice({...args,legacy:[t('2026-11-16','Tiny','Mo','vs','VS MVP')],
   scoreboard:[{member_id:'tiny',points:9200000},{member_id:'devi',points:8500000}],
   scoreDate:'2026-11-21'});
- assert.equal(advice.recommended.name,'Đevi');
+ assert.equal(advice.recommended.name,'Ɖevi');
  assert.equal(advice.rejected[0].name,'TinyMayhem');
  assert.match(advice.rejected[0].reasons.join(' '),/2026-11-16/);
- assert.match(advice.substitution,/TinyMayhem.*Đevi/);
+ assert.match(advice.substitution,/TinyMayhem.*Ɖevi/);
  assert.match(advice.context,/2026-11-21/);
 });
 test('R4 train does not disqualify a VS winner',()=>{
