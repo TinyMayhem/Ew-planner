@@ -298,6 +298,8 @@ export async function POST(request){
     ]);
     if(member.length!==1||found.length!==1||found[0].member_id!==memberId)return json({error:'Nickname not linked to that member'},404);
     if(key(member[0].display_name)===key(alias))return json({error:'Main member names cannot be removed. Add alternate nicknames instead.'},400);
+    const historical=await list('utw_stat_values',{select:'id',alias_key:'eq.'+key(alias),limit:'1'});
+    if(historical.length)return json({error:'This nickname has saved VS or donation scores and must stay linked to preserve history. Use the confirmed merge option if it belongs to another member.'},409);
     await del('utw_stat_aliases',{alias_key:'eq.'+key(alias),member_id:'eq.'+memberId});
     await recordAudit(request,'delete_alias',{alias_key:key(alias),alias:found[0].alias,member_id:memberId},false);
     return json({ok:true});
