@@ -201,7 +201,9 @@ export function initScreenshotWizard({getMembers,getAliases,getSeason,reload,sub
  }
  function renderStatus(){
   const checked=images.filter(x=>x.reviewed).length,rows=images.flatMap(x=>x.rows.filter(r=>!r.deleted));
-  ready.textContent=checked+'/'+images.length+' pictures checked · '+rows.length+' parsed rows'+(type.value==='ds'?' (only podium is saved)':'');
+  const unique=new Set(rows.filter(r=>r.name).map(r=>normalizeIgn(r.name))).size;
+  ready.textContent=checked+'/'+images.length+' pictures checked · '+rows.length+' parsed rows'+
+   (type.value==='ds'?' (only podium is saved)':' · '+unique+' unique names'+(rows.length>unique?' · repeated green/overlap rows counted once':''));
   save.disabled=busy||checked!==images.length||!images.length||(!rows.length&&type.value!=='ds');
  }
  function prepareRow(row,roster,aliases){
@@ -264,6 +266,12 @@ export function initScreenshotWizard({getMembers,getAliases,getSeason,reload,sub
     payload={ids};
    }else payload={rows:validateConfirmedRows(images)};
   }catch(e){hint(ready,e.message,true);return}
+  if(metric!=='ds'){
+   const rosterCount=getMembers().length;
+   if(images.length>=6&&payload.rows.length<Math.min(65,Math.ceil(rosterCount*.65))){
+    if(!confirm('Only '+payload.rows.length+' unique members were found across '+images.length+' screenshots. A full UTW roster normally has many more. Are you sure none were missed?'))return;
+   }
+  }
   if(!confirm('Save '+(metric==='ds'?'the verified DS podium':payload.rows.length+' reviewed member scores')+' for '+date.value+'? This will update the selected season.'))return;
   busy=true;save.disabled=true;reset.disabled=true;
   try{
