@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
-import {detectRankingPanels,panelCropRects,parsePanelPoints,splitMontageByPanel} from '../assets/r4-ranking-panels.mjs';
+import {detectRankingPanels,panelCropRects,parsePanelPoints,splitMontageByPanel,detectVisibleZeroGlyph} from '../assets/r4-ranking-panels.mjs';
 import {validateConfirmedRows} from '../assets/r4-ocr-parser.mjs';
 
 const width=709,height=1536;
@@ -99,4 +99,25 @@ test('site actually uses detected panels and numeric-safe OCR rather than relyin
   const x=spawnSync(process.execPath,['--check',path],{encoding:'utf8'});
   assert.equal(x.status,0,path+': '+x.stderr);
  }
+});
+
+test('visible printed 0 glyph can be detected on four blue rows after OCR misses it',()=>{
+ const sample=screenshotPixels();
+ const zeros=[3,4,5,6];
+ for(const i of zeros){
+  const row=positions[i],cy=Math.round((row.top+row.bottom)/2),x=648;
+  // Reproduce the outlined, single-digit 0 from the supplied 709px screenshot.
+  for(let y=cy-7;y<cy+7;y++)for(let dx=0;dx<11;dx++){
+   const dy=y-(cy-7);
+   const edge=dy<3||dy>10||dx<4||dx>7;
+   if(!edge)continue;
+   const index=(y*width+x+dx)*4;
+   sample.data[index]=20;sample.data[index+1]=20;sample.data[index+2]=20;
+  }
+ }
+ const panels=detectRankingPanels(sample);
+ assert.equal(panels.length,8);
+ for(const i of zeros)assert.equal(detectVisibleZeroGlyph(sample,panels[i]),true,'must recognize rank '+(84+i)+' zero');
+ assert.equal(detectVisibleZeroGlyph(sample,panels[0]),false,'blank rank score is not a zero');
+ assert.equal(detectVisibleZeroGlyph(sample,panels[7]),false,'green pinned row is not inferred to be zero');
 });
