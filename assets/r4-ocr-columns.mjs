@@ -4,8 +4,8 @@ import {scoreValue,matchRoster} from './r4-ocr-parser.mjs';
 
 const median=values=>{const s=values.filter(x=>Number.isFinite(x)&&x>0).sort((a,b)=>a-b);return s.length?s[Math.floor(s.length/2)]:null};
 export const columnRects=(width,height)=>({
- name:{x:Math.round(width*.325),y:0,w:Math.round(width*.365),h:height},
- score:{x:Math.round(width*.70),y:0,w:Math.round(width*.275),h:height}
+ name:{x:Math.round(width*.33),y:0,w:Math.round(width*.36),h:height},
+ score:{x:Math.round(width*.71),y:0,w:Math.round(width*.265),h:height}
 });
 
 export function textLines(data){
@@ -67,7 +67,9 @@ export function alignRankColumns({names,scores,height,roster=[],aliases=[]}){
   return {
    name:resolved,ocrGuess:guess,points:score.points,raw:guess+' | '+score.text,
    confirmed:match.type==='exact',deleted:false,
-   needsScoreCheck:score.confidence<65||(index>0&&gapBefore<gap*.38),
+   needsScoreCheck:score.confidence<65||(index>0&&gapBefore<gap*.38)||
+    (index>0&&score.points>points[index-1].points)||
+    (index<points.length-1&&score.points<points[index+1].points),
    confidence:score.confidence,matchType:match.type,
    y:score.y,imageCrop:{y:Math.max(0,Math.round(score.y-gap*.46)),height:Math.round(gap*.90)}
   };
