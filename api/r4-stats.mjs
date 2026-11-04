@@ -96,7 +96,7 @@ export async function GET(request){
   const week=q.get('week');
   if(!isMonday(week))return json({error:'Select a valid Monday to start the week'},400);
   const trainStage=q.get('train_stage')===null?15:Number(q.get('train_stage'));
-  if(!Number.isInteger(trainStage)||trainStage<13||trainStage>40)return json({error:'Invalid train calendar'},400);
+  if(!Number.isInteger(trainStage)||trainStage<7||trainStage>40)return json({error:'Invalid train calendar'},400);
   return json({...await getData(week,season,trainStage),seasons,season});
  }catch(e){return sendErr(e)}
 }
