@@ -54,7 +54,8 @@ test('missing VS data never invents score rankings',()=>{
  const a=buildTrainAdvice({...args});
  assert.equal(a.candidates.length,0);
  assert.equal(a.recommended,null);
- assert.match(a.context,/No matching VS/);
+ assert.match(a.context,/No completed VS weekly total/);
+ assert.match(a.context,/Daily VS points are not used/);
 });
 test('weekly regular driver conflicts block another regular assignment',()=>{
  const a=buildTrainAdvice({...args,legacy:[t('2026-11-18','Tiny','Mo','manual','Roulette')],
@@ -124,4 +125,12 @@ test('VIP on a regular train does not disqualify R4 candidate and vice versa',()
   legacy:[t('2026-11-19','TinyMayhem','Mo','r4','R4 Mo')],
   scoreboard:[{member_id:'tiny',points:9999999}]});
  assert.equal(regular.recommended.id,'tiny');
+});
+
+test('VS candidates are explicitly described as completed weekly VS rankings, not daily scores',()=>{
+ const data=buildTrainAdvice({...args,scoreDate:'2026-11-09',
+  scoreboard:[{member_id:'devi',points:92000000},{member_id:'tiny',points:88000000}]});
+ assert.equal(data.recommended.id,'devi');
+ assert.match(data.context,/completed VS weekly total for week starting 2026-11-09/);
+ assert.doesNotMatch(data.context,/VS day|VS daily/);
 });
