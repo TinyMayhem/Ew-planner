@@ -34,3 +34,13 @@ test('dedicated R4 source is selectable independently from DS',()=>{
  assert.match(page,/<option value="r4">R4 train/);
  assert.match(page,/same person from receiving an eligible DS train/);
 });
+
+test('historical stage selector and original worksheet slot labels are included',()=>{
+ const r4=readFileSync('assets/r4-stats.js','utf8');
+ const den=readFileSync('assets/members.js','utf8');
+ const labels=readFileSync('assets/r4-train-schedule.mjs','utf8');
+ assert.match(r4,/for\(let stage=7;stage<=30;stage\+\+\)/);
+ assert.match(r4,/trainLabelForDate/);
+ assert.match(den,/trainLabelForDate/);
+ assert.match(labels,/Top donation last week/);
+});
