@@ -102,6 +102,21 @@ export const ES_EXTRA={
 'Use dated exceptions to skip someone for all trains or only DS, donations or VS. Exceptions do not delete points or change the podium.':'Usa excepciones con fechas para omitir a alguien en todos los trenes o solo en TD, donaciones o VS. No borran puntos ni cambian el podio.',
 'Includes editable Driver and VIP records for the selected five-week Stage. For screenshot history, use Edit on the calendar above and record the replacement reason.':'Incluye registros editables de conductor y VIP para la etapa de cinco semanas. Para corregir el historial, usa Editar en el calendario y registra el motivo.'
 };
+// Nickname Manager dropdown and confirmed merge flow.
+export const NICKNAME_ES={
+ 'Existing name from the roster':'Nombre existente en la lista',
+ 'Choose an existing name…':'Elegir un nombre existente…',
+ 'Review linking existing name':'Revisar vinculación del nombre existente',
+ 'Use this dropdown when the nickname is already a separate member record. Linking it will combine its old scores and aliases with the member you keep, but only after you confirm.':'Usa esta lista cuando el apodo ya tiene su propio registro. Al vincularlo, se combinarán sus puntuaciones y nombres anteriores con el miembro que conserves, únicamente después de confirmarlo.',
+ "Or add a name that isn't in the roster yet":'O añadir un nombre que todavía no figura en la lista',
+ 'New nickname (exact spelling from the game)':'Nuevo apodo (escritura exacta del juego)',
+ 'Type a new nickname':'Escribe un apodo nuevo',
+ 'Add new nickname':'Añadir apodo nuevo',
+ 'Review before combining these two member records':'Revisa antes de combinar estos dos registros',
+ 'Confirm and combine records':'Confirmar y combinar registros',
+ 'Combining records and checking the saved nickname links…':'Combinando registros y comprobando los apodos guardados…',
+ 'The extra member record will be deleted. This cannot be undone from this page. Only continue if both records belong to the same person.':'El registro adicional se eliminará. Esto no se puede deshacer desde esta página. Continúa solo si ambos registros pertenecen a la misma persona.',
+};
 export const DYNAMIC_ES=[
  [/^(\d+) of (\d+) completed$/,'$1 de $2 completadas'],
  [/^(.+) · 🤝 UTW \+ VON shared$/,(m,group)=> (ES_EXTRA[group]||group)+' · 🤝 Compartido entre UTW y VON'],
@@ -112,5 +127,9 @@ export const DYNAMIC_ES=[
  [/^Skipped: (.+)$/,'Descartado: $1'],
  [/^No matched conductor or VIP entry in Stages 7 onward$/,'Sin registro coincidente de conductor o VIP desde la etapa 7'],
  [/^Rankings from completed VS weekly total for week starting (.+)$/,'Clasificación VS del total semanal de la semana que comienza $1'],
+ [/^Keep: (.+) · Combine into this record: (.+)$/,'Conservar: $1 · Incorporar este registro: $2'],
+ [/^Yes, these are the same player\. Keep (.+)\.$/,'Sí, es la misma persona. Conservar $1.'],
+ [/^Saved! (.+) is now listed under (.+)\. Historical scores are linked to (.+)\.$/,'¡Guardado! $1 aparece ahora bajo $2. Las puntuaciones históricas están vinculadas a $3.'],
+ [/^“(.+)” is already linked to (.+)\. Combining will move the old VS scores, donations, Desert Storm records, and known nicknames into (.+)\.$/,'“$1” pertenece actualmente a $2. Al combinar, las puntuaciones VS, donaciones, resultados de Tormenta del Desierto y apodos pasarán a $3.'],
  [/^No completed VS weekly total for the previous week has been uploaded\. Daily VS points are not used for train selection\.$/,'No se ha subido el total semanal VS de la semana anterior. Los puntos diarios no se usan para seleccionar trenes.']
 ];
