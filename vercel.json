@@ -38,7 +38,7 @@
     },
     {
       "source": "/r4-reports",
-      "destination": "/api/r4-reports?view=1"
+      "destination": "/api/r4-stats?view=reports"
     },
     {
       "source": "/r4-audit",
