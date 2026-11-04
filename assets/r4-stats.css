@@ -214,3 +214,11 @@
  .ocr-member-fields{grid-template-columns:minmax(0,1.2fr) minmax(100px,1fr);gap:7px}
  .ocr-row-sample img{max-height:110px}
 }
+
+/* Show explicitly which scanner build is running on cached mobile browsers. */
+.ocr-current-build{background:#e5f0e6;border:1px solid #9dbaa3;border-radius:9px;color:#2d533c;padding:11px 14px;font-size:13px;line-height:1.5}
+.ocr-current-build strong{color:#1e5537}
+.ocr-quality-warning{padding:11px 13px;background:#fff0e9;border:2px solid #c46648;color:#873f2f;border-radius:10px;font-size:13px;font-weight:800;line-height:1.5}
+.ocr-quality-note{padding:10px 12px;background:#f1f5e9;border:1px solid #b2c1a9;color:#33513c;border-radius:10px;font-size:12px;line-height:1.5}
+.ocr-roster-picker{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fcf5e7;border:1px solid #bda87f;padding:8px;border-radius:9px}
+.ocr-roster-picker select{width:100%;max-width:400px;min-width:160px;flex:1;background:#fff;border:1px solid #b8ae95;border-radius:7px;padding:9px;color:#2b4738;font-size:13px}
