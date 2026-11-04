@@ -5,13 +5,14 @@ import {columnRects,textLines,scoreAnchors,alignRankColumns,cleanRankName} from 
 import {matchRoster} from './r4-ocr-parser.mjs?version=scan-v4-20261104';
 import {hasEastAsianScript} from './r4-ocr-languages.mjs?version=scan-v4-20261104';
 
-function cropScaled(bitmap,rect,targetWidth=650){
+function cropScaled(bitmap,rect,targetWidth=650,enhanced=false){
  const scale=Math.min(3,Math.max(1,targetWidth/rect.w));
  const canvas=document.createElement('canvas');
  canvas.width=Math.max(1,Math.round(rect.w*scale));
  canvas.height=Math.max(1,Math.round(rect.h*scale));
- canvas.getContext('2d',{willReadFrequently:false}).drawImage(
-  bitmap,rect.x,rect.y,rect.w,rect.h,0,0,canvas.width,canvas.height);
+ const ctx=canvas.getContext('2d',{willReadFrequently:false});
+ if(enhanced)ctx.filter='grayscale(100%) contrast(165%) brightness(112%)';
+ ctx.drawImage(bitmap,rect.x,rect.y,rect.w,rect.h,0,0,canvas.width,canvas.height);
  return {canvas,scale};
 }
 function rankStrip(bitmap,rect){
@@ -45,6 +46,27 @@ export async function scanRankingScreenshot(worker,file,roster,aliases,onProgres
   const namesData=await recognizeBlock(worker,namesImage.canvas,false);
   const nameLines=orderedLines(namesData,namesImage.scale);
   let rows=alignRankColumns({names:nameLines,scores,height:bitmap.height,roster,aliases});
+  let secondaryText='';
+  // Game UI uses colored backgrounds and small decorative fonts. A second,
+  // higher-contrast pass is worthwhile only when the original pass was poor.
+  if(scores.length&&rows.filter(r=>r.name).length<Math.ceil(rows.length*.7)){
+   onProgress('improving unreadable names');
+   const contrasted=cropScaled(bitmap,rects.name,800,true);
+   const alternative=await recognizeBlock(worker,contrasted.canvas,false);
+   secondaryText=alternative.text||'';
+   const alternativeLines=orderedLines(alternative,contrasted.scale);
+   const alternatives=alignRankColumns({names:alternativeLines,scores,height:bitmap.height,roster,aliases});
+   for(let i=0;i<rows.length;i++){
+    const better=alternatives[i];
+    if(!better)continue;
+    const rank=value=>value.matchType==='exact'?3:value.matchType==='suggested'?2:value.ocrGuess?1:0;
+    if(rank(better)>rank(rows[i]))rows[i]=better;
+    else if(rank(better)===rank(rows[i])&&better.name&&rows[i].name&&better.name!==rows[i].name){
+     rows[i].name='';rows[i].confirmed=false;rows[i].ocrGuess=rows[i].ocrGuess+' / '+better.ocrGuess;
+     rows[i].matchType='conflict';
+    }
+   }
+  }
   const uncertain=rows.filter(r=>!r.name).length;
   // Focused single-row reading only for unlinked names. This eliminates [UTW]
   // labels and avatar edges without slowing down clear rows.
@@ -74,13 +96,19 @@ export async function scanRankingScreenshot(worker,file,roster,aliases,onProgres
    if(row.needsScoreCheck)row.confirmed=false;
   }
   const recognized=rows.filter(r=>r.name).length;
+  const quality=scores.length?recognized/scores.length:0;
+  const qualityMessage=quality<.5?
+   'LOW CONFIDENCE: Less than half the game rows matched the UTW roster. Do not save until each name and score has been checked against the original image.':
+   quality<.8?'PARTIAL MATCH: Some names need correction. Review every highlighted row.':
+   'Most detected names matched the roster. Verify the original screenshot before saving.';
   const details=[
-   'Column scan: '+scores.length+' scores detected',
-   recognized+' roster names matched',
-   rows.filter(r=>!r.confirmed).length+' rows need verification'
+   'Scanner v4.2 · '+scores.length+' score rows',
+   recognized+' roster names',
+   rows.filter(r=>!r.confirmed).length+' require checking'
   ].join(' · ');
-  return {rows,ocrText:'NAMES COLUMN:\n'+(namesData.text||'')+'\n\nPOINTS COLUMN:\n'+(pointsData.text||''),
+  return {rows,ocrText:'NAMES COLUMN:\n'+(namesData.text||'')+
+   '\n\nSECOND PASS:\n'+secondaryText+'\n\nPOINTS COLUMN:\n'+(pointsData.text||''),
    unread:rows.filter(r=>!r.name).map(r=>r.ocrGuess||'Unmatched name'),diagnostics:details,
-   layout:'last-war-ranked-columns'};
+   quality,qualityMessage,layout:'last-war-ranked-columns'};
  }finally{bitmap.close?.()}
 }
