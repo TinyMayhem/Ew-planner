@@ -36,7 +36,7 @@ test('VS train desk requests previous completed week VS weekly totals, not daily
  const queries=[],saved=globalThis.fetch;globalThis.fetch=backend(queries);
  try{
   const response=await GET(new Request('https://test.example/api/r4-stats?train_advice=1&date=2026-11-22&mode=vs&slot=VS%20MVP',{headers:auth()}));
-  assert.equal(response.status,200,await response.text().catch(()=>'')); // response body already read only in failures
+  assert.equal(response.status,200);
   const advice=await response.json();
   assert.equal(advice.dataDate,'2026-11-09');
   assert.equal(advice.recommended.name,'Devi');
