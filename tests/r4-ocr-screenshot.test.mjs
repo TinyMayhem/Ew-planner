@@ -38,7 +38,7 @@ test('R4 scanner includes private screenshot upload, audit-backed undo and confi
  const page=readFileSync('lib/r4-stats-page.mjs','utf8'),client=readFileSync('assets/r4-screenshot-wizard.mjs','utf8'),api=readFileSync('api/r4-stats.mjs','utf8');
  assert.match(page,/id="ocr-wizard"/);
  assert.match(page,/data-tab="scanner"/);
- assert.match(client,/createWorker\('eng'\)/);
+ assert.match(client,/createWorker\(langs,1\)/);
  assert.match(client,/I checked this picture/);
  assert.match(client,/scan_recent=1/);
  assert.match(client,/delete_import/);
