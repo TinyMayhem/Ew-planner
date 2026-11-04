@@ -1,4 +1,5 @@
 import {addDays,stageRange} from './r4-train-rules.mjs';
+import {trainLabelForDate} from './r4-train-schedule.mjs';
 
 const $=id=>document.getElementById(id);
 const weekdays=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
@@ -57,11 +58,12 @@ function stageCalendar(stage,entries){
    const assignments=map.get(date)||[];
    if(assignments.length){
     for(const assignment of assignments){
-     box.append(elem('div',assignment.slot||templateLabels[day],'member-train-type '+trainTypeClass(assignment.slot,assignment.source)));
+     box.append(elem('div',assignment.slot||trainLabelForDate(stage.stage,date)||templateLabels[day],'member-train-type '+trainTypeClass(assignment.slot,assignment.source)));
      box.append(trainPeople(assignment));
     }
    }else{
-    box.append(elem('div',templateLabels[day],'member-train-type '+trainTypeClass(templateLabels[day],'')));
+    const label=trainLabelForDate(stage.stage,date)||templateLabels[day];
+    box.append(elem('div',label,'member-train-type '+trainTypeClass(label,'')));
     box.append(elem('div','No assignment recorded','member-train-no-entry'));
    }
    td.append(box);row.append(td);
@@ -75,7 +77,9 @@ function stageCalendar(stage,entries){
 }
 function draw(){
  const choice=$('trainView').value;
- const selected=choice==='latest'?stages.slice(0,2):choice==='all'?stages:stages.filter(s=>String(s.stage)===choice);
+ // Upcoming calendars remain selectable without replacing the latest two completed or active stages.
+ const serverDate=new Date(Date.now()-2*3600000).toISOString().slice(0,10);
+ const selected=choice==='latest'?stages.filter(s=>s.start<=serverDate).slice(0,2):choice==='all'?stages:stages.filter(s=>String(s.stage)===choice);
  const container=$('trainCalendars');container.replaceChildren();
  if(!selected.length)container.append(elem('p','No saved train calendars yet.','member-stage-empty'));
  let total=0;
