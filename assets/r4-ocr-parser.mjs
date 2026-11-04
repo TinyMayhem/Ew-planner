@@ -73,7 +73,7 @@ export function matchRoster(name,members,aliases=[]){
  return {id:best.id,name:byId.get(best.id),type:'suggested'};
 }
 export function validateConfirmedRows(images){
- const rows=images.flatMap(image=>image.rows.filter(r=>!r.deleted));
+ const rows=images.flatMap(image=>image.rows.filter(r=>!r.deleted&&!r.pinned)); // defense-in-depth for older previews
  if(!rows.length)throw Error('No member scores to save. Add missing rows or rescan the screenshots.');
  if(rows.length>500)throw Error('One upload can contain at most 500 rows.');
  const seen=new Map(),out=[];
