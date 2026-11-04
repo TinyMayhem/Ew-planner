@@ -76,15 +76,19 @@ export function validateConfirmedRows(images){
  const rows=images.flatMap(image=>image.rows.filter(r=>!r.deleted));
  if(!rows.length)throw Error('No member scores to save. Add missing rows or rescan the screenshots.');
  if(rows.length>500)throw Error('One upload can contain at most 500 rows.');
- const seen=new Set(),out=[];
+ const seen=new Map(),out=[];
  for(const [i,row] of rows.entries()){
   const name=String(row.name||'').trim().replace(/\s+/g,' '),points=Number(String(row.points).replace(/[ ,]/g,''));
   if(!name||name.length>60||!/\p{L}/u.test(name))throw Error('Check the name on row '+(i+1)+'.');
   if(!Number.isSafeInteger(points)||points<0)throw Error('Check the score for '+name+'.');
   if(!row.confirmed)throw Error('Confirm the name for '+name+' before saving.');
   const k=normalizeIgn(name);
-  if(seen.has(k))throw Error('Duplicate name: '+name+'. Remove the repeated row before saving.');
-  seen.add(k);out.push({name,points});
+  if(seen.has(k)){
+   const previous=seen.get(k);
+   if(previous.points!==points)throw Error('Conflicting scores for '+name+': '+previous.points+' and '+points+'. Check the screenshots and keep only the correct result.');
+   continue; // The same rank or the pinned green self-row can repeat across 11 screenshots.
+  }
+  seen.set(k,{name,points});out.push({name,points});
  }
  return out;
 }
