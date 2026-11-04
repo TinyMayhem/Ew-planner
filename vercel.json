@@ -41,6 +41,10 @@
       "destination": "/api/r4-stats?view=reports"
     },
     {
+      "source": "/r4-nicknames",
+      "destination": "/api/r4-stats?view=nicknames"
+    },
+    {
       "source": "/r4-audit",
       "destination": "/api/r4-stats?view=audit"
     },
