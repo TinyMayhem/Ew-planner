@@ -1,6 +1,7 @@
 // Last War ranking names and scores must be read separately.
 // Joining by row position prevents ranks, avatars and alliance tags becoming scores.
 import {scoreValue,matchRoster} from './r4-ocr-parser.mjs';
+import {hasEastAsianScript} from './r4-ocr-languages.mjs';
 
 const median=values=>{const s=values.filter(x=>Number.isFinite(x)&&x>0).sort((a,b)=>a-b);return s.length?s[Math.floor(s.length/2)]:null};
 export const columnRects=(width,height)=>({
@@ -66,7 +67,7 @@ export function alignRankColumns({names,scores,height,roster=[],aliases=[]}){
   const gapBefore=index?score.y-points[index-1].y:gap;
   return {
    name:resolved,ocrGuess:guess,points:score.points,raw:guess+' | '+score.text,
-   confirmed:match.type==='exact',deleted:false,
+   confirmed:match.type==='exact'&&!hasEastAsianScript(guess),deleted:false,
    needsScoreCheck:score.confidence<65||(index>0&&gapBefore<gap*.38)||
     (index>0&&score.points>points[index-1].points)||
     (index<points.length-1&&score.points<points[index+1].points),
