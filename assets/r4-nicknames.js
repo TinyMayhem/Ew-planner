@@ -26,8 +26,9 @@ async function reload(){
  draw();
 }
 function choose(id){
- selected=id;$('nickname-member').value=id;$('nickname-collision').hidden=true;
- $('nickname-collision').replaceChildren();
+ selected=id;$('nickname-member').value=id;
+ $('nickname-existing-member').value='';
+ $('nickname-collision').hidden=true;$('nickname-collision').replaceChildren();
  draw();
  document.querySelector('.nickname-editor')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -36,6 +37,14 @@ function draw(){
  const keep=selected;selector.replaceChildren(new Option('Choose member…',''));
  for(const member of members)selector.append(new Option(member.display_name,member.id));
  selector.value=members.some(m=>m.id===keep)?keep:'';
+ const other=$('nickname-existing-member'),prior=other.value;
+ other.replaceChildren(new Option('Choose an existing name…',''));
+ for(const member of members.filter(m=>m.id!==keep)){
+  const known=namesOf(member.id).filter(a=>normalized(a.alias)!==normalized(member.display_name)).map(a=>a.alias);
+  other.append(new Option(member.display_name+(known.length?' (also: '+known.join(', ')+')':''),member.id));
+ }
+ other.value=members.some(m=>m.id===prior&&m.id!==keep)?prior:'';
+ $('nickname-link-existing').disabled=!keep;
  const linked=$('nickname-linked');linked.replaceChildren();
  if(!keep)linked.append(n('p','Select a member to view their linked nicknames.','nickname-empty'));
  else{
@@ -75,28 +84,51 @@ function drawDirectory(){
  }
  if(!matched.length)root.append(n('p','No member or nickname matched.','nickname-empty'));
 }
-function showCollision(original,canonical,existing){
+function showCollision(alias,memberToKeepId,existingMemberId){
  const root=$('nickname-collision');root.hidden=false;root.replaceChildren();
- const title=n('strong','This nickname already belongs to another member record.');
- const text=n('p','“'+original+'” currently belongs to '+existing+'. Do you want to combine that existing record into '+canonical+'? The old VS and donation scores, DS results, and linked names will follow '+canonical+'.');
- root.append(title,text);
- const info=n('p','Only combine records if you are certain both names are the same player. The merge cannot be undone here.','stat-muted');root.append(info);
- const source=members.find(m=>m.display_name===existing)||members.find(m=>m.id===root.dataset.sourceId);
- if(!source||source.id===selected)return;
- const merge=n('button','Combine '+existing+' into '+canonical,'stat-button');merge.type='button';
- merge.onclick=async()=>{
-  if(busy)return;
-  const expected='MERGE';
-  const typed=prompt('This will permanently combine member records, including historical scores. Type MERGE to combine “'+existing+'” into “'+canonical+'”.');
-  if(typed!==expected)return;
-  busy=true;merge.disabled=true;
+ const canonical=mainName(memberToKeepId),existing=mainName(existingMemberId);
+ if(!canonical||!existing||memberToKeepId===existingMemberId){
+  message('Choose two different members.',true);root.hidden=true;return;
+ }
+ const title=n('strong','Review before combining these two member records');
+ const summary=n('p','Keep: '+canonical+' · Combine into this record: '+existing);
+ const aliasNote=n('p','“'+alias+'” is already linked to '+existing+'. Combining will move the old VS scores, donations, Desert Storm records, and known nicknames into '+canonical+'.');
+ const details=n('p','The extra member record will be deleted. This cannot be undone from this page. Only continue if both records belong to the same person.','stat-muted');
+ const confirmLabel=n('label',null,'nickname-confirm');
+ const checkbox=document.createElement('input');checkbox.type='checkbox';
+ confirmLabel.append(checkbox,n('span','Yes, these are the same player. Keep '+canonical+'.'));
+ const button=n('button','Confirm and combine records','stat-button primary');
+ button.type='button';button.disabled=true;
+ checkbox.onchange=()=>{button.disabled=!checkbox.checked||busy};
+ button.onclick=async()=>{
+  if(busy||!checkbox.checked)return;
+  busy=true;button.disabled=true;
+  message('Combining records and checking the saved nickname links…');
   try{
-   await request({action:'merge',source:source.id,target:selected});
-   $('nickname-new').value='';root.hidden=true;
-   await reload();message('Combined '+existing+' into '+canonical+'. All linked nickname records now point to '+canonical+'.');
-  }catch(err){message(err.message,true)}finally{busy=false;merge.disabled=false}
+   const result=await request({action:'merge',source:existingMemberId,target:memberToKeepId});
+   if(!result.ok||!result.verified)throw Error('The merge could not be verified. Refresh and review the member records before trying again.');
+   await reload();
+   const nowLinked=namesOf(memberToKeepId).some(a=>normalized(a.alias)===normalized(alias));
+   const originalRemoved=!members.some(m=>m.id===existingMemberId);
+   if(!nowLinked||!originalRemoved)throw Error('The server returned a merge response, but the updated nickname list is incomplete. Do not repeat the merge until it is checked.');
+   $('nickname-new').value='';$('nickname-existing-member').value='';
+   root.hidden=true;root.replaceChildren();
+   message('Saved! '+existing+' is now listed under '+canonical+'. Historical scores are linked to '+canonical+'.');
+   const list=$('nickname-linked');list.scrollIntoView({behavior:'smooth',block:'center'});
+  }catch(err){
+   message('Could not confirm the merge: '+err.message,true);
+   checkbox.checked=false;button.disabled=true;
+  }finally{busy=false}
  };
- root.append(merge);
+ root.append(title,summary,aliasNote,details,confirmLabel,button);
+ root.scrollIntoView({behavior:'smooth',block:'center'});
+}
+function linkExistingMember(){
+ const target=$('nickname-member').value,source=$('nickname-existing-member').value;
+ if(!target){message('First choose the member to keep.',true);return}
+ if(!source){message('Choose an existing member name from the dropdown.',true);return}
+ if(target===source){message('Choose a different existing member to link.',true);return}
+ showCollision(mainName(source),target,source);
 }
 async function addNickname(){
  if(busy)return;
@@ -108,7 +140,7 @@ async function addNickname(){
  const existing=ownerOf(alias);
  if(existing){
   if(existing.member_id===memberId){message('That name is already linked to '+target.display_name+'.');return}
-  showCollision(alias,target.display_name,mainName(existing.member_id));return;
+  showCollision(alias,memberId,existing.member_id);return;
  }
  busy=true;$('nickname-add').disabled=true;
  try{
@@ -118,11 +150,13 @@ async function addNickname(){
  }catch(error){
   if(error.status===409&&error.details?.existing_member_id){
    await reload();
-   showCollision(alias,mainName(memberId),mainName(error.details.existing_member_id));
+   showCollision(alias,memberId,error.details.existing_member_id);
   }else message(error.message,true);
  }finally{busy=false;$('nickname-add').disabled=false}
 }
 $('nickname-member').addEventListener('change',e=>choose(e.target.value));
+$('nickname-link-existing').addEventListener('click',linkExistingMember);
+$('nickname-existing-member').addEventListener('change',()=>{$('nickname-collision').hidden=true;$('nickname-collision').replaceChildren()});
 $('nickname-search').addEventListener('input',drawDirectory);
 $('nickname-add').addEventListener('click',addNickname);
 $('nickname-new').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addNickname()}});
