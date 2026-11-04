@@ -6,7 +6,7 @@ import {ES_EXTRA,DYNAMIC_ES} from './r4-es-extra.mjs';
 const STORAGE_KEY='utw-r4-interface-language';
 const SUPPORTED=['en','es'];
 const originals=new WeakMap(),attributeOriginals=new WeakMap();
-const SKIP='script, style, textarea, code, pre, [contenteditable="true"], .r4-comment-body, .r4-comment-head, .r4-role-label input, .stat-points';
+const SKIP='script, style, textarea, code, pre, [contenteditable="true"], .r4-comment-body, .r4-comment-head, .r4-role-label input, .stat-points, .stat-person b, .stat-line strong, .nickname-person strong, .stat-candidate strong';
 function translated(raw){
  const source=String(raw??''),trimmed=source.trim();
  if(!trimmed)return source;
