@@ -1,7 +1,7 @@
 // Last War ranking names and scores must be read separately.
 // Joining by row position prevents ranks, avatars and alliance tags becoming scores.
-import {scoreValue,matchRoster} from './r4-ocr-parser.mjs';
-import {hasEastAsianScript} from './r4-ocr-languages.mjs';
+import {scoreValue,matchRoster} from './r4-ocr-parser.mjs?version=scan-v4-20261104';
+import {hasEastAsianScript} from './r4-ocr-languages.mjs?version=scan-v4-20261104';
 
 const median=values=>{const s=values.filter(x=>Number.isFinite(x)&&x>0).sort((a,b)=>a-b);return s.length?s[Math.floor(s.length/2)]:null};
 export const columnRects=(width,height)=>({
