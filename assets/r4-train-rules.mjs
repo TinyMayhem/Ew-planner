@@ -5,14 +5,17 @@ const DAY=86400000;
 const toTime=date=>Date.parse(date+'T00:00:00Z');
 export const addDays=(date,days)=>new Date(toTime(date)+days*DAY).toISOString().slice(0,10);
 export function stageRange(stage){
- if(!Number.isInteger(stage)||stage<13||stage>40)throw Error('Unsupported train calendar');
- const start=addDays(TRAIN_ANCHOR,(stage-TRAIN_BASE_STAGE)*35);
+ if(!Number.isInteger(stage)||stage<7||stage>40)throw Error('Unsupported train calendar');
+ // Stages 7 and 8 preceded a one-week break before Stage 9.
+ const start=stage===7?'2025-12-29':stage===8?'2026-02-02':addDays(TRAIN_ANCHOR,(stage-TRAIN_BASE_STAGE)*35);
  return {stage,start,end:addDays(start,34)};
 }
 export function stageForDate(date){
  const timestamp=toTime(date);
  if(!Number.isFinite(timestamp))return TRAIN_BASE_STAGE;
- return Math.max(TRAIN_BASE_STAGE,Math.min(40,TRAIN_BASE_STAGE+Math.floor((timestamp-toTime(TRAIN_ANCHOR))/(35*DAY))));
+ if(timestamp<toTime('2026-02-02'))return 7;
+ if(timestamp<toTime('2026-03-16'))return 8;
+ return Math.max(9,Math.min(40,TRAIN_BASE_STAGE+Math.floor((timestamp-toTime(TRAIN_ANCHOR))/(35*DAY))));
 }
 export const weekStart=date=>addDays(date,-((new Date(toTime(date)).getUTCDay()+6)%7));
 export const trainRole=(award,id)=>award.member_id===id?'Driver':award.vip_member_id===id?'VIP':null;
@@ -26,6 +29,7 @@ export function trainWarnings(awards,proposed,displayName=id=>id){
  const warnings=[];
  const people=[{id:member_id,role:'Driver'},{id:vip_member_id,role:'VIP'}];
  for(const person of people){
+  if(String(person.id).trim().toLowerCase()==='not recorded')continue;
   const matches=awards.filter(a=>a.id!==editingId&&a.train_date>=range.start&&a.train_date<=range.end&&isR4Train(a)===isR4Train(proposed)&&trainRole(a,person.id));
   const who=displayName(person.id);
   for(const prior of matches){
