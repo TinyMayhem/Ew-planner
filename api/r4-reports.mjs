@@ -4,7 +4,7 @@ import {buildMemberPerformance} from '../lib/member-performance.mjs';
 
 const headers={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
 const json=(body,status=200)=>Response.json(body,{status,headers});
-const isDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&new Date(value+'T00:00:00Z').toISOString?.().slice(0,10)===value;
+const isDate=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value+'T00:00:00Z'))&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value;
 const integer=(text,defaultValue,min,max)=>{
  if(text===null)return defaultValue;
  if(!/^\d+$/.test(text))return null;
