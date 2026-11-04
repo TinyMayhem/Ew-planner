@@ -142,3 +142,10 @@
 .train-legacy-editor input,.train-legacy-editor select{width:100%;min-width:0;border:1px solid #c9b58a;border-radius:8px;background:#fffdf6;color:#1f4734;font:inherit;padding:10px}
 .train-editor-actions{display:flex;gap:9px;flex-wrap:wrap}
 @media(max-width:600px){.train-legacy-editor{grid-template-columns:1fr}}
+
+/* Train Desk recommendation evidence, ranked skips and proposed rotation. */
+.train-advice-favorite{padding:12px;border:1px solid #adc29d;border-radius:10px;background:#f1f7ed;margin:8px 0}
+.train-advice-recommended{font-size:12px;color:#2a6544;font-weight:800;margin:4px 0}
+.train-advice-substitution{padding:12px 14px;border-radius:10px;border:1px solid #d8c599;background:#fbf2dc;color:#624c25;font-size:13px;line-height:1.45}
+#candidates .stat-flag.blocked{display:block;width:fit-content;margin:5px 0 0}
+#candidates .stat-candidate > div:first-child{min-width:0;flex:1}
