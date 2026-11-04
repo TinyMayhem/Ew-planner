@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
 import {parseRankLines,scoreValue,matchRoster,validateConfirmedRows} from '../assets/r4-ocr-parser.mjs';
 
 test('score scanner recognizes standard, K and M formats without reading leaderboard ranks',()=>{
@@ -44,4 +45,9 @@ test('R4 scanner includes private screenshot upload, audit-backed undo and confi
  assert.match(client,/delete_ds/);
  assert.match(api,/return json\(\{ok:true,id:importId/);
  assert.match(api,/return json\(\{ok:true,id:created\[0\]\.id\}/);
+});
+
+test('screenshot scanner module is valid JavaScript',()=>{
+ const checked=spawnSync(process.execPath,['--check','assets/r4-screenshot-wizard.mjs'],{encoding:'utf8'});
+ assert.equal(checked.status,0,checked.stderr);
 });
