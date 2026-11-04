@@ -38,8 +38,8 @@ function makeRowCard({image,row,index,roster,aliases,redraw}){
  const header=node('div',null,'ocr-member-head');
  header.append(node('strong','Row '+(index+1)+(row.confirmed?' · Matched':' · Check this entry')));
  if(row.preview){
-  const link=document.createElement('a');link.href=image.url;link.target='_blank';link.rel='noopener noreferrer';
-  link.title='Open original screenshot';link.className='ocr-row-sample';
+  const link=document.createElement('a');link.href=row.preview;link.target='_blank';link.rel='noopener noreferrer';
+  link.title='Open enlarged copy of this game row';link.className='ocr-row-sample';
   const picture=document.createElement('img');picture.src=row.preview;picture.alt='Original game row showing the name and score';picture.loading='lazy';
   link.append(picture);card.append(header,link);
  }else card.append(header);
