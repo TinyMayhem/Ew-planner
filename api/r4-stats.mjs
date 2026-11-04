@@ -4,7 +4,8 @@ import {authorizedAccess} from './r4-planner.mjs';
 import {sessionUser} from '../lib/r4-auth.mjs';
 import {GET as auditPage} from '../lib/r4-audit-page.mjs';
 import {GET as statsPage} from '../lib/r4-stats-page.mjs';
-import {stageRange} from '../assets/r4-train-rules.mjs';
+import {stageRange,stageForDate,weekStart} from '../assets/r4-train-rules.mjs';
+import {buildTrainAdvice} from '../lib/train-advice.mjs';
 
 const HEADERS={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
 const json=(body,status=200)=>Response.json(body,{status,headers:HEADERS});
@@ -82,6 +83,42 @@ export async function GET(request){
   if(q.get('audit')==='1'){
    if(!await owner(request))return json({error:'Owner account required'},403);
    return json({events:await list('utw_stat_audit',{select:'id,action,actor,created_at,reversible,undone_at,undone_by,details',order:'created_at.desc,id.desc',limit:'400'})});
+  }
+  if(q.get('train_advice')==='1'){
+   const date=q.get('date'),mode=q.get('mode'),slot=clean(q.get('slot'),100);
+   if(!isoDate(date)||date<'2025-12-29'||stageForDate(date)>40||
+      !['never','vs','donations','ds','r4','manual'].includes(mode))return json({error:'Choose a valid train date and category'},400);
+   const [members,aliases,legacy,awards,exceptions]=await Promise.all([
+    list('utw_stat_members',{select:'id,display_name',order:'display_name.asc',limit:'1000'}),
+    list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'}),
+    list('utw_stat_train_legacy',{select:'train_date,driver_name,vip_name,source,selection_label',order:'train_date.desc',limit:'1500'}),
+    list('utw_stat_awards',{select:'train_date,member_id,vip_member_id,source,slot',order:'train_date.desc',limit:'1500'}),
+    list('utw_stat_exceptions',{select:'member_id,scope,starts_on,ends_on,reason,active',active:'eq.true',limit:'1000'})
+   ]);
+   if(![members,aliases,legacy,awards,exceptions].every(Array.isArray))throw Error('Incomplete train records');
+   let scoreboard=[],scoreDate=null,dsEvent=null;
+   const monday=weekStart(date);
+   if(mode==='vs'||mode==='donations'){
+    const metric=mode==='vs'?'vs_daily':'donations_weekly';
+    const filters={select:'id,period,created_at,row_count',metric:'eq.'+metric,order:'period.desc,created_at.desc',limit:'50'};
+    if(mode==='vs')filters.period='gte.'+monday;
+    else filters.period='eq.'+dateAdd(monday,-7);
+    const imports=await list('utw_stat_imports',filters);
+    const latest=imports.find(i=>i.period<=date);
+    if(latest){
+     const values=await list('utw_stat_values',{select:'alias_key,points',import_id:'eq.'+latest.id,limit:'501'});
+     if(values.length===latest.row_count){
+      const byAlias=new Map(aliases.map(x=>[x.alias_key,x.member_id]));
+      scoreboard=values.map(x=>({member_id:byAlias.get(x.alias_key),points:Number(x.points)}));
+      scoreDate=latest.period;
+     }
+    }
+   }
+   if(mode==='ds'){
+    const podium=await list('utw_stat_ds',{select:'event_date,first_member,second_member,third_member',event_date:'gte.'+dateAdd(date,-14),order:'event_date.desc,created_at.desc',limit:'30'});
+    dsEvent=podium.find(x=>x.event_date<=date)||null;
+   }
+   return json(buildTrainAdvice({date,mode,slot,members,aliases,legacy,awards,exceptions,scoreboard,scoreDate,dsEvent}));
   }
   const seasons=await list('utw_stat_seasons',{select:'id,label,sort_order',order:'sort_order.asc',limit:'50'});
   const season=q.get('season')||'post-s5';
