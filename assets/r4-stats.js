@@ -1,6 +1,7 @@
 import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv} from './r4-csv-utils.mjs';
 import {archivedWeeks,vsWeekSlots,vsLeaderboard,weekOf,scoreFlag} from './r4-vs-archive.mjs';
 import {stageForDate,stageRange,trainWarnings,isR4Train,addDays as trainAddDays} from './r4-train-rules.mjs';
+import {trainLabelForDate} from './r4-train-schedule.mjs';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
@@ -282,8 +283,8 @@ function trainCalendar(){
   for(let d=0;d<7;d++){
    const date=trainAddDays(range.start,w*7+d),td=text('td',null,'train-cell'),current=schedule.get(date)||[];
    const dateBtn=text('button',date.slice(5),'train-date-button');dateBtn.type='button';dateBtn.title='Select '+date+' for train planning';
-   dateBtn.addEventListener('click',()=>{$('train-date').value=date;const type=current[0]?.source||((d===2||d===3||d===5)?'r4':d===0?'donations':d===1?'ds':d===6?'vs':'manual');$('train-source').value=['r4','ds','donations','vs'].includes(type)?type:'manual';$('train-slot').value=current[0]?.slot||trainLabel[d];candidates();eligibilityWarnings();$('train-date').scrollIntoView({block:'center'})});
-   td.append(dateBtn,text('small',current[0]?.slot||trainLabel[d],'train-type'));
+   dateBtn.addEventListener('click',()=>{$('train-date').value=date;const type=current[0]?.source||((d===2||d===3||d===5)?'r4':d===0?'donations':d===1?'ds':d===6?'vs':'manual');$('train-source').value=['r4','ds','donations','vs'].includes(type)?type:'manual';$('train-slot').value=current[0]?.slot||trainLabelForDate(state.trainStage,date)||trainLabel[d];candidates();eligibilityWarnings();$('train-date').scrollIntoView({block:'center'})});
+   td.append(dateBtn,text('small',current[0]?.slot||trainLabelForDate(state.trainStage,date)||trainLabel[d],'train-type'));
    for(const award of current){
     const item=text('div',null,'train-entry'+(award.legacy?' train-archive-entry':'')+(isR4Train(award)?' train-r4-entry':''));
     item.append(text('strong','D: '+award.driverName),text('span','VIP: '+award.vipName));
@@ -459,7 +460,7 @@ async function uploadCsvQueue(){
 }
 function wire(){
  const today=serverToday(),week=monday(today);
- state.trainStage=stageForDate(today);for(let stage=13;stage<=30;stage++){const range=stageRange(stage);$('train-stage').append(new Option('Stage '+stage+' · '+range.start+' to '+range.end,stage))}$('train-stage').value=String(state.trainStage);
+ state.trainStage=stageForDate(today);for(let stage=7;stage<=30;stage++){const range=stageRange(stage);$('train-stage').append(new Option('Stage '+stage+' · '+range.start+' to '+range.end,stage))}$('train-stage').value=String(state.trainStage);
  $('week').value=week;$('ds-date').value=today;$('train-date').value=today;$('exception-start').value=today;$('exception-end').value=today;
  $('reload').addEventListener('click',load);
  $('season').value='post-s5';$('season').addEventListener('change',load);
