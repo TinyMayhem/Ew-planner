@@ -1,6 +1,6 @@
 // Browser screenshot parser for UTW game ranking lists.
 // Pure helpers, deliberately conservative. Every result requires human confirmation.
-export const normalizeIgn=value=>String(value||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();
+export const normalizeIgn=value=>String(value||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[ƉĐđɖ]/g,'d').replace(/[Łł]/g,'l').trim().replace(/\s+/g,' ').toLowerCase();
 export function scoreValue(text){
  const raw=String(text||'').trim().replace(/[Oo](?=\d)/g,'0').replace(/[Il](?=\d)/g,'1');
  const match=/^(\d[\d,. ]*)([KMB])?$/i.exec(raw.replace(/\s*(points?|pts|power|score)$/i,'').trim());
@@ -65,8 +65,8 @@ export function matchRoster(name,members,aliases=[]){
  const byId=new Map(members.map(x=>[x.id,x.display_name]));
  if(index.has(key))return {id:index.get(key),name:byId.get(index.get(key)),type:'exact'};
  // Suggest, never silently apply a fuzzy guess. Missed digits and non-Latin text are risky.
- if(key.length<5)return {id:null,name:null,type:'unknown'};
- const suggestions=[...index.entries()].map(([k,id])=>({id,d:levenshtein(key,k)})).filter(x=>x.d<=2)
+ if(key.length<4)return {id:null,name:null,type:'unknown'};
+ const suggestions=[...index.entries()].map(([k,id])=>({id,d:levenshtein(key,k)})).filter(x=>x.d<=(key.length>=7?2:1))
  .sort((a,b)=>a.d-b.d).filter((x,i,list)=>list.findIndex(y=>y.id===x.id)===i);
  const best=suggestions[0];
  if(!best||suggestions[1]?.d===best.d)return {id:null,name:null,type:'unknown'};
