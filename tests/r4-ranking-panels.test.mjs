@@ -123,3 +123,40 @@ test('visible printed 0 glyph can be detected on four blue rows after OCR misses
  assert.equal(detectVisibleZeroGlyph(sample,panels[0]),false,'blank rank score is not a zero');
  assert.equal(detectVisibleZeroGlyph(sample,panels[7]),false,'green pinned row is not inferred to be zero');
 });
+
+test('podium screenshot detects gold, silver and bronze before blue rows and green pinned rank',()=>{
+ // Representative actual sampled card colors and boundaries from a 709 x 1536
+ // Last War Daily Rank image; no personal screenshot is committed to the repo.
+ const screenshot=screenshotPixels();
+ const panels=[
+  {top:354,bottom:465,color:[250,221,85]},
+  {top:477,bottom:588,color:[198,209,255]},
+  {top:601,bottom:713,color:[248,203,182]},
+  {top:727,bottom:839,color:[203,211,230]},
+  {top:851,bottom:964,color:[203,211,230]},
+  {top:975,bottom:1088,color:[203,211,230]},
+  {top:1100,bottom:1212,color:[203,211,230]},
+  {top:1231,bottom:1345,color:[173,241,138]}
+ ];
+ const xs=[.06,.09,.62,.69,.88].map(f=>Math.round(width*f));
+ // Only the detector's stable sample columns need rewriting.
+ for(const card of panels)for(let y=card.top;y<card.bottom;y++)for(const x of xs){
+  const offset=(y*width+x)*4;
+  screenshot.data[offset]=card.color[0];screenshot.data[offset+1]=card.color[1];
+  screenshot.data[offset+2]=card.color[2];screenshot.data[offset+3]=255;
+ }
+ // Clear pre-existing sample columns outside the new card bounds.
+ for(const x of xs)for(let y=0;y<height;y++){
+  if(panels.some(card=>y>=card.top&&y<card.bottom))continue;
+  const offset=(y*width+x)*4;
+  screenshot.data[offset]=245;screenshot.data[offset+1]=245;screenshot.data[offset+2]=245;
+ }
+ const found=detectRankingPanels(screenshot);
+ assert.equal(found.length,8,'top three must not be omitted');
+ assert.deepEqual(found.map(x=>x.kind),['gold','silver','bronze','blue','blue','blue','blue','green']);
+ assert.deepEqual(found.map(x=>x.isPinned),[false,false,false,false,false,false,false,true]);
+ for(let i=0;i<panels.length;i++){
+  assert(Math.abs(found[i].top-panels[i].top)<4,'expected card start '+i);
+  assert(Math.abs(found[i].bottom-panels[i].bottom)<4,'expected card end '+i);
+ }
+});
