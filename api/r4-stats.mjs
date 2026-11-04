@@ -93,7 +93,7 @@ export async function GET(request){
       (season&&!/^[a-z0-9-]{2,30}$/.test(season)))return json({error:'Choose a valid report date range and season'},400);
    const intValue=(text,defaultValue,min,max)=>{
     if(text===null)return defaultValue;
-    if(!/^\\d+$/.test(text))return null;
+    if(!/^\d+$/.test(text))return null;
     const value=Number(text);
     return Number.isSafeInteger(value)&&value>=min&&value<=max?value:null;
    };
