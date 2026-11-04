@@ -1,3 +1,4 @@
+import {detectRankingPanels,parsePanelPoints,splitMontageByPanel,panelCropRects} from './r4-ranking-panels.mjs?version=scan-v5-20261104';
 // Local-only, column-specific OCR for Last War ranking screenshots.
 // A single OCR pass over the whole screenshot is not reliable: it pairs ranks,
 // avatars, [UTW] tags and scores from different visual rows.
@@ -30,7 +31,7 @@ async function recognizeBlock(worker,canvas,scoreOnly=false){
 function orderedLines(data,scale){
  return textLines(data).map(l=>({...l,y:l.y===null?null:l.y/scale,h:l.h===null?null:l.h/scale}));
 }
-export async function scanRankingScreenshot(worker,file,roster,aliases,onProgress=()=>{}){
+async function scanColumnFallback(worker,file,roster,aliases,onProgress=()=>{}){
  const bitmap=await createImageBitmap(file);
  try{
   const rects=columnRects(bitmap.width,bitmap.height);
@@ -111,4 +112,133 @@ export async function scanRankingScreenshot(worker,file,roster,aliases,onProgres
    unread:rows.filter(r=>!r.name).map(r=>r.ocrGuess||'Unmatched name'),diagnostics:details,
    quality,qualityMessage,layout:'last-war-ranked-columns'};
  }finally{bitmap.close?.()}
+}
+
+
+function montageForRankedCards(bitmap,panels,kind){
+ const tileHeight=128,tileWidth=kind==='name'?690:410;
+ const canvas=document.createElement('canvas');
+ canvas.width=tileWidth;canvas.height=tileHeight*panels.length;
+ const ctx=canvas.getContext('2d');
+ ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
+ for(const [i,panel] of panels.entries()){
+  const rect=panelCropRects(bitmap.width,panel)[kind],scale=Math.min(2.5,(tileWidth-18)/rect.w);
+  const h=Math.min(tileHeight-12,Math.round(rect.h*scale)),w=Math.min(tileWidth-16,Math.round(rect.w*scale));
+  ctx.save();
+  ctx.filter='grayscale(100%) contrast(150%) brightness(108%)';
+  ctx.drawImage(bitmap,rect.x,rect.y,rect.w,rect.h,8,i*tileHeight+6,w,h);
+  ctx.restore();
+ }
+ return {canvas,tileHeight};
+}
+
+function panelPreview(bitmap,panel){
+ const rect=panelCropRects(bitmap.width,panel).original;
+ const cv=document.createElement('canvas');
+ cv.width=940;cv.height=Math.max(70,Math.round(rect.h*940/rect.w));
+ cv.getContext('2d').drawImage(bitmap,rect.x,rect.y,rect.w,rect.h,0,0,cv.width,cv.height);
+ return cv.toDataURL('image/jpeg',.83);
+}
+
+async function readMontage(worker,montage,numbersOnly=false){
+ await worker.setParameters({tessedit_pageseg_mode:'6',tessedit_char_whitelist:numbersOnly?'0123456789,.':''});
+ return (await worker.recognize(montage.canvas,{}, {blocks:true})).data;
+}
+
+async function retrySingleCard(worker,bitmap,panel,kind){
+ const r=panelCropRects(bitmap.width,panel)[kind];
+ const width=kind==='name'?680:390;
+ const cv=document.createElement('canvas'),scale=Math.min(3,width/r.w);
+ cv.width=width;cv.height=Math.max(42,Math.ceil(r.h*scale)+12);
+ const ctx=cv.getContext('2d');
+ ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);
+ ctx.filter='grayscale(100%) contrast(145%) brightness(108%)';
+ ctx.drawImage(bitmap,r.x,r.y,r.w,r.h,4,5,Math.round(r.w*scale),Math.round(r.h*scale));
+ await worker.setParameters({tessedit_pageseg_mode:'7',tessedit_char_whitelist:kind==='score'?'0123456789,.':''});
+ const result=await worker.recognize(cv);
+ return String(result.data.text||'').trim().replace(/\s+/g,' ');
+}
+
+function rosterGuess(value,roster,aliases){
+ const guess=cleanRankName(value.replace(/^\s*\d{1,3}\s+[.)]?\s*/,'').trim());
+ const match=matchRoster(guess,roster,aliases);
+ return {name:match.name||guess,ocrGuess:guess,matchType:match.type,
+  confirmed:match.type==='exact'&&!hasEastAsianScript(guess)};
+}
+
+async function scanCards(worker,file,roster,aliases,onProgress=()=>{}){
+ const bitmap=await createImageBitmap(file);
+ try{
+  const canvas=document.createElement('canvas');
+  canvas.width=bitmap.width;canvas.height=bitmap.height;
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  ctx.drawImage(bitmap,0,0);
+  const panels=detectRankingPanels(ctx.getImageData(0,0,canvas.width,canvas.height));
+  if(!panels.length)return null;
+  onProgress('found '+panels.length+' blue/green ranking rows');
+  const nameMontage=montageForRankedCards(bitmap,panels,'name');
+  const scoreMontage=montageForRankedCards(bitmap,panels,'score');
+  onProgress('reading names from '+panels.length+' isolated rows');
+  const nameData=await readMontage(worker,nameMontage,false);
+  onProgress('reading all points, including zeros');
+  const scoreData=await readMontage(worker,scoreMontage,true);
+  const nameLines=splitMontageByPanel(nameData,panels.length,nameMontage.tileHeight);
+  const scoreLines=splitMontageByPanel(scoreData,panels.length,scoreMontage.tileHeight);
+  const rows=[],debug=[];
+  for(let i=0;i<panels.length;i++){
+   const n=nameLines[i].map(x=>x.text).filter(Boolean).join(' ').trim();
+   const scoreRaw=scoreLines[i].map(x=>x.text).filter(Boolean).join('').replace(/\s+/g,'');
+   const guess=rosterGuess(n,roster,aliases);
+   const initial=parsePanelPoints(scoreRaw);
+   rows.push({
+    ...guess,points:initial.points,needsScoreCheck:initial.uncertain,
+    confirmed:guess.confirmed&&initial.points!==null&&!initial.uncertain,
+    deleted:false,raw:n+' | '+scoreRaw,
+    preview:panelPreview(bitmap,panels[i]),pinned:panels[i].isPinned,
+    y:(panels[i].top+panels[i].bottom)/2
+   });
+   debug.push('Row '+(i+1)+(panels[i].isPinned?' (green pinned)':'')+': '+n+' | '+scoreRaw);
+  }
+  // Only retry genuinely incomplete rows; a zero is a real value, not missing.
+  const incomplete=rows.map((r,i)=>({...r,i})).filter(r=>!r.ocrGuess||r.points===null);
+  for(const row of incomplete.slice(0,15)){
+   const i=row.i;
+   if(!rows[i].ocrGuess){
+    onProgress('retrying unreadable name in row '+(i+1));
+    const guess=rosterGuess(await retrySingleCard(worker,bitmap,panels[i],'name'),roster,aliases);
+    Object.assign(rows[i],guess);
+    rows[i].confirmed=false;
+   }
+   if(rows[i].points===null){
+    onProgress('retrying points in row '+(i+1));
+    const score=parsePanelPoints(await retrySingleCard(worker,bitmap,panels[i],'score'));
+    rows[i].points=score.points;rows[i].needsScoreCheck=score.uncertain;
+    rows[i].confirmed=false;
+   }
+  }
+  // Pinned self-entry is not an extra ranking place in the scrolling list.
+  // The existing save path deduplicates by identical member+score values.
+  const matched=rows.filter(r=>r.ocrGuess).length,withPoints=rows.filter(r=>r.points!==null).length;
+  const quality=Math.min(matched/rows.length,withPoints/rows.length);
+  const qualityMessage=quality<.6?
+   'LOW CONFIDENCE: Some names or scores were unreadable. Compare the full game-row previews before saving.':
+   quality<1?'PARTIAL SCAN: Check highlighted names and scores against their row previews.':
+   'All game rows were located. Review the names and points before saving.';
+  return {
+   rows,ocrText:'ISOLATED RANKING ROWS:\n'+debug.join('\n')+
+    '\n\nNAME OCR:\n'+(nameData.text||'')+'\n\nSCORE OCR:\n'+(scoreData.text||''),
+   unread:rows.filter(r=>!r.ocrGuess||r.points===null).map(r=>r.ocrGuess||'(unreadable)'),
+   diagnostics:'Scanner v5 · '+panels.length+' actual game cards (blue/green) · '+withPoints+
+    ' scores, including '+rows.filter(r=>r.points===0).length+' recorded zeros'+
+    (panels.some(p=>p.isPinned)?' · green pinned row recognized':''),
+   quality,qualityMessage,layout:'last-war-ranked-panels'
+  };
+ }finally{bitmap.close?.()}
+}
+
+export async function scanRankingScreenshot(worker,file,roster,aliases,onProgress=()=>{}){
+ const result=await scanCards(worker,file,roster,aliases,onProgress);
+ if(result)return result;
+ onProgress('Ranking cards not recognized; trying generic column scan');
+ return scanColumnFallback(worker,file,roster,aliases,onProgress);
 }
