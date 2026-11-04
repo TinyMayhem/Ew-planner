@@ -118,7 +118,24 @@ export async function GET(request){
     const podium=await list('utw_stat_ds',{select:'event_date,first_member,second_member,third_member',event_date:'gte.'+dateAdd(date,-14),order:'event_date.desc,created_at.desc',limit:'30'});
     dsEvent=podium.find(x=>x.event_date<=date)||null;
    }
-   return json(buildTrainAdvice({date,mode,slot,members,aliases,legacy,awards,exceptions,scoreboard,scoreDate,dsEvent}));
+   let rosterIds=[],rosterDate=null;
+   if(mode==='never'){
+    // The current VS roster is the eligibility pool, not everyone ever entered into the directory.
+    const candidates=await list('utw_stat_imports',{
+     select:'id,period,metric,row_count,created_at',metric:'in.(vs_daily,vs_weekly)',
+     period:'lte.'+date,order:'period.desc,created_at.desc',limit:'40'
+    });
+    const latest=candidates[0];
+    if(latest){
+     const values=await list('utw_stat_values',{select:'alias_key',import_id:'eq.'+latest.id,limit:'501'});
+     if(values.length===latest.row_count){
+      const byAlias=new Map(aliases.map(x=>[x.alias_key,x.member_id]));
+      rosterIds=[...new Set(values.map(x=>byAlias.get(x.alias_key)).filter(Boolean))];
+      rosterDate=latest.period;
+     }
+    }
+   }
+   return json(buildTrainAdvice({date,mode,slot,members,aliases,legacy,awards,exceptions,scoreboard,scoreDate,dsEvent,rosterIds,rosterDate}));
   }
   const seasons=await list('utw_stat_seasons',{select:'id,label,sort_order',order:'sort_order.asc',limit:'50'});
   const season=q.get('season')||'post-s5';
@@ -165,7 +182,7 @@ async function importCsv(body,request){
   await insert('utw_stat_values',cleanRows.map(x=>({import_id:importId,alias_key:x.alias_key,original_name:x.name,points:x.points})));
  }catch(e){await del('utw_stat_imports',{id:'eq.'+importId}).catch(()=>{});throw e}
  await recordAudit(request,'import',{id:importId,filename,season,metric,period,rows:cleanRows.length,new_members:fresh.length},true);
- return json({ok:true,rows:cleanRows.length,new_members:fresh.length},201);
+ return json({ok:true,id:importId,rows:cleanRows.length,new_members:fresh.length},201);
 }
 async function dsUpload(form,request){
  const season=form.get('season_id')||'post-s5';
@@ -188,7 +205,7 @@ async function dsUpload(form,request){
   created=await insert('utw_stat_ds',{season_id:season,event_date:eventDate,first_member:first,second_member:second,third_member:third,opponent,notes,screenshot_path:path});
  }catch(e){await storage('utw-r4-ds-evidence/'+path,{method:'DELETE'}).catch(()=>{});throw e}
  await recordAudit(request,'ds',{id:created[0].id,season,date:eventDate,opponent,first,second,third,screenshot:path},true);
- return json({ok:true},201);
+ return json({ok:true,id:created[0].id},201);
 }
 export async function POST(request){
  if(!await authorizedAccess(request))return json({error:'R4 sign-in required'},401);
