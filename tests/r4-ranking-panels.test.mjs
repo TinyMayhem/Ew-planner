@@ -18,6 +18,8 @@ const positions=[
 ];
 function screenshotPixels(){
  const data=new Uint8ClampedArray(width*height*4);
+ // The game background outside each card is pale, not transparent black.
+ for(let i=0;i<data.length;i+=4){data[i]=245;data[i+1]=245;data[i+2]=245;data[i+3]=255;}
  for(const {top,bottom,kind} of positions){
   const color=kind==='green'?[173,241,138]:[203,211,230];
   for(let y=top;y<bottom;y++)for(let x=25;x<683;x++){
