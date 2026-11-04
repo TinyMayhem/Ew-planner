@@ -78,7 +78,7 @@ export function validateConfirmedRows(images){
  if(rows.length>500)throw Error('One upload can contain at most 500 rows.');
  const seen=new Map(),out=[];
  for(const [i,row] of rows.entries()){
-  const name=String(row.name||'').trim().replace(/\s+/g,' '),points=Number(String(row.points).replace(/[ ,]/g,''));
+  const name=String(row.name||'').trim().replace(/\s+/g,' '),rawScore=String(row.points??'').trim(),points=rawScore===''?NaN:Number(rawScore.replace(/[ ,]/g,''));
   if(!name||name.length>60||!/\p{L}/u.test(name))throw Error('Check the name on row '+(i+1)+'.');
   if(!Number.isSafeInteger(points)||points<0)throw Error('Check the score for '+name+'.');
   if(!row.confirmed)throw Error('Confirm the name for '+name+' before saving.');
