@@ -52,10 +52,10 @@ export async function scanRankingScreenshot(worker,file,roster,aliases,onProgres
    for(const row of rows.filter(r=>!r.name).slice(0,12)){
     const gap=Math.max(bitmap.height*.047,row.imageCrop.height);
     const rect={
-     x:Math.round(bitmap.width*.325),
-     y:Math.max(0,Math.round(row.y-gap*.40)),
-     w:Math.round(bitmap.width*.365),
-     h:Math.max(14,Math.min(bitmap.height-Math.max(0,Math.round(row.y-gap*.40)),Math.round(gap*.58)))
+     x:Math.round(bitmap.width*.33),
+     y:Math.max(0,Math.round(row.y-gap*.32)),
+     w:Math.round(bitmap.width*.36),
+     h:Math.max(14,Math.min(bitmap.height-Math.max(0,Math.round(row.y-gap*.32)),Math.round(gap*.42)))
     };
     if(rect.h<10)continue;
     const focused=cropScaled(bitmap,rect,720);
