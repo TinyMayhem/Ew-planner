@@ -46,18 +46,18 @@ function makeRow({image,row,index,roster,aliases,redraw}){
  controls.append(label);
  if(match.type==='suggested'){
   const fix=node('button','Use '+match.name,'stat-button');fix.type='button';
-  fix.onclick=()=>{row.name=match.name;row.confirmed=true;redraw()};
+  fix.onclick=()=>{row.name=match.name;row.confirmed=true;image.reviewed=false;redraw()};
   controls.append(fix);
  }
- const remove=node('button','Remove','stat-button');remove.type='button';remove.onclick=()=>{row.deleted=true;redraw()};
+ const remove=node('button','Remove','stat-button');remove.type='button';remove.onclick=()=>{row.deleted=true;image.reviewed=false;redraw()};
  controls.append(remove);tr.append(controls);
  iName.addEventListener('change',()=>{
   row.name=iName.value.trim();const m=matchRoster(row.name,roster,aliases);
   if(m.type==='exact'){row.name=m.name;iName.value=m.name;row.confirmed=true}
-  else row.confirmed=false;redraw();
+  else row.confirmed=false;image.reviewed=false;redraw();
  });
- iScore.addEventListener('change',()=>{row.points=iScore.value.trim().replace(/[ ,]/g,'');redraw()});
- checkbox.addEventListener('change',()=>{row.confirmed=checkbox.checked;redraw()});
+ iScore.addEventListener('change',()=>{row.points=iScore.value.trim().replace(/[ ,]/g,'');image.reviewed=false;redraw()});
+ checkbox.addEventListener('change',()=>{row.confirmed=checkbox.checked;image.reviewed=false;redraw()});
  return tr;
 }
 export function initScreenshotWizard({getMembers,getAliases,getSeason,reload,submit,today}){
