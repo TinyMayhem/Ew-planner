@@ -3,9 +3,15 @@ import assert from 'node:assert/strict';
 import {stageRange,stageForDate,trainWarnings,weekStart} from '../assets/r4-train-rules.mjs';
 
 test('train stages are exact five-week calendars starting on Monday',()=>{
+ assert.deepEqual(stageRange(7),{stage:7,start:'2025-12-29',end:'2026-02-01'});
+ assert.deepEqual(stageRange(8),{stage:8,start:'2026-02-02',end:'2026-03-08'});
+ assert.deepEqual(stageRange(9),{stage:9,start:'2026-03-16',end:'2026-04-19'});
  assert.deepEqual(stageRange(13),{stage:13,start:'2026-08-03',end:'2026-09-06'});
  assert.deepEqual(stageRange(14),{stage:14,start:'2026-09-07',end:'2026-10-11'});
  assert.deepEqual(stageRange(15),{stage:15,start:'2026-10-12',end:'2026-11-15'});
+ assert.equal(stageForDate('2026-01-01'),7);
+ assert.equal(stageForDate('2026-02-20'),8);
+ assert.equal(stageForDate('2026-03-20'),9);
  assert.equal(stageForDate('2026-11-01'),15);
  assert.equal(stageForDate('2026-11-16'),16);
  assert.equal(weekStart('2026-11-01'),'2026-10-26');
@@ -65,4 +71,10 @@ test('R4 recipient is not ruled out of regular roulette',()=>{
  const r4=a('r4','2026-10-15','a','b','r4','R4 Mo');
  const roulette=a('roulette','2026-10-16','a','c','manual','Roulette');
  assert.deepEqual(trainWarnings([r4],roulette),[]);
+});
+
+test('unfilled historical VIP placeholders do not create false duplicate warnings',()=>{
+ const prior=a('x','2026-02-27','a','not recorded','manual');
+ const next=a('y','2026-03-05','b','not recorded','manual');
+ assert.deepEqual(trainWarnings([prior],next),[]);
 });
