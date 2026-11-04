@@ -308,9 +308,25 @@ export async function POST(request){
    }
    case 'merge':{
     if(!uuid(body.source)||!uuid(body.target)||body.source===body.target)return json({error:'Choose two distinct members'},400);
+    // A merge permanently combines historical scores, so resolve the exact
+    // source and target IDs before running the existing atomic database RPC.
+    const [source,target,sourceAliases]=await Promise.all([
+     list('utw_stat_members',{select:'id,display_name',id:'eq.'+body.source,limit:'1'}),
+     list('utw_stat_members',{select:'id,display_name',id:'eq.'+body.target,limit:'1'}),
+     list('utw_stat_aliases',{select:'alias_key,alias',member_id:'eq.'+body.source,limit:'1000'})
+    ]);
+    if(source.length!==1||target.length!==1)return json({error:'A member record is missing. Refresh the page before merging.'},409);
+    if(!sourceAliases.length)return json({error:'Source member has no linked nickname. Review the record before merging.'},409);
     await db('rpc/utw_stat_merge_members',{method:'POST',body:JSON.stringify({p_source:body.source,p_target:body.target})});
-    await recordAudit(request,'merge',{source:body.source,target:body.target},false);
-    return json({ok:true});
+    const [sourceAfter,linkedAfter]=await Promise.all([
+     list('utw_stat_members',{select:'id',id:'eq.'+body.source,limit:'1'}),
+     list('utw_stat_aliases',{select:'alias_key,alias,member_id',member_id:'eq.'+body.target,limit:'1000'})
+    ]);
+    const allKeys=new Set(linkedAfter.map(a=>a.alias_key));
+    const verified=sourceAfter.length===0&&sourceAliases.every(a=>allKeys.has(a.alias_key));
+    if(!verified)return json({error:'The merge returned but could not be fully verified. Refresh before attempting another merge.'},409);
+    await recordAudit(request,'merge',{source:body.source,source_name:source[0].display_name,target:body.target,target_name:target[0].display_name},false);
+    return json({ok:true,verified:true,member_id:body.target,aliases:linkedAfter.map(a=>a.alias)});
    }
    case 'exception':{
     if(!uuid(body.member_id)||!['all','ds','donations','vs'].includes(body.scope)||!isoDate(body.starts_on)||!isoDate(body.ends_on)||body.ends_on<body.starts_on||clean(body.reason,301).length<1||clean(body.reason,301).length>300)return json({error:'Enter a valid member, scope, date range and reason'},400);
