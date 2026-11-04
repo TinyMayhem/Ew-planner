@@ -122,3 +122,87 @@ test('nickname page and server code are valid JavaScript and linked from R4',()=
  assert.match(planner,/Nickname Manager/);
  assert.match(stats,/Manage member nicknames/);
 });
+
+test('existing-name dropdown and merge confirmation are visible without typing MERGE',()=>{
+ const page=readFileSync('lib/r4-nicknames-page.mjs','utf8');
+ const script=readFileSync('assets/r4-nicknames.js','utf8');
+ assert.match(page,/id="nickname-existing-member"/);
+ assert.match(page,/id="nickname-link-existing"/);
+ assert.match(page,/id="nickname-new"/);
+ assert.match(script,/for\(const member of members\.filter\(m=>m\.id!==keep\)\)/);
+ assert.match(script,/Confirm and combine records/);
+ assert.match(script,/checkbox\.checked/);
+ assert.doesNotMatch(script,/prompt\('This will permanently combine/);
+ assert.match(script,/nowLinked/);
+ assert.match(script,/originalRemoved/);
+});
+test('merge API verifies the source member disappears and linked alias moves to target',async()=>{
+ const headers={...signedHeaders(),origin:'https://example.test','content-type':'application/json'};
+ const saved=globalThis.fetch;
+ let activeMembers=roster.map(x=>({...x}));
+ let activeAliases=aliases.map(x=>({...x}));
+ let merged=false;
+ globalThis.fetch=async(url,options={})=>{
+  const path=new URL(String(url)).pathname;
+  const params=new URL(String(url)).searchParams;
+  if(path.endsWith('/rpc/utw_buddy_rate_limit'))return Response.json(1);
+  if(path.endsWith('/rpc/utw_stat_merge_members')){
+   const args=JSON.parse(options.body);
+   assert.equal(args.p_source,couchId);
+   assert.equal(args.p_target,susId);
+   merged=true;
+   activeMembers=activeMembers.filter(m=>m.id!==couchId);
+   activeAliases=activeAliases.map(a=>a.member_id===couchId?{...a,member_id:susId}:a);
+   return new Response(null,{status:204});
+  }
+  if(path.endsWith('/utw_stat_members')){
+   const id=params.get('id')?.slice(3);
+   return Response.json(id?activeMembers.filter(m=>m.id===id):activeMembers);
+  }
+  if(path.endsWith('/utw_stat_aliases')){
+   const id=params.get('member_id')?.slice(3);
+   return Response.json(id?activeAliases.filter(a=>a.member_id===id):activeAliases);
+  }
+  if(path.endsWith('/utw_stat_audit'))return Response.json([{id:'audit'}]);
+  return Response.json([]);
+ };
+ try{
+  const response=await statsPost(new Request('https://example.test/api/r4-stats',{
+   method:'POST',headers,body:JSON.stringify({action:'merge',source:couchId,target:susId})
+  }));
+  assert.equal(response.status,200);
+  assert.equal(merged,true);
+  const payload=await response.json();
+  assert.equal(payload.verified,true);
+  assert.equal(payload.member_id,susId);
+  assert(payload.aliases.includes('Fkn Up Your Couch'));
+  assert(payload.aliases.includes('Sus'));
+  assert.equal(activeMembers.length,1);
+  assert.equal(activeAliases.every(a=>a.member_id===susId),true);
+ }finally{globalThis.fetch=saved}
+});
+test('merge API never returns success when the database merge cannot be verified',async()=>{
+ const headers={...signedHeaders(),origin:'https://example.test','content-type':'application/json'};
+ const saved=globalThis.fetch;
+ globalThis.fetch=async(url,options={})=>{
+  const path=new URL(String(url)).pathname,q=new URL(String(url)).searchParams;
+  if(path.endsWith('/rpc/utw_buddy_rate_limit'))return Response.json(1);
+  if(path.endsWith('/rpc/utw_stat_merge_members'))return new Response(null,{status:204}); // broken no-op
+  if(path.endsWith('/utw_stat_members')){
+   const id=q.get('id')?.slice(3);
+   return Response.json(id?roster.filter(x=>x.id===id):roster);
+  }
+  if(path.endsWith('/utw_stat_aliases')){
+   const id=q.get('member_id')?.slice(3);
+   return Response.json(id?aliases.filter(x=>x.member_id===id):aliases);
+  }
+  return Response.json([]);
+ };
+ try{
+  const response=await statsPost(new Request('https://example.test/api/r4-stats',{
+   method:'POST',headers,body:JSON.stringify({action:'merge',source:couchId,target:susId})
+  }));
+  assert.equal(response.status,409);
+  assert.match((await response.json()).error,/could not be fully verified/);
+ }finally{globalThis.fetch=saved}
+});
