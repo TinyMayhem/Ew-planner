@@ -2,6 +2,7 @@ import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv} from
 import {archivedWeeks,vsWeekSlots,vsLeaderboard,weekOf,scoreFlag} from './r4-vs-archive.mjs';
 import {stageForDate,stageRange,trainWarnings,isR4Train,addDays as trainAddDays} from './r4-train-rules.mjs';
 import {trainLabelForDate} from './r4-train-schedule.mjs';
+import {initScreenshotWizard} from './r4-screenshot-wizard.mjs';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
@@ -509,6 +510,7 @@ function wire(){
   action(()=>post({action:'award',season_id:state.season,train_date:date,slot:$('train-slot').value,member_id:id,vip_member_id:vipId,source,reason}), 'Conductor and VIP recorded.');
  });
  $('exception-save').addEventListener('click',()=>action(()=>post({action:'exception',member_id:$('exception-member').value,scope:$('exception-scope').value,starts_on:$('exception-start').value,ends_on:$('exception-end').value,reason:$('exception-reason').value}), 'Exception saved.'));
+ initScreenshotWizard({getMembers:members,getAliases:aliases,getSeason:()=>state.season,reload:load,submit:post,today:serverToday});
  load();
 }
 wire();
