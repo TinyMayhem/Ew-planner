@@ -146,12 +146,14 @@ export async function GET(request){
    let scoreboard=[],scoreDate=null,dsEvent=null;
    const monday=weekStart(date);
    if(mode==='vs'||mode==='donations'){
-    const metric=mode==='vs'?'vs_daily':'donations_weekly';
-    const filters={select:'id,period,created_at,row_count',metric:'eq.'+metric,order:'period.desc,created_at.desc',limit:'50'};
-    if(mode==='vs')filters.period='gte.'+monday;
-    else filters.period='eq.'+dateAdd(monday,-7);
+    // VS picks use the prior completed WEEKLY VS total, not a daily score.
+    // Weekly periods are keyed by their starting Monday.
+    const metric=mode==='vs'?'vs_weekly':'donations_weekly';
+    const previousWeek=dateAdd(monday,-7);
+    const filters={select:'id,period,created_at,row_count',metric:'eq.'+metric,
+     period:'eq.'+previousWeek,order:'created_at.desc',limit:'50'};
     const imports=await list('utw_stat_imports',filters);
-    const latest=imports.find(i=>i.period<=date);
+    const latest=imports[0];
     if(latest){
      const values=await list('utw_stat_values',{select:'alias_key,points',import_id:'eq.'+latest.id,limit:'501'});
      if(values.length===latest.row_count){
