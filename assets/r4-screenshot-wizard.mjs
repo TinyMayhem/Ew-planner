@@ -45,12 +45,19 @@ function makeRowCard({image,row,index,roster,aliases,redraw}){
   link.append(picture);card.append(header,link);
  }else card.append(header);
  const match=matchRoster(row.name,roster,aliases);
+ const ocrMatch=matchRoster(row.ocrGuess||'',roster,aliases);
  const fields=node('div',null,'ocr-member-fields'),nameLabel=node('label',null,'ocr-member-field');
  nameLabel.append(node('span','Member name'));
  const inputName=document.createElement('input');inputName.value=row.name||'';inputName.maxLength=60;
  inputName.placeholder='Find member from roster';inputName.setAttribute('list','ocr-names');
  inputName.setAttribute('aria-label','Member name for screenshot row '+(index+1));
- const hintName=match.type==='exact'?'Matched UTW roster':
+ const hintName=row.matchType==='suggested'?
+  'Check OCR guess "'+(row.ocrGuess||'')+'" against '+(row.name||'the roster'):
+  row.ocrGuess&&ocrMatch.type==='unknown'?
+  'Unmatched OCR text: '+row.ocrGuess+' · select correct roster name':
+  match.type==='exact'&&/[\p{Script=Han}\p{Script=Hangul}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(row.name)?
+  'East Asian name found in roster. Verify every character.':
+  match.type==='exact'?'Matched UTW roster':
   match.type==='suggested'?'Possible roster name: '+match.name:
   row.ocrGuess?'OCR could not match: '+row.ocrGuess:'Name could not be read. Choose from roster.';
  nameLabel.append(inputName,node('small',hintName,'ocr-match'));
