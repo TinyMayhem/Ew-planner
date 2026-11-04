@@ -1,4 +1,5 @@
 import {parseRankLines,matchRoster,normalizeIgn,validateConfirmedRows} from './r4-ocr-parser.mjs';
+import {scanRankingScreenshot} from './r4-ocr-browser.mjs';
 import {weekStart,validTarget} from './r4-csv-utils.mjs';
 
 // The scanner works in the browser. Screenshots leave the device only for DS evidence.
@@ -32,33 +33,64 @@ function selectMembers(members,selected=''){
  for(const m of members)select.append(new Option(m.display_name,m.id));
  select.value=selected;return select;
 }
-function makeRow({image,row,index,roster,aliases,redraw}){
- const tr=node('tr',null,'ocr-row'+(!row.confirmed?' ocr-uncertain':''));
- const n=node('td'),iName=document.createElement('input');iName.value=row.name||'';iName.maxLength=60;
- iName.setAttribute('list','ocr-names');iName.setAttribute('aria-label','Member name from image '+image.file.name);
- const match=matchRoster(row.name,roster,aliases),status=node('small',match.type==='exact'?'Matched roster':match.type==='suggested'?'Possible match: '+match.name:'Check name against roster','ocr-match');
- n.append(iName,status);tr.append(n);
- const p=node('td'),iScore=document.createElement('input');iScore.type='text';iScore.inputMode='numeric';iScore.value=row.points===null?'':String(row.points);iScore.setAttribute('aria-label','Score');
- p.append(iScore);tr.append(p);
- const controls=node('td'),label=node('label',null,'ocr-check'),checkbox=document.createElement('input');
+function makeRowCard({image,row,index,roster,aliases,redraw}){
+ const card=node('article',null,'ocr-member-card'+(!row.confirmed?' ocr-uncertain':''));
+ const header=node('div',null,'ocr-member-head');
+ header.append(node('strong','Row '+(index+1)+(row.confirmed?' · Matched':' · Check this entry')));
+ if(row.preview){
+  const link=document.createElement('a');link.href=image.url;link.target='_blank';link.rel='noopener noreferrer';
+  link.title='Open original screenshot';link.className='ocr-row-sample';
+  const picture=document.createElement('img');picture.src=row.preview;picture.alt='Original game row showing the name and score';picture.loading='lazy';
+  link.append(picture);card.append(header,link);
+ }else card.append(header);
+ const match=matchRoster(row.name,roster,aliases);
+ const fields=node('div',null,'ocr-member-fields'),nameLabel=node('label',null,'ocr-member-field');
+ nameLabel.append(node('span','Member name'));
+ const inputName=document.createElement('input');inputName.value=row.name||'';inputName.maxLength=60;
+ inputName.placeholder='Find member from roster';inputName.setAttribute('list','ocr-names');
+ inputName.setAttribute('aria-label','Member name for screenshot row '+(index+1));
+ const hintName=match.type==='exact'?'Matched UTW roster':
+  match.type==='suggested'?'Possible roster name: '+match.name:
+  row.ocrGuess?'OCR could not match: '+row.ocrGuess:'Name could not be read. Choose from roster.';
+ nameLabel.append(inputName,node('small',hintName,'ocr-match'));
+ if(!row.name&&row.ocrGuess)nameLabel.append(node('small','Use the screenshot above to select the correct name.','report-low'));
+ fields.append(nameLabel);
+ const scoreLabel=node('label',null,'ocr-member-field');scoreLabel.append(node('span','Points / donations'));
+ const inputScore=document.createElement('input');inputScore.type='text';inputScore.inputMode='numeric';
+ inputScore.value=row.points===null?'':String(row.points);inputScore.setAttribute('aria-label','Score for screenshot row '+(index+1));
+ scoreLabel.append(inputScore);
+ if(row.needsScoreCheck)scoreLabel.append(node('small','Score needs a careful check','ocr-match'));
+ fields.append(scoreLabel);card.append(fields);
+ const controls=node('div',null,'ocr-member-controls');
+ const label=node('label',null,'ocr-check'),checkbox=document.createElement('input');
  checkbox.type='checkbox';checkbox.checked=!!row.confirmed;
- label.append(checkbox,node('span','Name verified'));
+ label.append(checkbox,node('span','Name and score checked'));
  controls.append(label);
  if(match.type==='suggested'){
   const fix=node('button','Use '+match.name,'stat-button');fix.type='button';
-  fix.onclick=()=>{row.name=match.name;row.confirmed=true;image.reviewed=false;redraw()};
+  fix.onclick=()=>{row.name=match.name;row.confirmed=false;image.reviewed=false;redraw()};
   controls.append(fix);
  }
- const remove=node('button','Remove','stat-button');remove.type='button';remove.onclick=()=>{row.deleted=true;image.reviewed=false;redraw()};
- controls.append(remove);tr.append(controls);
- iName.addEventListener('change',()=>{
-  row.name=iName.value.trim();const m=matchRoster(row.name,roster,aliases);
-  if(m.type==='exact'){row.name=m.name;iName.value=m.name;row.confirmed=true}
-  else row.confirmed=false;image.reviewed=false;redraw();
+ const remove=node('button','Remove wrong row','stat-button');remove.type='button';
+ remove.onclick=()=>{row.deleted=true;image.reviewed=false;redraw()};
+ controls.append(remove);card.append(controls);
+ inputName.addEventListener('change',()=>{
+  row.name=inputName.value.trim();const m=matchRoster(row.name,roster,aliases);
+  if(m.type==='exact'){row.name=m.name;inputName.value=m.name}
+  row.confirmed=false;image.reviewed=false;redraw();
  });
- iScore.addEventListener('change',()=>{row.points=iScore.value.trim().replace(/[ ,]/g,'');image.reviewed=false;redraw()});
- checkbox.addEventListener('change',()=>{row.confirmed=checkbox.checked;image.reviewed=false;redraw()});
- return tr;
+ inputScore.addEventListener('change',()=>{
+  row.points=inputScore.value.trim().replace(/[ ,]/g,'');
+  row.needsScoreCheck=false;row.confirmed=false;image.reviewed=false;redraw();
+ });
+ checkbox.addEventListener('change',()=>{
+  row.confirmed=checkbox.checked;
+  if(row.confirmed&&(!row.name||!String(row.points).trim())){
+   row.confirmed=false;checkbox.checked=false;
+  }
+  image.reviewed=false;redraw();
+ });
+ return card;
 }
 export function initScreenshotWizard({getMembers,getAliases,getSeason,reload,submit,today}){
  const root=$('ocr-wizard');if(!root)return;
@@ -139,11 +171,12 @@ export function initScreenshotWizard({getMembers,getAliases,getSeason,reload,sub
    preview.src=image.url;preview.alt='Uploaded results screenshot '+image.file.name;preview.className='ocr-thumb';preview.loading='lazy';layout.append(preview);
    const content=node('div',null,'ocr-image-contents');
    if(!isDs){
-    const wrap=node('div',null,'stat-scroll'),table=node('table',null,'stat-table ocr-table');
-    const h=node('tr');['Member name','Score','Verify / fix'].forEach(x=>h.append(node('th',x)));table.append(h);
-    image.rows.forEach((row,i)=>{if(!row.deleted)table.append(makeRow({image,row,index:i,roster,aliases,redraw:render}))});
-    wrap.append(table);content.append(wrap);
-    const add=node('button','+ Add missing member','stat-button');add.type='button';add.onclick=()=>{image.rows.push({name:'',points:'',confirmed:false,deleted:false});image.reviewed=false;render()};
+    const list=node('div',null,'ocr-member-list');
+    image.rows.forEach((row,i)=>{if(!row.deleted)list.append(makeRowCard({image,row,index:i,roster,aliases,redraw:render}))});
+    content.append(list);
+    if(image.diagnostics)content.prepend(node('p',image.diagnostics,'ocr-diagnostic'));
+    const add=node('button','+ Add missing member','stat-button');add.type='button';
+    add.onclick=()=>{image.rows.push({name:'',points:'',confirmed:false,deleted:false,ocrGuess:''});image.reviewed=false;render()};
     content.append(add);
    }else{
     content.append(node('p','The OCR text is shown below. Confirm the podium names and order in Step 4.','stat-muted'));
@@ -152,6 +185,7 @@ export function initScreenshotWizard({getMembers,getAliases,getSeason,reload,sub
    raw.rows=5;raw.value=image.ocrText;raw.setAttribute('aria-label','Editable OCR text for '+image.file.name);
    const parse=node('button','Try parsing corrected text','stat-button');parse.type='button';
    parse.onclick=()=>{
+    if(image.layout==='last-war-ranked-columns'&&!confirm('Replace the column-matched rows with manually parsed OCR text? Only use this if you have entered each name and score together.'))return;
     image.ocrText=raw.value;const parsed=parseRankLines(raw.value);
     if(!isDs){image.rows=parsed.rows.map(row=>prepareRow(row,roster,aliases));image.unread=parsed.unread}
     image.reviewed=false;render();
@@ -194,11 +228,23 @@ export function initScreenshotWizard({getMembers,getAliases,getSeason,reload,sub
    worker=await engine.createWorker('eng');
    for(let i=0;i<selected.length;i++){
     const file=selected[i];hint(progress,'Reading screenshot '+(i+1)+' of '+selected.length+': '+file.name);
-    const result=await worker.recognize(file);
-    const source=result.data.text||'';
-    const parsed=parseRankLines(source),roster=getMembers(),aliases=getAliases();
-    const rows=parsed.rows.map(r=>prepareRow(r,roster,aliases));
-    images.push({file,url:URL.createObjectURL(file),ocrText:source,rows,unread:parsed.unread,reviewed:false});
+    const roster=getMembers(),aliases=getAliases();
+    let parsed;
+    if(type.value==='ds'){
+     const result=await worker.recognize(file);
+     const source=result.data.text||'';
+     const detected=parseRankLines(source);
+     parsed={rows:detected.rows.map(r=>prepareRow(r,roster,aliases)),ocrText:source,unread:detected.unread,diagnostics:'DS screenshot: confirm the podium manually.'};
+    }else{
+     parsed=await scanRankingScreenshot(worker,file,roster,aliases,phase=>
+      hint(progress,'Screenshot '+(i+1)+' of '+selected.length+': '+phase+'…'));
+     if(!parsed.rows.length){
+      // This layout is not recognized. Do not invent rows or silently save garbage.
+      parsed.diagnostics='No ranking rows were recognized. Add rows manually or use a clearer screenshot.';
+      parsed.rows=[{name:'',points:'',ocrGuess:'',confirmed:false,deleted:false}];
+     }
+    }
+    images.push({file,url:URL.createObjectURL(file),...parsed,reviewed:false});
    }
    review.hidden=false;hint(progress,'OCR finished. Check the results in Step 4. Nothing has been saved yet.');
    render();
