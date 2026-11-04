@@ -1,9 +1,9 @@
 // Local-only, column-specific OCR for Last War ranking screenshots.
 // A single OCR pass over the whole screenshot is not reliable: it pairs ranks,
 // avatars, [UTW] tags and scores from different visual rows.
-import {columnRects,textLines,scoreAnchors,alignRankColumns,cleanRankName} from './r4-ocr-columns.mjs';
-import {matchRoster} from './r4-ocr-parser.mjs';
-import {hasEastAsianScript} from './r4-ocr-languages.mjs';
+import {columnRects,textLines,scoreAnchors,alignRankColumns,cleanRankName} from './r4-ocr-columns.mjs?version=scan-v4-20261104';
+import {matchRoster} from './r4-ocr-parser.mjs?version=scan-v4-20261104';
+import {hasEastAsianScript} from './r4-ocr-languages.mjs?version=scan-v4-20261104';
 
 function cropScaled(bitmap,rect,targetWidth=650){
  const scale=Math.min(3,Math.max(1,targetWidth/rect.w));
