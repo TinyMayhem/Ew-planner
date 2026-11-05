@@ -34,10 +34,10 @@ function selectMembers(members,selected=''){
  for(const m of members)select.append(new Option(m.display_name,m.id));
  select.value=selected;return select;
 }
-function makeRowCard({image,row,index,roster,aliases,redraw}){
- const card=node('article',null,'ocr-member-card'+(!row.confirmed?' ocr-uncertain':''));
+function makeRowCard({image,row,index,roster,aliases,redraw,updateStatus}){
+ const card=node('article',null,'ocr-member-card'+(row.confirmed?' ocr-verified':' ocr-uncertain'));
  const header=node('div',null,'ocr-member-head');
- header.append(node('strong','Row '+(index+1)+(row.pinned?' · Green pinned rank':'')+(row.confirmed?' · Matched':' · Check this entry')));
+ const rowTitle=node('strong','Row '+(index+1)+(row.pinned?' · Green pinned rank':'')+(row.confirmed?' · Verified':' · Tap to verify'));header.append(rowTitle);
  if(row.preview){
   const link=document.createElement('a');link.href=row.preview;link.target='_blank';link.rel='noopener noreferrer';
   link.title='Open enlarged copy of this game row';link.className='ocr-row-sample';
@@ -72,15 +72,16 @@ function makeRowCard({image,row,index,roster,aliases,redraw}){
  const controls=node('div',null,'ocr-member-controls');
  const label=node('label',null,'ocr-check'),checkbox=document.createElement('input');
  checkbox.type='checkbox';checkbox.checked=!!row.confirmed;
- label.append(checkbox,node('span','Name and score checked'));
+ const checkText=node('span',row.confirmed?'Verified name + score':'Tap to verify name + score');
+ label.append(checkbox,checkText);
  controls.append(label);
  if(match.type==='suggested'){
   const fix=node('button','Use '+match.name,'stat-button');fix.type='button';
-  fix.onclick=()=>{row.name=match.name;row.confirmed=false;image.reviewed=false;redraw()};
+  fix.onclick=()=>{row.name=match.name;row.confirmed=false;redraw()};
   controls.append(fix);
  }
  const remove=node('button','Remove wrong row','stat-button');remove.type='button';
- remove.onclick=()=>{row.deleted=true;image.reviewed=false;redraw()};
+ remove.onclick=()=>{row.deleted=true;redraw()};
  controls.append(remove);
  if(!row.confirmed){
   const pick=node('button','Pick from UTW roster','stat-button');pick.type='button';
@@ -94,7 +95,7 @@ function makeRowCard({image,row,index,roster,aliases,redraw}){
    apply.addEventListener('click',()=>{
     const selected=roster.find(m=>m.id===selection.value);
     if(!selected)return;
-    row.name=selected.display_name;row.confirmed=false;image.reviewed=false;redraw();
+    row.name=selected.display_name;row.confirmed=false;redraw();
    });
    box.append(selection,apply);card.append(box);
   });
@@ -104,25 +105,29 @@ function makeRowCard({image,row,index,roster,aliases,redraw}){
  inputName.addEventListener('change',()=>{
   row.name=inputName.value.trim();const m=matchRoster(row.name,roster,aliases);
   if(m.type==='exact'){row.name=m.name;inputName.value=m.name}
-  row.confirmed=false;image.reviewed=false;redraw();
+  row.confirmed=false;redraw();
  });
  inputScore.addEventListener('change',()=>{
   row.points=inputScore.value.trim().replace(/[ ,]/g,'');
-  row.needsScoreCheck=false;row.confirmed=false;image.reviewed=false;redraw();
+  row.needsScoreCheck=false;row.confirmed=false;redraw();
  });
  checkbox.addEventListener('change',()=>{
   row.confirmed=checkbox.checked;
   if(row.confirmed&&(!row.name||row.points===null||row.points===undefined||String(row.points).trim()==='')){
    row.confirmed=false;checkbox.checked=false;
   }
-  image.reviewed=false;redraw();
+  card.classList.toggle('ocr-uncertain',!row.confirmed);
+  card.classList.toggle('ocr-verified',row.confirmed);
+  checkText.textContent=row.confirmed?'Verified name + score':'Tap to verify name + score';
+  rowTitle.textContent='Row '+(index+1)+(row.pinned?' · Green pinned rank':'')+(row.confirmed?' · Verified':' · Tap to verify');
+  updateStatus();
  });
  return card;
 }
 export function initScreenshotWizard({getMembers,getAliases,getSeason,reload,submit,today}){
  const root=$('ocr-wizard');if(!root)return;
  let images=[],busy=false,lastSaved=null,historyBusy=false;
- root.innerHTML='<p class="ocr-current-build"><strong>SCANNER v5.1 · CARD READER</strong> · Game-row previews + quality checking. If you still see the old Member name / Score table, refresh this page.</p><div class="ocr-start"><div class="stat-fields"><label>1. What are you uploading?<select id="ocr-type"><option value="vs_daily">VS daily scores</option><option value="vs_weekly">VS weekly totals</option><option value="donations_weekly">Weekly donations</option><option value="ds">Desert Storm results</option></select></label><label>2. Date shown on the results<input id="ocr-date" type="date" required></label><label class="ocr-file-label">3. Add screenshots (up to 15)<input id="ocr-files" type="file" accept="image/png,image/jpeg,image/webp" multiple></label><label>Player name languages<select id="ocr-languages"><option value="auto">Auto: languages in UTW roster</option><option value="all">English + Korean + Chinese + Japanese</option><option value="eng">English only (faster)</option><option value="ko">English + Korean</option><option value="zh">English + Chinese (both scripts)</option><option value="ja">English + Japanese</option></select></label></div><p class="stat-muted">For a full VS or donation roster, select all 11 screenshots together. Keep the same report date for the batch. The site scans locally and never saves scores before you confirm. The green self-ranking footer is skipped automatically. Korean, Chinese and Japanese names are supported. Auto selects languages found in the roster. Choose All languages for new names not yet in the roster.</p><button type="button" id="ocr-begin" class="stat-button primary">Read my screenshots</button><p id="ocr-progress" role="status" aria-live="polite"></p></div><div id="ocr-review" hidden><h3>4. Check the names and scores</h3><p class="stat-muted">Look at each screenshot and correct anything the scanner missed. Add missing people. Tick “I checked this picture” for every screenshot before saving.</p><div id="ocr-images"></div><div id="ocr-ds-fields" hidden><div class="stat-fields"><label>DS MVP / 1st<select id="ocr-ds-first"></select></label><label>2nd<select id="ocr-ds-second"></select></label><label>3rd<select id="ocr-ds-third"></select></label><label>Opponent (optional)<input id="ocr-ds-opponent" maxlength="80" placeholder="Opponent alliance"></label></div><p class="stat-muted">Review the original screenshot and choose the correct podium order. Only the first image is saved as private match evidence.</p></div><p id="ocr-ready" role="status"></p><div class="ocr-actions"><button type="button" id="ocr-save" class="stat-button primary">Confirm and save results</button><button type="button" id="ocr-reset" class="stat-button">Start over</button></div></div><div id="ocr-success" class="ocr-success" hidden><strong id="ocr-success-message"></strong><button type="button" id="ocr-undo" class="stat-button">Undo this upload</button></div><details class="ocr-history" open><summary>Recent screenshot uploads and Undo</summary><p class="stat-muted">You can undo a mistaken upload even after refreshing this page. The owner audit log keeps a recoverable record.</p><div id="ocr-history-list"></div></details><datalist id="ocr-names"></datalist>';
+ root.innerHTML='<p class="ocr-current-build"><strong>SCANNER v5.2 · PLAYER VERIFICATION</strong> · Game-row previews + quality checking. If you still see the old Member name / Score table, refresh this page.</p><div class="ocr-start"><div class="stat-fields"><label>1. What are you uploading?<select id="ocr-type"><option value="vs_daily">VS daily scores</option><option value="vs_weekly">VS weekly totals</option><option value="donations_weekly">Weekly donations</option><option value="ds">Desert Storm results</option></select></label><label>2. Date shown on the results<input id="ocr-date" type="date" required></label><label class="ocr-file-label">3. Add screenshots (up to 15)<input id="ocr-files" type="file" accept="image/png,image/jpeg,image/webp" multiple></label><label>Player name languages<select id="ocr-languages"><option value="auto">Auto: languages in UTW roster</option><option value="all">English + Korean + Chinese + Japanese</option><option value="eng">English only (faster)</option><option value="ko">English + Korean</option><option value="zh">English + Chinese (both scripts)</option><option value="ja">English + Japanese</option></select></label></div><p class="stat-muted">For a full VS or donation roster, select all 11 screenshots together. Keep the same report date for the batch. The site scans locally and never saves scores before you confirm. The green self-ranking footer is skipped automatically. Korean, Chinese and Japanese names are supported. Auto selects languages found in the roster. Choose All languages for new names not yet in the roster.</p><button type="button" id="ocr-begin" class="stat-button primary">Read my screenshots</button><p id="ocr-progress" role="status" aria-live="polite"></p></div><div id="ocr-review" hidden><h3>4. Check the names and scores</h3><p class="stat-muted">Look at each screenshot and correct anything the scanner missed. Add missing people. Tap “Verify name + score” on each player after checking the game row. All listed players must be verified before saving.</p><div id="ocr-images"></div><div id="ocr-ds-fields" hidden><div class="stat-fields"><label>DS MVP / 1st<select id="ocr-ds-first"></select></label><label>2nd<select id="ocr-ds-second"></select></label><label>3rd<select id="ocr-ds-third"></select></label><label>Opponent (optional)<input id="ocr-ds-opponent" maxlength="80" placeholder="Opponent alliance"></label></div><p class="stat-muted">Review the original screenshot and choose the correct podium order. Only the first image is saved as private match evidence.</p></div><p id="ocr-ready" role="status"></p><div class="ocr-actions"><button type="button" id="ocr-save" class="stat-button primary">Confirm and save results</button><button type="button" id="ocr-reset" class="stat-button">Start over</button></div></div><div id="ocr-success" class="ocr-success" hidden><strong id="ocr-success-message"></strong><button type="button" id="ocr-undo" class="stat-button">Undo this upload</button></div><details class="ocr-history" open><summary>Recent screenshot uploads and Undo</summary><p class="stat-muted">You can undo a mistaken upload even after refreshing this page. The owner audit log keeps a recoverable record.</p><div id="ocr-history-list"></div></details><datalist id="ocr-names"></datalist>';
  const type=$('ocr-type'),date=$('ocr-date'),files=$('ocr-files'),languages=$('ocr-languages'),go=$('ocr-begin'),progress=$('ocr-progress'),
   review=$('ocr-review'),imageRoot=$('ocr-images'),dsFields=$('ocr-ds-fields'),ready=$('ocr-ready'),
   save=$('ocr-save'),reset=$('ocr-reset'),success=$('ocr-success'),successMessage=$('ocr-success-message'),undo=$('ocr-undo');
@@ -199,12 +204,12 @@ export function initScreenshotWizard({getMembers,getAliases,getSeason,reload,sub
    const content=node('div',null,'ocr-image-contents');
    if(!isDs){
     const list=node('div',null,'ocr-member-list');
-    image.rows.forEach((row,i)=>{if(!row.deleted)list.append(makeRowCard({image,row,index:i,roster,aliases,redraw:render}))});
+    image.rows.forEach((row,i)=>{if(!row.deleted)list.append(makeRowCard({image,row,index:i,roster,aliases,redraw:render,updateStatus:renderStatus}))});
     content.append(list);
     if(image.diagnostics)content.prepend(node('p',image.diagnostics,'ocr-diagnostic'));
     if(image.qualityMessage)content.prepend(node('p',image.qualityMessage,image.quality<.5?'ocr-quality-warning':'ocr-quality-note'));
     const add=node('button','+ Add missing member','stat-button');add.type='button';
-    add.onclick=()=>{image.rows.push({name:'',points:'',confirmed:false,deleted:false,ocrGuess:''});image.reviewed=false;render()};
+    add.onclick=()=>{image.rows.push({name:'',points:'',confirmed:false,deleted:false,ocrGuess:''});render()};
     content.append(add);
    }else{
     content.append(node('p','The OCR text is shown below. Confirm the podium names and order in Step 4.','stat-muted'));
@@ -216,27 +221,26 @@ export function initScreenshotWizard({getMembers,getAliases,getSeason,reload,sub
     if(image.layout==='last-war-ranked-columns'&&!confirm('Replace the column-matched rows with manually parsed OCR text? Only use this if you have entered each name and score together.'))return;
     image.ocrText=raw.value;const parsed=parseRankLines(raw.value);
     if(!isDs){image.rows=parsed.rows.map(row=>prepareRow(row,roster,aliases));image.unread=parsed.unread}
-    image.reviewed=false;render();
+    render();
    };
    note.append(summary,raw,parse);content.append(note);
-   const checked=node('label',null,'ocr-review-check'),check=document.createElement('input');check.type='checkbox';check.checked=image.reviewed;
-   check.onchange=()=>{image.reviewed=check.checked;renderStatus()};
-   checked.append(check,node('strong','I checked this picture against the results'));content.append(checked);
    layout.append(content);card.append(layout);imageRoot.append(card);
   }
   if(isDs)dsSelectors();
   renderStatus();
  }
  function renderStatus(){
-  const checked=images.filter(x=>x.reviewed).length,rows=images.flatMap(x=>x.rows.filter(r=>!r.deleted));
+  const rows=images.flatMap(x=>x.rows.filter(r=>!r.deleted&&!r.pinned));
+  const verified=rows.filter(r=>r.confirmed).length,isDs=type.value==='ds';
   const unique=new Set(rows.filter(r=>r.name).map(r=>normalizeIgn(r.name))).size;
-  ready.textContent=checked+'/'+images.length+' pictures checked · '+rows.length+' parsed rows'+
-   (type.value==='ds'?' (only podium is saved)':' · '+unique+' unique names'+(rows.length>unique?' · repeated green/overlap rows counted once':''));
-  save.disabled=busy||checked!==images.length||!images.length||(!rows.length&&type.value!=='ds');
+  ready.textContent=isDs?images.length+' DS screenshot loaded · select the correct podium players':
+   verified+'/'+rows.length+' players verified across '+images.length+' pictures · '+unique+' unique names'+
+   (rows.length>unique?' · repeated overlap rows counted once':'');
+  save.disabled=busy||!images.length||(!isDs&&(!rows.length||verified!==rows.length));
  }
  function prepareRow(row,roster,aliases){
   const m=matchRoster(row.name,roster,aliases);
-  return {name:m.type==='exact'?m.name:row.name,points:row.points,confirmed:m.type==='exact',deleted:false};
+  return {name:m.type==='exact'?m.name:row.name,points:row.points,confirmed:false,deleted:false};
  }
  go.onclick=async()=>{
   if(busy)return;const selected=[...files.files];
@@ -275,8 +279,8 @@ export function initScreenshotWizard({getMembers,getAliases,getSeason,reload,sub
       parsed.rows=[{name:'',points:'',ocrGuess:'',confirmed:false,deleted:false}];
      }
     }
-    if(type.value!=='ds')parsed.rows=parsed.rows.filter(row=>!row.pinned);
-    images.push({file,url:URL.createObjectURL(file),...parsed,reviewed:false});
+    if(type.value!=='ds')parsed.rows=parsed.rows.filter(row=>!row.pinned).map(row=>({...row,confirmed:false}));
+    images.push({file,url:URL.createObjectURL(file),...parsed});
    }
    review.hidden=false;hint(progress,'Multilingual OCR finished. Check the results in Step 4. Nothing has been saved yet.');
    render();
@@ -286,7 +290,7 @@ export function initScreenshotWizard({getMembers,getAliases,getSeason,reload,sub
   }finally{try{await worker?.terminate()}catch{}busy=false;go.disabled=false;renderStatus()}
  };
  save.onclick=async()=>{
-  if(busy||images.some(x=>!x.reviewed)||!images.length)return;
+  if(busy||!images.length||(type.value!=='ds'&&images.some(image=>image.rows.some(row=>!row.deleted&&!row.pinned&&!row.confirmed))))return;
   const metric=type.value,period=metric==='ds'||metric==='vs_daily'?date.value:weekStart(date.value);
   let payload;
   try{
