@@ -95,7 +95,7 @@ function renderAwakening() {
 function nextAwakeningForSquad() {
   return AWAKENING_HEROES
     .filter(h => plannedLineup().includes(h.id))
-    .sort((a,b) => Number(HERO_MAP[b.id].type === activeGoal().focus) - Number(HERO_MAP[a.id].type === activeGoal().focus) || a.week - b.week)[0] || null;
+    .sort((a,b) => Number(isAvailable(b)) - Number(isAvailable(a)) || Number(HERO_MAP[b.id].type === activeGoal().focus) - Number(HERO_MAP[a.id].type === activeGoal().focus) || a.week - b.week)[0] || null;
 }
 function renderAdvice() {
   if (!byId('advisorEW')) return;
@@ -174,8 +174,10 @@ function decorateSquad() {
     heading.parentNode.appendChild(tag);
   });
 }
+let preferredTab = activeTabOnLoad();
 function showTab(next,scroll = false) {
   const selected = ['squad','ew','awakening','advisor'].includes(next) ? next : 'squad';
+  preferredTab = selected;
   document.querySelectorAll('[data-progress-tab]').forEach(button => {
     const active = button.dataset.progressTab === selected;
     button.setAttribute('aria-selected',String(active));
@@ -218,6 +220,6 @@ window.refreshHeroProgression = function () {
   renderAwakening();
   renderAdvice();
   decorateSquad();
-  showTab(activeTabOnLoad());
+  showTab(preferredTab);
 };
 window.addEventListener('load',() => window.refreshHeroProgression?.());
