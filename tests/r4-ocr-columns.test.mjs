@@ -66,7 +66,7 @@ test('column OCR uses geometry-aware recognition, and the review page shows orig
  assert.match(scan,/textLines/);
  assert.match(scan,/tessedit_pageseg_mode:'7'/);
  assert.match(wizard,/row\.preview/);
- assert.match(wizard,/Name and score checked/);
+ assert.match(wizard,/Tap to verify name \+ score/);
  assert.match(wizard,/scanRankingScreenshot/);
  assert.match(wizard,/validateConfirmedRows/);
 });
