@@ -72,6 +72,51 @@ export function matchRoster(name,members,aliases=[]){
  if(!best||suggestions[1]?.d===best.d)return {id:null,name:null,type:'unknown'};
  return {id:best.id,name:byId.get(best.id),type:'suggested'};
 }
+
+/**
+ * Build one review card per unique player and score across screenshots.
+ * Only exact roster identities or identical normalized names are grouped.
+ * Different scores for the same player remain separate and must be resolved.
+ * Unknown/empty scores and names are never automatically collapsed.
+ */
+export function groupScreenshotRows(images,members=[],aliases=[]){
+ const groups=[],byImage=images.map(()=>[]),overlapsByImage=images.map(()=>[]);
+ const byPair=new Map(),byPlayer=new Map();
+ images.forEach((image,imageIndex)=>{
+  (image.rows||[]).forEach((row,index)=>{
+   if(row.deleted||row.pinned)return;
+   const name=String(row.name||'').trim(),match=matchRoster(name,members,aliases);
+   const playerKey=match.type==='exact'&&match.id?'member:'+match.id:
+    name?'name:'+normalizeIgn(name):null;
+   const rawScore=String(row.points??'').trim(),points=rawScore===''?NaN:Number(rawScore.replace(/[ ,]/g,''));
+   const validScore=Number.isSafeInteger(points)&&points>=0;
+   const key=playerKey&&validScore?JSON.stringify([playerKey,points]):null;
+   const occurrence={image,imageIndex,row,index};
+   const found=key?byPair.get(key):null;
+   if(found){
+    found.occurrences.push(occurrence);
+    overlapsByImage[imageIndex].push(found);
+    return;
+   }
+   const group={...occurrence,occurrences:[occurrence],playerKey,score:validScore?points:null,conflict:false};
+   groups.push(group);byImage[imageIndex].push(group);
+   if(key)byPair.set(key,group);
+   if(playerKey){
+    if(!byPlayer.has(playerKey))byPlayer.set(playerKey,[]);
+    byPlayer.get(playerKey).push(group);
+   }
+  });
+ });
+ const conflicts=[];
+ for(const matches of byPlayer.values()){
+  if(matches.length<2)continue;
+  const conflict={name:matches[0].row.name,scores:matches.map(g=>g.score),groups:matches};
+  for(const group of matches){group.conflict=true;group.conflictScores=conflict.scores}
+  conflicts.push(conflict);
+ }
+ return {groups,byImage,overlapsByImage,conflicts,duplicateCount:groups.reduce((n,g)=>n+g.occurrences.length-1,0)};
+}
+
 export function validateConfirmedRows(images){
  const rows=images.flatMap(image=>image.rows.filter(r=>!r.deleted&&!r.pinned)); // defense-in-depth for older previews
  if(!rows.length)throw Error('No member scores to save. Add missing rows or rescan the screenshots.');
