@@ -2,7 +2,7 @@ import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv} from
 import {archivedWeeks,vsWeekSlots,vsLeaderboard,weekOf,scoreFlag} from './r4-vs-archive.mjs';
 import {stageForDate,stageRange,trainWarnings,isR4Train,addDays as trainAddDays} from './r4-train-rules.mjs';
 import {trainLabelForDate} from './r4-train-schedule.mjs';
-import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=nickname-v6-20261104';
+import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=verify-by-player-v1-20261105';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
