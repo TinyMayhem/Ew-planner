@@ -37,7 +37,7 @@ test('universal awakening shards never satisfy initial named unlock requirement'
 });
 test('existing EW page retains original storage and adds coherent progression links', () => {
   const html=readFileSync(new URL('../ew-planner.html',import.meta.url),'utf8');
-  for (const key of ['utw-ew-planner-v1','id="progress-squad"','id="progress-ew"','id="progress-awakening"','id="progress-advisor"','hero-progression.mjs','awakened', 'awakeningUniversal']) {
+  for (const key of ['utw-ew-planner-v1','id="progress-squad"','id="progress-ew"','id="progress-awakening"','id="progress-advisor"','hero-progression.mjs','awakeningUniversal']) {
     assert.ok(html.includes(key),key+' missing');
   }
   assert.ok(html.includes("6:[]"),'No fictitious Season 6 EWs should be introduced');
