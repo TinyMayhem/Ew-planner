@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
-import {parseRankLines,scoreValue,matchRoster,validateConfirmedRows} from '../assets/r4-ocr-parser.mjs';
+import {parseRankLines,scoreValue,matchRoster,validateConfirmedRows,groupScreenshotRows} from '../assets/r4-ocr-parser.mjs';
 
 test('score scanner recognizes standard, K and M formats without reading leaderboard ranks',()=>{
  assert.equal(scoreValue('8,235,712'),8235712);
@@ -34,12 +34,71 @@ test('confirmation checks names and scores and safely deduplicates repeated gree
  imgs[1].rows[0].name='Member1';imgs[2].rows[0].confirmed=false;
  assert.throws(()=>validateConfirmedRows(imgs),/Confirm the name/);
 });
+
+test('overlapping screenshot entries share one verification when name and score match',()=>{
+ const members=[{id:'tiny',display_name:'Tiny'},{id:'mo',display_name:'Mo'}];
+ const images=[
+  {file:{name:'one.png'},rows:[{name:'Tiny',points:12000000,confirmed:false},{name:'Mo',points:15000000,confirmed:false}]},
+  {file:{name:'two.png'},rows:[{name:'Tiny',points:12000000,confirmed:false}]}
+ ];
+ const grouped=groupScreenshotRows(images,members,[]);
+ assert.equal(grouped.groups.length,2);
+ assert.equal(grouped.duplicateCount,1);
+ assert.equal(grouped.byImage[1].length,0);
+ assert.equal(grouped.overlapsByImage[1].length,1);
+ assert.deepEqual(grouped.conflicts,[]);
+ assert.equal(grouped.groups[0].occurrences.length,2);
+ grouped.groups.forEach(group=>{group.row.confirmed=true});
+ assert.deepEqual(validateConfirmedRows([{rows:grouped.groups.map(group=>group.row)}]),[
+  {name:'Tiny',points:12000000},{name:'Mo',points:15000000}
+ ]);
+ assert.equal(images[1].rows[0].confirmed,false,'hidden duplicate does not require another tap');
+});
+
+test('different scores for the same player remain separate and are marked as conflicts',()=>{
+ const members=[{id:'tiny',display_name:'Tiny'}];
+ const images=[
+  {rows:[{name:'Tiny',points:12000000,confirmed:false}]},
+  {rows:[{name:'Tiny',points:13000000,confirmed:false}]}
+ ];
+ const grouped=groupScreenshotRows(images,members,[]);
+ assert.equal(grouped.groups.length,2);
+ assert.equal(grouped.duplicateCount,0);
+ assert.equal(grouped.conflicts.length,1);
+ assert(grouped.groups.every(group=>group.conflict));
+ assert.deepEqual(grouped.conflicts[0].scores,[12000000,13000000]);
+ images[1].rows[0].points=12000000;
+ const fixed=groupScreenshotRows(images,members,[]);
+ assert.equal(fixed.conflicts.length,0);
+ assert.equal(fixed.groups.length,1);
+ assert.equal(fixed.duplicateCount,1);
+});
+
+test('known aliases group by player identity but invalid names or scores are not silently collapsed',()=>{
+ const members=[{id:'t',display_name:'Tiny'}];
+ const aliases=[{member_id:'t',alias:'TinyMayhem'}];
+ const images=[
+  {rows:[{name:'Tiny',points:0},{name:'',points:20},{name:'Unknown',points:null}]},
+  {rows:[{name:'TinyMayhem',points:0},{name:'',points:20},{name:'Unknown',points:null}]}
+ ];
+ const grouped=groupScreenshotRows(images,members,aliases);
+ assert.equal(grouped.duplicateCount,1);
+ assert.equal(grouped.groups.length,5);
+ assert.equal(grouped.conflicts.length,1,'unreadable scores require checking');
+ images[1].rows[2].deleted=true;
+ const fixed=groupScreenshotRows(images,members,aliases);
+ assert.equal(fixed.conflicts.length,0);
+ assert.equal(fixed.groups.length,4);
+});
+
 test('R4 scanner includes private screenshot upload, audit-backed undo and confirmation',()=>{
  const page=readFileSync('lib/r4-stats-page.mjs','utf8'),client=readFileSync('assets/r4-screenshot-wizard.mjs','utf8'),api=readFileSync('api/r4-stats.mjs','utf8');
  assert.match(page,/id="ocr-wizard"/);
  assert.match(page,/data-tab="scanner"/);
  assert.match(client,/createWorker\(langs,1\)/);
- assert.match(client,/I checked this picture/);
+ assert.doesNotMatch(client,/I checked this picture/);
+ assert.match(client,/groupScreenshotRows/);
+ assert.match(client,/Duplicate, counted once/);
  assert.match(client,/scan_recent=1/);
  assert.match(client,/delete_import/);
  assert.match(client,/delete_ds/);
