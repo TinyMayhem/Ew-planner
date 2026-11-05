@@ -95,7 +95,7 @@ test('site actually uses detected panels and numeric-safe OCR rather than relyin
  assert.match(browser,/scoreMontage/);
  assert.match(browser,/readMontage/);
  assert.match(browser,/green pinned/);
- assert.match(wizard,/CARD READER/);
+ assert.match(wizard,/SCANNER v5\.3 · OVERLAP REVIEW/);
  assert.match(wizard,/scanRankingScreenshot/);
  for(const path of ['assets/r4-ocr-browser.mjs','assets/r4-ranking-panels.mjs','assets/r4-screenshot-wizard.mjs']){
   const x=spawnSync(process.execPath,['--check',path],{encoding:'utf8'});
