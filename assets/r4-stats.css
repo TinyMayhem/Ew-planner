@@ -203,8 +203,10 @@
 .ocr-member-field input{min-width:0;width:100%;min-height:42px;padding:9px;border-radius:8px;border:1px solid #b8ae95;background:#fff;color:#294a36;font:inherit}
 .ocr-member-field .ocr-match{font-weight:500;line-height:1.25;overflow-wrap:anywhere}
 .ocr-member-controls{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.ocr-member-controls .ocr-check{display:flex;gap:8px;align-items:center;font-size:12px;font-weight:750;color:#315740}
-.ocr-member-controls .ocr-check input{width:19px;height:19px;accent-color:#2c7350}
+.ocr-member-controls .ocr-check{display:flex;gap:10px;align-items:center;min-height:46px;padding:10px 13px;border:1px solid #adc9b2;border-radius:10px;background:#e4f0df;cursor:pointer;font-size:13px;font-weight:800;color:#315740;touch-action:manipulation}
+.ocr-member-controls .ocr-check input{width:23px;height:23px;flex:0 0 auto;accent-color:#2c7350;cursor:pointer}
+.ocr-member-card.ocr-verified{background:#eaf5e7;border-color:#8fbe9b}
+.ocr-member-card.ocr-verified .ocr-check{background:#d6ead5;border-color:#7eb48d}
 .ocr-image-card{overflow:hidden}
 .ocr-image-contents{overflow:visible}
 @media(max-width:600px){
