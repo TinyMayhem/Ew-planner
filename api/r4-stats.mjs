@@ -132,9 +132,9 @@ export async function GET(request){
    return json({imports,ds});
   }
   if(q.get('train_advice')==='1'){
-   const date=q.get('date'),mode=q.get('mode'),slot=clean(q.get('slot'),100);
+   const date=q.get('date'),mode=q.get('mode'),slot=clean(q.get('slot'),100),vipMode=q.get('vip_mode')||'weekly';
    if(!isoDate(date)||date<'2025-12-29'||stageForDate(date)>40||
-      !['never','vs','donations','ds','r4','manual'].includes(mode))return json({error:'Choose a valid train date and category'},400);
+      (!['never','vs','donations','ds','r4','manual'].includes(mode)||!['weekly','stage'].includes(vipMode)))return json({error:'Choose a valid train date and category'},400);
    const [members,aliases,legacy,awards,exceptions]=await Promise.all([
     list('utw_stat_members',{select:'id,display_name',order:'display_name.asc',limit:'1000'}),
     list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'}),
@@ -184,7 +184,7 @@ export async function GET(request){
      }
     }
    }
-   return json(buildTrainAdvice({date,mode,slot,members,aliases,legacy,awards,exceptions,scoreboard,scoreDate,dsEvent,rosterIds,rosterDate}));
+   return json(buildTrainAdvice({date,mode,slot,vipMode,members,aliases,legacy,awards,exceptions,scoreboard,scoreDate,dsEvent,rosterIds,rosterDate}));
   }
   const seasons=await list('utw_stat_seasons',{select:'id,label,sort_order',order:'sort_order.asc',limit:'50'});
   const season=q.get('season')||'post-s5';

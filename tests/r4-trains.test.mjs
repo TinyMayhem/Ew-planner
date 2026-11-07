@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {stageRange,stageForDate,trainWarnings,weekStart} from '../assets/r4-train-rules.mjs';
+import {stageRange,stageForDate,trainWarnings,weekStart,isR4Train} from '../assets/r4-train-rules.mjs';
 
 test('train stages are exact five-week calendars starting on Monday',()=>{
  assert.deepEqual(stageRange(7),{stage:7,start:'2025-12-29',end:'2026-02-01'});
@@ -72,28 +72,44 @@ test('a person cannot hold both roles on the same train',()=>{
  const warnings=trainWarnings([],a('1','2026-10-15','ube','ube'));
  assert.ok(warnings.some(s=>s.includes('both conductor and VIP')));
 });
-test('R4 trains remain a separate lane for DS and other regular trains',()=>{
- const r4=a('r4','2026-10-15','a','b','r4','R4 Mo');
- const ds=a('ds','2026-10-16','a','b','ds','Desert Storm MVP');
- assert.deepEqual(trainWarnings([r4],ds),[]);
- assert.deepEqual(trainWarnings([ds],r4),[]);
+test('only Wednesday and Saturday R4 conductor trains use the exception lane',()=>{
+ const wed=a('r4-wed','2026-10-14','a','b','r4','R4 Mo');
+ const sat=a('r4-sat','2026-10-17','c','d','r4','R4 Devi');
+ const thurs=a('r4-thu','2026-10-15','e','f','r4','R4 Mo');
+ assert.equal(isR4Train(wed),true);
+ assert.equal(isR4Train(sat),true);
+ assert.equal(isR4Train(thurs),false);
+ assert.equal(isR4Train(a('vote','2026-10-14','x','y','r4','R4 vote')),false);
 });
-test('a repeat R4 conductor is blocked in R4 calendar, but prior R4 VIP is allowed',()=>{
- const first=a('r4-1','2026-10-15','a','b','r4','R4 Mo');
- const repeat=a('r4-2','2026-10-28','a','c','r4','R4 Tiny');
+test('Wednesday/Saturday R4 conductors are independent of regular conductor stage cap',()=>{
+ const wed=a('r4','2026-10-14','a','b','r4','R4 Mo');
+ const regular=a('regular','2026-10-16','a','c','ds','DS MVP');
+ assert.deepEqual(trainWarnings([wed],regular),[]);
+ assert.deepEqual(trainWarnings([regular],wed),[]);
+});
+test('a second Wednesday/Saturday R4 conductor turn repeats inside its own stage lane',()=>{
+ const first=a('r4-1','2026-10-14','a','b','r4','R4 Mo');
+ const repeat=a('r4-2','2026-10-17','a','c','r4','R4 Tiny');
  assert.ok(trainWarnings([first],repeat).some(s=>s.includes('five-week stage')));
- const switched=a('r4-3','2026-10-28','b','c','r4','R4 Savvy');
- assert.deepEqual(trainWarnings([first],switched),[]);
+ assert.deepEqual(trainWarnings([first],a('switch','2026-10-17','b','c','r4','R4 Tiny')),[]);
 });
-test('historical R4 labels work even when stored as manual source',()=>{
- const r4=a('r4','2026-10-15','a','b','manual','R4 Mo');
- const ds=a('ds','2026-10-16','a','c','ds','DS MVP');
- assert.deepEqual(trainWarnings([r4],ds),[]);
+test('Thursday R4 labels do not grant a conductor exception',()=>{
+ const thurs=a('r4-thu','2026-10-15','a','b','r4','R4 Mo');
+ const regular=a('ds','2026-10-16','a','c','ds','DS MVP');
+ assert.ok(trainWarnings([thurs],regular).some(s=>s.includes('five-week stage')));
 });
-test('R4 conductor can also conduct regular roulette in the stage',()=>{
- const r4=a('r4','2026-10-15','a','b','r4','R4 Mo');
- const roulette=a('roulette','2026-10-16','a','c','manual','Roulette');
- assert.deepEqual(trainWarnings([r4],roulette),[]);
+test('VIPs have no R4 exception: same-week repeats are flagged across both lanes',()=>{
+ const r4=a('r4','2026-10-14','a','b','r4','R4 Mo');
+ const regular=a('normal','2026-10-16','c','b','manual','Roulette');
+ const warnings=trainWarnings([r4],regular);
+ assert.ok(warnings.some(s=>s.includes('same Monday-to-Sunday week')));
+ assert.ok(!warnings.some(s=>s.includes('conductor cannot')));
+});
+test('historic R4 labels on Saturdays count even with manual source',()=>{
+ const r4=a('r4','2026-10-17','a','b','manual','R4 Mo');
+ const regular=a('regular','2026-10-18','a','c','manual','Roulette');
+ assert.equal(isR4Train(r4),true);
+ assert.deepEqual(trainWarnings([r4],regular),[]);
 });
 test('unfilled historical VIP placeholders are not treated as real VIPs',()=>{
  const prior=a('x','2026-02-27','a','not recorded','manual');
