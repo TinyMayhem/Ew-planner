@@ -116,12 +116,13 @@ export async function GET(request){
    return json({from:from||null,to:to||null,season:season||'all',...buildMemberPerformance(raw,settings)});
   }
   if(q.get('nicknames')==='1'){
-   const [members,aliases]=await Promise.all([
+   const [members,aliases,trainLegacy]=await Promise.all([
     list('utw_stat_members',{select:'id,display_name',order:'display_name.asc',limit:'1000'}),
-    list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'5000'})
+    list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'5000'}),
+    list('utw_stat_train_legacy',{select:'train_date,driver_name,vip_name',order:'train_date.desc',limit:'1500'})
    ]);
-   if(!Array.isArray(members)||!Array.isArray(aliases))throw Error('Member nickname list unavailable');
-   return json({members,aliases});
+   if(![members,aliases,trainLegacy].every(Array.isArray))throw Error('Member nickname list unavailable');
+   return json({members,aliases,trainLegacy});
   }
   if(q.get('scan_recent')==='1'){
    const [imports,ds]=await Promise.all([
