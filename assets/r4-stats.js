@@ -249,7 +249,14 @@ const knownLegacyNames={
  'smotpoker':'commander smotpoker'
 };
 function legacyKey(value){
- const k=normalize(value).normalize('NFKD').replace(/[\u0300-\u036f]/g,'');
+ const canonical=text=>normalize(text).normalize('NFKD')
+  .replace(/[\u0300-\u036f]/g,'').replace(/[Øø]/g,'o');
+ const k=canonical(value),alias=aliases().find(a=>canonical(a.alias)===k||canonical(a.alias_key)===k);
+ // Treat historical conductor and VIP names as the same member after a confirmed nickname link.
+ const linked=alias?byId(alias.member_id):null;
+ if(linked)return canonical(linked.display_name);
+ const current=members().find(m=>canonical(m.display_name)===k);
+ if(current)return canonical(current.display_name);
  return knownLegacyNames[k]||k;
 }
 function trainRecords(){
