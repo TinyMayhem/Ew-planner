@@ -19,20 +19,28 @@ export function stageForDate(date){
 }
 export const weekStart=date=>addDays(date,-((new Date(toTime(date)).getUTCDay()+6)%7));
 export const trainRole=(award,id)=>award.member_id===id?'Driver':award.vip_member_id===id?'VIP':null;
-// R4-arranged trains run in their own eligibility lane. An R4 assignment
-// must never disqualify its recipient from a DS, donation, VS or roulette train.
-export const isR4Train=award=>award?.source==='r4'||/^R4(?:\s|$)/i.test(String(award?.slot||award?.selection_label||'').trim());
-// Conductor and VIP are separate entitlements, not one combined "had train" flag.
-// One conductor assignment per five-week stage; one VIP assignment per calendar
-// week. R4-appointed trains retain their own separate eligibility lane.
+// Only Wednesday/Saturday R4 conductor trains use a separate eligibility lane.
+// A Wednesday R4 vote is not a train assignment, and VIPs never use this lane.
+export function isR4Train(award){
+ const date=award?.train_date||award?.date;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||'')))return false;
+ const day=new Date(date+'T00:00:00Z').getUTCDay();
+ const label=String(award?.slot||award?.selection_label||'').trim();
+ return (day===3||day===6)&&
+   (award?.source==='r4'||/^R4(?:\s|$)/i.test(label))&&
+   !/\bvote\b/i.test(label);
+}
+// Conductor and VIP are independent entitlements. Standard conductors are
+// limited to one five-week Stage; VIPs are limited to one Monday-Sunday week,
+// across ALL train types, even Wednesday/Saturday R4 trains.
 export function trainWarnings(awards,proposed,displayName=id=>id){
  const {train_date,member_id,vip_member_id,source,slot,id:editingId}=proposed;
  if(!train_date||(!member_id&&!vip_member_id))return [];
  const stage=stageForDate(train_date),range=stageRange(stage),weeklyStart=weekStart(train_date);
  const weeklyEnd=addDays(weeklyStart,6),r4Lane=isR4Train(proposed),warnings=[];
- const sameLane=awards.filter(a=>a.id!==editingId&&
-  a.train_date>=range.start&&a.train_date<=range.end&&
-  isR4Train(a)===r4Lane);
+ const sameStage=awards.filter(a=>a.id!==editingId&&
+   a.train_date>=range.start&&a.train_date<=range.end);
+  const sameLane=sameStage.filter(a=>isR4Train(a)===r4Lane);
  const valid=id=>id&&String(id).trim().toLowerCase()!=='not recorded';
  if(valid(member_id)){
   const name=displayName(member_id);
@@ -51,7 +59,7 @@ export function trainWarnings(awards,proposed,displayName=id=>id){
  }
  if(valid(vip_member_id)){
   const name=displayName(vip_member_id);
-  const previous=sameLane.filter(a=>a.vip_member_id===vip_member_id);
+  const previous=sameStage.filter(a=>a.vip_member_id===vip_member_id);
   const thisWeek=previous.filter(a=>a.train_date>=weeklyStart&&a.train_date<=weeklyEnd);
   for(const prior of thisWeek){
    warnings.push(name+' was already a VIP on '+prior.train_date+
