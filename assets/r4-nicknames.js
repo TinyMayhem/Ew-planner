@@ -1,6 +1,8 @@
+import {trainAliasSuggestions} from './r4-train-alias-suggestions.mjs?version=review-v1-20261106';
 const $=id=>document.getElementById(id);
 const n=(tag,content,cls)=>{const e=document.createElement(tag);if(content!==undefined&&content!==null)e.textContent=String(content);if(cls)e.className=cls;return e};
-let members=[],aliases=[],selected='',busy=false;
+let members=[],aliases=[],trainLegacy=[],selected='',busy=false;
+const hiddenSuggestions=new Set();
 const normalized=value=>String(value||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLocaleLowerCase();
 const namesOf=id=>aliases.filter(a=>a.member_id===id).sort((a,b)=>a.alias.localeCompare(b.alias));
 function message(value,error=false){
@@ -21,7 +23,7 @@ async function reload(){
  const data=await fetch('/api/r4-stats?nicknames=1',{credentials:'same-origin',cache:'no-store'});
  if(data.status===401){location.href='/r4-planner';return}
  const payload=await data.json();if(!data.ok)throw Error(payload.error||'Could not load member nicknames');
- members=payload.members||[];aliases=payload.aliases||[];
+ members=payload.members||[];aliases=payload.aliases||[];trainLegacy=payload.trainLegacy||[];
  if(selected&&!members.some(m=>m.id===selected))selected='';
  draw();
 }
@@ -70,6 +72,39 @@ function draw(){
   if(!rows.length)linked.append(n('p','No nicknames linked yet.','nickname-empty'));
  }
  drawDirectory();
+ drawTrainNameSuggestions();
+}
+function drawTrainNameSuggestions(){
+ const root=$('nickname-train-suggestions');if(!root)return;
+ root.replaceChildren();
+ const suggestions=trainAliasSuggestions(trainLegacy,members,aliases).filter(x=>!hiddenSuggestions.has(x.alias));
+ if(!suggestions.length){
+  root.append(n('p','No likely unlinked train-name matches found right now.','stat-muted'));return;
+ }
+ root.append(n('p',suggestions.length+' unconfirmed historical spelling'+(suggestions.length===1?'':'s')+
+  ' found. Only approve a pair when you know it is the same person.','stat-muted'));
+ for(const x of suggestions.slice(0,40)){
+  const card=n('div',null,'stat-row');
+  card.append(n('strong','“'+x.alias+'”  →  '+x.member_name),
+   n('p','Possible match · '+x.confidence+'% text similarity · '+x.occurrences+
+    ' train record'+(x.occurrences===1?'':'s'),'stat-muted'));
+  const actions=n('div',null,'nickname-actions');
+  const confirmButton=n('button','Yes, same player','stat-button primary');confirmButton.type='button';
+  confirmButton.onclick=async()=>{
+   if(busy||!confirm('Confirm “'+x.alias+'” is the SAME player as '+x.member_name+
+    '? This links past train records to that member without merging member accounts.'))return;
+   busy=true;confirmButton.disabled=true;
+   try{
+    await request({action:'alias',member_id:x.member_id,alias:x.alias});
+    await reload();
+    message('Linked “'+x.alias+'” to '+x.member_name+' for future train matching and screenshot uploads.');
+   }catch(e){message(e.message,true)}finally{busy=false;confirmButton.disabled=false}
+  };
+  const skip=n('button','Not the same / skip','stat-button');skip.type='button';
+  skip.onclick=()=>{hiddenSuggestions.add(x.alias);drawTrainNameSuggestions()};
+  actions.append(confirmButton,skip);card.append(actions);root.append(card);
+ }
+ if(suggestions.length>40)root.append(n('p','Showing the first 40 likely matches. Link or skip reviewed names to reveal more.','stat-muted'));
 }
 function drawDirectory(){
  const query=normalized($('nickname-search').value),root=$('nickname-directory');root.replaceChildren();

@@ -1,6 +1,6 @@
 // Browser screenshot parser for UTW game ranking lists.
 // Pure helpers, deliberately conservative. Every result requires human confirmation.
-export const normalizeIgn=value=>String(value||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[ƉĐđɖ]/g,'d').replace(/[Łł]/g,'l').trim().replace(/\s+/g,' ').toLowerCase();
+export const normalizeIgn=value=>String(value||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[ƉĐđɖ]/g,'d').replace(/[Łł]/g,'l').replace(/[Øø]/g,'o').trim().replace(/\s+/g,' ').toLowerCase();
 export function scoreValue(text){
  const raw=String(text||'').trim().replace(/[Oo](?=\d)/g,'0').replace(/[Il](?=\d)/g,'1');
  const match=/^(\d[\d,. ]*)([KMB])?$/i.exec(raw.replace(/\s*(points?|pts|power|score)$/i,'').trim());
@@ -63,14 +63,37 @@ export function matchRoster(name,members,aliases=[]){
  for(const a of aliases){add(a.alias,a.member_id);add(a.alias_key,a.member_id)}
  for(const k of conflicts)index.delete(k);
  const byId=new Map(members.map(x=>[x.id,x.display_name]));
- if(index.has(key))return {id:index.get(key),name:byId.get(index.get(key)),type:'exact'};
- // Suggest, never silently apply a fuzzy guess. Missed digits and non-Latin text are risky.
- if(key.length<4)return {id:null,name:null,type:'unknown'};
- const suggestions=[...index.entries()].map(([k,id])=>({id,d:levenshtein(key,k)})).filter(x=>x.d<=(key.length>=7?2:1))
- .sort((a,b)=>a.d-b.d).filter((x,i,list)=>list.findIndex(y=>y.id===x.id)===i);
- const best=suggestions[0];
- if(!best||suggestions[1]?.d===best.d)return {id:null,name:null,type:'unknown'};
- return {id:best.id,name:byId.get(best.id),type:'suggested'};
+ const unknown={id:null,name:null,type:'unknown',similarity:0};
+ if(conflicts.has(key))return unknown;
+ if(index.has(key))return {id:index.get(key),name:byId.get(index.get(key)),type:'exact',similarity:1};
+ if(key.length<4)return unknown;
+ // Compute best score per member, including their saved alternate names.
+ // Similarity is 1 minus Levenshtein distance divided by the longer length.
+ const scored=new Map();
+ for(const [k,id] of index){
+  const distance=levenshtein(key,k);
+  const similarity=1-distance/Math.max(key.length,k.length);
+  if(!scored.has(id)||similarity>scored.get(id).similarity)
+   scored.set(id,{id,d:distance,similarity});
+ }
+ const ranked=[...scored.values()].sort((a,b)=>b.similarity-a.similarity||a.d-b.d);
+ const best=ranked[0],second=ranked[1];
+ if(!best||best.d>(key.length>=7?2:1))return unknown;
+ // Never precheck a collision or similarly plausible alternative member.
+ if(second&&best.similarity-second.similarity<0.05)return unknown;
+ return {id:best.id,name:byId.get(best.id),type:'suggested',similarity:best.similarity};
+}
+
+export function autoVerifyRosterRow(row,members,aliases=[]){
+ const source=String(row.ocrGuess||row.name||'').trim();
+ const match=matchRoster(source,members,aliases);
+ const points=Number(row.points);
+ const scoreValid=row.points!==null&&row.points!==undefined&&
+  String(row.points).trim()!==''&&Number.isSafeInteger(points)&&points>=0;
+ const verified=(match.type==='exact'||match.type==='suggested'&&match.similarity>=0.9)&&
+  scoreValid&&!row.needsScoreCheck&&!row.deleted&&!row.pinned&&row.matchType!=='conflict';
+ return {...row,name:verified?match.name:row.name,confirmed:verified,
+  autoMatched:verified,matchSimilarity:match.similarity||0};
 }
 
 /**

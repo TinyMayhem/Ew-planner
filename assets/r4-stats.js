@@ -2,7 +2,7 @@ import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv} from
 import {archivedWeeks,vsWeekSlots,vsLeaderboard,weekOf,scoreFlag} from './r4-vs-archive.mjs';
 import {stageForDate,stageRange,trainWarnings,isR4Train,addDays as trainAddDays} from './r4-train-rules.mjs';
 import {trainLabelForDate} from './r4-train-schedule.mjs';
-import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=overlap-v1-20261105';
+import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=auto90-v1-20261106';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
@@ -249,7 +249,14 @@ const knownLegacyNames={
  'smotpoker':'commander smotpoker'
 };
 function legacyKey(value){
- const k=normalize(value).normalize('NFKD').replace(/[\u0300-\u036f]/g,'');
+ const canonical=text=>normalize(text).normalize('NFKD')
+  .replace(/[\u0300-\u036f]/g,'').replace(/[Øø]/g,'o');
+ const k=canonical(value),alias=aliases().find(a=>canonical(a.alias)===k||canonical(a.alias_key)===k);
+ // Treat historical conductor and VIP names as the same member after a confirmed nickname link.
+ const linked=alias?byId(alias.member_id):null;
+ if(linked)return canonical(linked.display_name);
+ const current=members().find(m=>canonical(m.display_name)===k);
+ if(current)return canonical(current.display_name);
  return knownLegacyNames[k]||k;
 }
 function trainRecords(){
