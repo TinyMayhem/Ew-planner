@@ -20,7 +20,7 @@ test('VS ranking skips a prior same-stage VS recipient and shows the replacement
  assert.match(advice.context,/2026-11-21/);
 });
 test('R4 train does not disqualify a VS winner',()=>{
- const a=buildTrainAdvice({...args,legacy:[t('2026-11-19','Tiny','Mo','r4','R4 Mo')],
+ const a=buildTrainAdvice({...args,legacy:[t('2026-11-21','Tiny','Mo','r4','R4 Mo')],
   scoreboard:[{member_id:'tiny',points:10000000}]});
  assert.equal(a.recommended.id,'tiny');
 });
@@ -109,20 +109,20 @@ test('a conductor from the first week is excluded from later weeks of the same s
 });
 test('prior R4 VIP does not disqualify R4 conductor, but prior R4 conductor does',()=>{
  const label='R4 Tiny';
- const justVip=buildTrainAdvice({...args,date:'2026-12-01',mode:'r4',slot:label,
-  legacy:[t('2026-11-19','Mo','TinyMayhem','r4','R4 Mo')]});
+ const justVip=buildTrainAdvice({...args,date:'2026-12-05',mode:'r4',slot:label,
+  legacy:[t('2026-11-21','Mo','TinyMayhem','r4','R4 Mo')]});
  assert.equal(justVip.recommended.id,'tiny');
- const priorDriver=buildTrainAdvice({...args,date:'2026-12-01',mode:'r4',slot:label,
-  legacy:[t('2026-11-19','TinyMayhem','Mo','r4','R4 Mo')]});
+ const priorDriver=buildTrainAdvice({...args,date:'2026-12-05',mode:'r4',slot:label,
+  legacy:[t('2026-11-21','TinyMayhem','Mo','r4','R4 Mo')]});
  assert.equal(priorDriver.recommended,null);
  assert.ok(priorDriver.rejected[0].reasons.some(x=>x.includes('once per stage')));
 });
 test('VIP on a regular train does not disqualify R4 candidate and vice versa',()=>{
- const r4=buildTrainAdvice({...args,date:'2026-12-01',mode:'r4',slot:'R4 Tiny',
+ const r4=buildTrainAdvice({...args,date:'2026-12-05',mode:'r4',slot:'R4 Tiny',
   legacy:[t('2026-11-18','TinyMayhem','Mo','vs','VS winner')]});
  assert.equal(r4.recommended.id,'tiny');
  const regular=buildTrainAdvice({...args,date:'2026-12-01',mode:'vs',slot:'VS winner',
-  legacy:[t('2026-11-19','TinyMayhem','Mo','r4','R4 Mo')],
+  legacy:[t('2026-11-21','TinyMayhem','Mo','r4','R4 Mo')],
   scoreboard:[{member_id:'tiny',points:9999999}]});
  assert.equal(regular.recommended.id,'tiny');
 });
@@ -133,4 +133,34 @@ test('VS candidates are explicitly described as completed weekly VS rankings, no
  assert.equal(data.recommended.id,'devi');
  assert.match(data.context,/completed VS weekly total for week starting 2026-11-09/);
  assert.doesNotMatch(data.context,/VS day|VS daily/);
+});
+
+test('VIP stage option skips a prior VIP from the same five-week Stage',()=>{
+ const prior=[t('2026-11-16','Devi','TinyMayhem','vs','VS MVP')];
+ const weekly=buildTrainAdvice({...args,date:'2026-12-05',mode:'manual',vipMode:'weekly',legacy:prior});
+ const stage=buildTrainAdvice({...args,date:'2026-12-05',mode:'manual',vipMode:'stage',legacy:prior});
+ assert.equal(weekly.vipCandidates.find(c=>c.id==='tiny').eligible,true);
+ assert.equal(stage.vipCandidates.find(c=>c.id==='tiny').eligible,false);
+ assert.match(stage.vipCandidates.find(c=>c.id==='tiny').reasons.join(' '),/Stage 16/);
+ assert.equal(stage.vipCandidates.find(c=>c.id==='new').eligible,true);
+});
+test('previous conductor does not count as having had VIP',()=>{
+ const data=buildTrainAdvice({...args,date:'2026-12-05',mode:'manual',vipMode:'stage',
+  legacy:[t('2026-11-16','TinyMayhem','Mo','manual','Roulette')]});
+ assert.equal(data.vipCandidates.find(c=>c.id==='tiny').eligible,true);
+ assert.equal(data.vipCandidates.find(c=>c.id==='mo').eligible,false);
+});
+test('R4 VIP turn counts toward both weekly and optional Stage VIP filters',()=>{
+ const prior=[t('2026-11-21','Devi','TinyMayhem','r4','R4 Devi')];
+ const weekly=buildTrainAdvice({...args,date:'2026-11-22',mode:'manual',vipMode:'weekly',legacy:prior});
+ const stage=buildTrainAdvice({...args,date:'2026-12-05',mode:'manual',vipMode:'stage',legacy:prior});
+ assert.equal(weekly.vipCandidates.find(c=>c.id==='tiny').eligible,false);
+ assert.equal(stage.vipCandidates.find(c=>c.id==='tiny').eligible,false);
+});
+test('VIP suggestions prefer players with no matched VIP history, then oldest previous VIP',()=>{
+ const data=buildTrainAdvice({...args,date:'2026-12-05',mode:'manual',vipMode:'weekly',legacy:[
+  t('2026-08-12','Mo','Devi'),t('2026-10-14','Crum','Mo')
+ ]});
+ assert.ok(data.vipCandidates.find(c=>c.id==='new').place<data.vipCandidates.find(c=>c.id==='devi').place);
+ assert.ok(data.vipCandidates.find(c=>c.id==='devi').place<data.vipCandidates.find(c=>c.id==='mo').place);
 });
