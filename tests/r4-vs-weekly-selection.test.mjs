@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHmac} from 'node:crypto';
 import {GET} from '../api/r4-stats.mjs';
+import {buildTrainAdvice} from '../lib/train-advice.mjs';
 
 const ids={tiny:'11111111-1111-4111-8111-111111111111',devi:'22222222-2222-4222-8222-222222222222',report:'33333333-3333-4333-8333-333333333333'};
 function auth(){
@@ -20,8 +21,8 @@ function backend(queries,weeklyExists=true){
   if(route.endsWith('/utw_stat_members'))return Response.json([{id:ids.tiny,display_name:'TinyMayhem'},{id:ids.devi,display_name:'Devi'}]);
   if(route.endsWith('/utw_stat_aliases'))return Response.json([{alias_key:'tinymayhem',alias:'TinyMayhem',member_id:ids.tiny},{alias_key:'devi',alias:'Devi',member_id:ids.devi}]);
   if(route.endsWith('/utw_stat_imports')){
-   if(q.get('metric')==='eq.vs_weekly'&&q.get('period')==='eq.2026-11-09'&&weeklyExists)
-    return Response.json([{id:ids.report,period:'2026-11-09',row_count:2,created_at:'2026-11-16T04:00:00Z'}]);
+   if(q.get('metric')==='eq.vs_weekly'&&['eq.2026-11-09','eq.2026-11-16'].includes(q.get('period'))&&weeklyExists)
+    return Response.json([{id:ids.report,period:q.get('period').slice(3),row_count:2,created_at:'2026-11-21T22:00:00Z'}]);
    return Response.json([]);
   }
   if(route.endsWith('/utw_stat_values'))return Response.json([
@@ -60,6 +61,66 @@ test('VS train recommendations do not fall back to daily scores when weekly tota
   assert.match(advice.context,/No completed VS weekly total/);
   assert(!queries.some(x=>x.params.metric==='eq.vs_daily'));
  }finally{globalThis.fetch=saved}
+});
+test('Saturday VS train uses current-week weekly total, never previous-week or daily points',async()=>{
+ const queries=[],saved=globalThis.fetch;globalThis.fetch=backend(queries);
+ try{
+  const response=await GET(new Request('https://test.example/api/r4-stats?train_advice=1&date=2026-11-21&mode=vs&season=s6',{headers:auth()}));
+  assert.equal(response.status,200);
+  const advice=await response.json();
+  assert.equal(advice.dataDate,'2026-11-16');
+  assert.equal(advice.saturdayVs,true);
+  assert.equal(advice.recommended.name,'Devi');
+  assert.equal(advice.recommendedVip.name,'TinyMayhem');
+  assert.equal(advice.vipCandidates[0].name,'Devi');
+  assert.equal(advice.vipCandidates[1].name,'TinyMayhem');
+  assert.match(advice.context,/this week's VS weekly total/);
+  const importQuery=queries.find(x=>x.route.endsWith('/utw_stat_imports')).params;
+  assert.equal(importQuery.period,'eq.2026-11-16');
+  assert.equal(importQuery.metric,'eq.vs_weekly');
+  assert.equal(importQuery.season_id,'eq.s6');
+  assert(!queries.some(x=>x.params.metric==='eq.vs_daily'));
+ }finally{globalThis.fetch=saved}
+});
+test('Saturday VS with no current-week total does not silently fall back to another week',async()=>{
+ const queries=[],saved=globalThis.fetch;globalThis.fetch=backend(queries,false);
+ try{
+  const response=await GET(new Request('https://test.example/api/r4-stats?train_advice=1&date=2026-11-21&mode=vs',{headers:auth()}));
+  const advice=await response.json();
+  assert.equal(advice.recommended,null);
+  assert.equal(advice.recommendedVip,null);
+  assert.match(advice.context,/No VS weekly total has been uploaded for this Saturday/);
+  assert.equal(queries.find(x=>x.route.endsWith('/utw_stat_imports')).params.period,'eq.2026-11-16');
+ }finally{globalThis.fetch=saved}
+});
+test('Saturday VS skips used Stage conductors and same-week VIPs, but not past VIPs when choosing driver',()=>{
+ const members=['Alpha','Bravo','Charlie','Delta'].map((name,i)=>({id:String(i+1),display_name:name}));
+ const result=buildTrainAdvice({
+  date:'2026-11-21',mode:'vs',vipMode:'stage',members,scoreDate:'2026-11-16',
+  scoreboard:[{member_id:'1',points:100},{member_id:'2',points:90},{member_id:'3',points:80},{member_id:'4',points:70}],
+  awards:[
+   {train_date:'2026-11-17',member_id:'1',vip_member_id:'4',source:'manual',slot:'Roulette'},
+   {train_date:'2026-11-19',member_id:'4',vip_member_id:'2',source:'manual',slot:'Train'}
+  ]
+ });
+ assert.equal(result.candidates[0].eligible,false);
+ assert.equal(result.recommended.name,'Bravo'); // Was VIP this week but can conduct.
+ assert.equal(result.recommended.place,2);
+ assert.equal(result.recommendedVip.name,'Charlie'); // Next VS rank.
+ assert.equal(result.recommendedVip.vsRank,3);
+ assert.equal(result.vipCandidates.find(x=>x.id==='2').eligible,false);
+ assert.equal(result.vipCandidates.find(x=>x.id==='4').eligible,false);
+ assert.deepEqual(result.vipCandidates.map(x=>x.name),['Alpha','Bravo','Charlie','Delta']);
+});
+test('Saturday VS VIP cap only spans current week even when Stage VIP preference is enabled',()=>{
+ const members=[{id:'1',display_name:'Alpha'},{id:'2',display_name:'Bravo'}];
+ const result=buildTrainAdvice({date:'2026-11-21',mode:'vs',vipMode:'stage',members,scoreDate:'2026-11-16',
+  scoreboard:[{member_id:'1',points:100},{member_id:'2',points:90}],
+  awards:[{train_date:'2026-11-09',member_id:'2',vip_member_id:'1',source:'manual',slot:'Train'}]
+ });
+ assert.equal(result.recommended.name,'Alpha');
+ assert.equal(result.recommendedVip.name,'Bravo');
+ assert.equal(result.vipCandidates.find(x=>x.id==='1').eligible,true); // Last week's VIP is not barred this week.
 });
 test('Spanish labels preserve actual member names and weeks without translating source records',async()=>{
  const {translateR4Text}=await import('../assets/r4-es-core.mjs');
