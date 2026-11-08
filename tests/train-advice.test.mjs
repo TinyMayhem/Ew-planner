@@ -24,6 +24,42 @@ test('R4 train does not disqualify a VS winner',()=>{
   scoreboard:[{member_id:'tiny',points:10000000}]});
  assert.equal(a.recommended.id,'tiny');
 });
+test('Sunday VS selection suggests next eligible weekly scorer for both conductor and VIP',()=>{
+ const ranked=buildTrainAdvice({...args,date:'2026-11-22',mode:'vs',vipMode:'weekly',legacy:[
+  t('2026-11-17','TinyMayhem','Movich Mo','manual','Roulette'),
+  t('2026-11-19','New Recruit','Crüm','manual','Train')
+ ],scoreDate:'2026-11-16',scoreboard:[
+  {member_id:'tiny',points:100},
+  {member_id:'mo',points:90},
+  {member_id:'crum',points:80},
+  {member_id:'devi',points:70},
+  {member_id:'new',points:60}
+ ]});
+ assert.equal(ranked.scoreRanked,true);
+ assert.equal(ranked.saturdayVs,false);
+ assert.equal(ranked.recommended.id,'mo'); // Was VIP, never a conductor this Stage
+ assert.equal(ranked.recommended.place,2);
+ assert.equal(ranked.recommendedVip.id,'devi'); // Crüm already rode VIP this week
+ assert.equal(ranked.recommendedVip.scoreRank,4);
+ assert.deepEqual(ranked.vipCandidates.map(x=>x.id),['tiny','mo','crum','devi','new']);
+ assert.equal(ranked.vipCandidates.find(x=>x.id==='crum').eligible,false);
+ assert.match(ranked.substitution,/TinyMayhem.*Movich Mo/);
+});
+test('weekly donation source suggests the highest eligible donor and next-ranked VIP',()=>{
+ const result=buildTrainAdvice({...args,date:'2026-11-24',mode:'donations',vipMode:'weekly',
+  legacy:[t('2026-11-17','TinyMayhem','Ɖevi','manual','Roulette')],
+  scoreDate:'2026-11-16',scoreboard:[
+   {member_id:'tiny',points:5000},
+   {member_id:'mo',points:4000},
+   {member_id:'devi',points:3000},
+   {member_id:'crum',points:2000}
+  ]});
+ assert.equal(result.scoreRanked,true);
+ assert.equal(result.recommended.id,'mo');
+ assert.equal(result.recommendedVip.id,'devi'); // Prior-week VIP eligible again
+ assert.equal(result.recommendedVip.scoreRank,3);
+ assert.equal(result.vipCandidates[0].points,5000);
+});
 test('never had means neither driver nor VIP in recorded history',()=>{
  const a=buildTrainAdvice({...args,mode:'never',slot:'R4 Vote (no train for a while)',legacy:[
   t('2026-08-12','Mo','Devi','r4','R4 choice'),

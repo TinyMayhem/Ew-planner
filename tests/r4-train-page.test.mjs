@@ -13,6 +13,16 @@ test('the secure Train Desk includes a stage selector, archive grid and rules',(
  for(const key of ['id="train-stage"','id="train-calendar"','id="train-stage-warnings"','id="train-eligibility-warnings"','Da Rules'])
   assert.ok(source.includes(key),'Missing '+key);
 });
+test('selecting weekly VS or donations shows and auto-fills a ranked conductor/VIP pair',()=>{
+ const page=readFileSync('lib/r4-stats-page.mjs','utf8');
+ const client=readFileSync('assets/r4-stats.js','utf8');
+ const helper=readFileSync('lib/train-advice.mjs','utf8');
+ assert.match(page,/id="train-pair-suggestion"/);
+ assert.match(client,/if\(advice\.scoreRanked\)\$\('train-member'\)\.value=advice\.recommended\.id/);
+ assert.match(client,/showVipAdvice\(advice,\{autoSelect:!!advice\.scoreRanked/);
+ assert.match(client,/\$\('train-vip'\)\.value=suggestedVip\?\.id\|\|''/);
+ assert.match(helper,/scoreRanked=mode==='vs'\|\|mode==='donations'/);
+});
 test('the API keeps the legacy archive on the private data path',()=>{
  const source=readFileSync('api/r4-stats.mjs','utf8');
  assert.match(source,/utw_stat_train_legacy/);
