@@ -133,9 +133,10 @@ export async function GET(request){
    return json({imports,ds});
   }
   if(q.get('train_advice')==='1'){
-   const date=q.get('date'),mode=q.get('mode'),slot=clean(q.get('slot'),100),vipMode=q.get('vip_mode')||'weekly';
+   const date=q.get('date'),mode=q.get('mode'),slot=clean(q.get('slot'),100),vipMode=q.get('vip_mode')||'weekly',selectedSeason=q.get('season');
    if(!isoDate(date)||date<'2025-12-29'||stageForDate(date)>40||
-      (!['never','vs','donations','ds','r4','manual'].includes(mode)||!['weekly','stage'].includes(vipMode)))return json({error:'Choose a valid train date and category'},400);
+      (!['never','vs','donations','ds','r4','manual'].includes(mode)||!['weekly','stage'].includes(vipMode))||
+      (selectedSeason&&!/^[a-z0-9-]{2,30}$/.test(selectedSeason)))return json({error:'Choose a valid train date and category'},400);
    const [members,aliases,legacy,awards,exceptions]=await Promise.all([
     list('utw_stat_members',{select:'id,display_name',order:'display_name.asc',limit:'1000'}),
     list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'}),
@@ -147,12 +148,15 @@ export async function GET(request){
    let scoreboard=[],scoreDate=null,dsEvent=null;
    const monday=weekStart(date);
    if(mode==='vs'||mode==='donations'){
-    // VS picks use the prior completed WEEKLY VS total, not a daily score.
-    // Weekly periods are keyed by their starting Monday.
+    // Saturday VS uses THIS week's saved weekly total (Monday through Saturday).
+    // Other VS dates and donation selection retain the prior completed week.
+    // Daily VS uploads are never used as a substitute for the weekly report.
     const metric=mode==='vs'?'vs_weekly':'donations_weekly';
-    const previousWeek=dateAdd(monday,-7);
+    const saturdayVs=mode==='vs'&&new Date(date+'T00:00:00Z').getUTCDay()===6;
+    const reportWeek=saturdayVs?monday:dateAdd(monday,-7);
     const filters={select:'id,period,created_at,row_count',metric:'eq.'+metric,
-     period:'eq.'+previousWeek,order:'created_at.desc',limit:'50'};
+     period:'eq.'+reportWeek,order:'created_at.desc',limit:'50'};
+    if(selectedSeason)filters.season_id='eq.'+selectedSeason;
     const imports=await list('utw_stat_imports',filters);
     const latest=imports[0];
     if(latest){
