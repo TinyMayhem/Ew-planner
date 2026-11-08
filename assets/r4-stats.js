@@ -586,7 +586,13 @@ function wire(){
  $('alias-save').addEventListener('click',()=>action(()=>post({action:'alias',member_id:$('alias-member').value,alias:$('alias-name').value}),'Nickname added to the member.'));
  $('ds-form').addEventListener('submit',event=>{event.preventDefault();action(()=>{const form=new FormData($('ds-form'));form.set('action','ds');form.set('season_id',state.season);return post(form,true)},'DS evidence and podium saved.')});
  $('train-stage').addEventListener('change',()=>{state.trainStage=Number($('train-stage').value);load()});
- $('train-source').addEventListener('change',()=>{if($('train-source').value==='never'&&!/no train|vote|roulette/i.test($('train-slot').value))$('train-slot').value='Never had a train / participation';candidates();eligibilityWarnings()});
+ $('train-source').addEventListener('change',()=>{
+  const date=$('train-date').value,mode=$('train-source').value,slot=$('train-slot');
+  if(mode==='never'&&!/no train|vote|roulette/i.test(slot.value))slot.value='Never had a train / participation';
+  if(mode==='vs'&&validDate(date)&&new Date(date+'T00:00:00Z').getUTCDay()===6&&/^R4(?:\s|$)/i.test(slot.value))slot.value='Saturday VS top scores';
+  if(mode==='r4'&&slot.value==='Saturday VS top scores')slot.value=trainLabelForDate(stageForDate(date),date)||'R4 train';
+  candidates();eligibilityWarnings();
+ });
  $('train-date').addEventListener('change',()=>{const date=$('train-date').value;if(!validDate(date))return;const stage=stageForDate(date);const label=trainLabelForDate(stage,date);if(label){$('train-slot').value=label;$('train-source').value=inferTrainMode(label)}if(stage!==state.trainStage){state.trainStage=stage;$('train-stage').value=String(stage);load()}else{candidates();eligibilityWarnings()}});
  $('train-member').addEventListener('change',()=>{showVipAdvice(state.advice);eligibilityWarnings()});$('train-vip').addEventListener('change',eligibilityWarnings);$('train-vip-mode').addEventListener('change',()=>{candidates();eligibilityWarnings()});$('train-slot').addEventListener('change',()=>{candidates();eligibilityWarnings()});
  $('award').addEventListener('click',()=>{const mode=$('train-source').value,source=mode==='never'&&/^r4/i.test($('train-slot').value)?'r4':mode==='never'?'manual':mode,date=$('train-date').value,id=$('train-member').value,vipId=$('train-vip').value,reason=$('train-reason').value.trim();
