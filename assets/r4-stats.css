@@ -232,3 +232,26 @@
 .ocr-quality-note{padding:10px 12px;background:#f1f5e9;border:1px solid #b2c1a9;color:#33513c;border-radius:10px;font-size:12px;line-height:1.5}
 .ocr-roster-picker{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#fcf5e7;border:1px solid #bda87f;padding:8px;border-radius:9px}
 .ocr-roster-picker select{width:100%;max-width:400px;min-width:160px;flex:1;background:#fff;border:1px solid #b8ae95;border-radius:7px;padding:9px;color:#2b4738;font-size:13px}
+
+/* Compact missing-daily-scores view within the private VS archive. */
+.stat-missing-wrap{border:1px solid #dccba7;border-radius:12px;background:#f9f4e8;padding:13px 15px;margin:0 0 16px}
+.stat-missing-wrap h3{font-size:17px;margin:0 0 4px;color:#28533f}
+.stat-missing-wrap>.stat-muted{margin:0 0 10px;font-size:12px}
+.stat-missing-list{display:grid;gap:6px}
+.stat-missing-reference{margin:0 0 5px;font-size:12px}
+.stat-missing-day{background:#fffdf6;border:1px solid #e1d6be;border-radius:8px;overflow:hidden}
+.stat-missing-day summary{display:flex;align-items:center;gap:12px;justify-content:space-between;cursor:pointer;padding:8px 11px;list-style:none}
+.stat-missing-day summary::-webkit-details-marker{display:none}
+.stat-missing-day summary:focus-visible{outline:2px solid #bc934d;outline-offset:-2px}
+.stat-missing-day[open] summary{border-bottom:1px solid #e1d6be}
+.stat-missing-label{display:flex;align-items:baseline;flex-wrap:wrap;gap:9px;font-size:13px;color:#28533f}
+.stat-missing-label small{font-size:11px;color:#637669}
+.stat-missing-count{font-size:11px;font-weight:750;white-space:nowrap}
+.stat-missing-count.has-missing{color:#9b422c}
+.stat-missing-count.all-found{color:#376548}
+.stat-missing-count.not-uploaded{color:#79766c}
+.stat-missing-content{padding:8px 11px 11px}
+.stat-missing-names{font-size:13px;line-height:1.75;margin:0 0 7px;overflow-wrap:anywhere}
+.stat-missing-copy{font-size:12px;padding:5px 9px}
+.stat-missing-message{font-size:12px;margin:8px 11px}
+@media(max-width:760px){.stat-missing-wrap{padding:11px}.stat-missing-label{gap:4px;flex-direction:column}.stat-missing-day summary{align-items:center}}
