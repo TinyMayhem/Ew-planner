@@ -67,3 +67,32 @@ export function vsLeaderboard(data,metric,period){
  }
  return [...byMember.values()].sort((a,b)=>b.points-a.points||a.name.localeCompare(b.name)).map((r,i)=>({...r,rank:i+1,belowTarget:scoreFlag(metric,r.points)}));
 }
+
+/**
+ * Compare daily uploads to the most complete saved VS snapshot for that week.
+ * This is a coverage check, not proof of zero points or a definitive alliance roster.
+ */
+export function vsMissingDaily(data,week){
+ const slots=vsWeekSlots(week,data?.imports||[]);
+ const captured=slots.filter(slot=>slot.import).map(slot=>({...slot,rows:vsLeaderboard(data,slot.metric,slot.period)}));
+ captured.sort((a,b)=>b.rows.length-a.rows.length||
+  Number(b.metric==='vs_weekly')-Number(a.metric==='vs_weekly')||
+  b.period.localeCompare(a.period));
+ const reference=captured.find(x=>x.rows.length>0)||null;
+ const referenceMembers=reference?.rows||[];
+ const days=slots.filter(slot=>slot.metric==='vs_daily').map(slot=>{
+  const capturedDay=captured.find(x=>x.metric==='vs_daily'&&x.period===slot.period);
+  const seen=new Set((capturedDay?.rows||[]).map(x=>x.id));
+  return {
+   label:slot.label,period:slot.period,hasUpload:!!slot.import,
+   recordedCount:capturedDay?.rows.length||0,
+   // An absent upload is not a list of absent people. Report it separately.
+   missing:slot.import?referenceMembers.filter(x=>!seen.has(x.id))
+    .map(x=>({id:x.id,name:x.name})).sort((a,b)=>a.name.localeCompare(b.name)):[]
+  };
+ });
+ return {
+  reference:reference?{label:reference.label,period:reference.period,metric:reference.metric,count:referenceMembers.length}:null,
+  days
+ };
+}
