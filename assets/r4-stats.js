@@ -23,7 +23,7 @@ const setContent=(id,...nodes)=>$(id).replaceChildren(...nodes);
 const notice=(message,error=false)=>{const n=$('notice');n.hidden=!message;n.className='stat-notice'+(error?' error':'');n.textContent=message||'';if(message)n.scrollIntoView({block:'nearest'})};
 async function post(body,multipart=false){notice('');const r=await fetch('/api/r4-stats',{method:'POST',credentials:'same-origin',headers:multipart?{}:{'Content-Type':'application/json'},body:multipart?body:JSON.stringify(body)});const data=await r.json().catch(()=>({}));if(r.status===401){location.href='/r4-planner';throw Error('R4 sign-in expired')}if(!r.ok)throw Error(data.error||'Could not save the change');return data}
 async function action(fn,success){try{await fn();await load();notice(success)}catch(e){notice(e.message,true)}}
-const opt=(id,includeBlank=false)=>{const select=$(id),old=select.value;select.replaceChildren();if(includeBlank){const o=new Option('Not recorded','');select.append(o)}for(const m of members())select.append(new Option(m.display_name,m.id));if([...select.options].some(o=>o.value===old))select.value=old};
+const opt=(id,includeBlank=false)=>{const select=$(id),old=select.value;select.replaceChildren();if(includeBlank){const o=new Option(id==='train-member'?'Choose conductor':id==='train-vip'?'Choose VIP':'Not recorded','');select.append(o)}for(const m of members())select.append(new Option(m.display_name,m.id));if([...select.options].some(o=>o.value===old))select.value=old};
 function ranking(metric,period){
  const imp=state.data.imports.find(x=>x.metric===metric&&x.period===period);
  if(!imp)return [];
@@ -159,7 +159,7 @@ function directory(){
  if(!filtered.length)root.append(elEmpty('No matching members.'));
 }
 function memberFields(){
- for(const id of ['merge-from','merge-to','alias-member','ds-first','ds-second','ds-third','train-member','train-vip','exception-member'])opt(id,id==='ds-second'||id==='ds-third'||id==='train-vip');
+ for(const id of ['merge-from','merge-to','alias-member','ds-first','ds-second','ds-third','train-member','train-vip','exception-member'])opt(id,id==='ds-second'||id==='ds-third'||id==='train-member'||id==='train-vip');
  directory();
 }
 function dsHistory(){
@@ -184,23 +184,45 @@ function inferTrainMode(label,savedSource=''){
  if(/^r4\s/i.test(v)||/^r5\s/i.test(v))return 'r4';
  return ['r4','ds','donations','vs'].includes(savedSource)?savedSource:'manual';
 }
-function showVipAdvice(advice){
- const root=$('vip-candidates');root.replaceChildren();
+function nextRankedVip(advice,conductorId){
+ const conductor=(advice?.candidates||[]).find(x=>x.id===conductorId);
+ if(!advice?.scoreRanked||!conductor)return null;
+ return (advice.vipCandidates||[]).find(x=>x.eligible&&x.id!==conductorId&&x.scoreRank>conductor.place)||null;
+}
+function showVipAdvice(advice,{autoSelect=false}={}){
+ const root=$('vip-candidates'),pair=$('train-pair-suggestion');
+ root.replaceChildren();pair.replaceChildren();
  if(!advice)return;
- const saturdayVs=!!advice.saturdayVs,fresh=advice.vipMode==='stage'&&!saturdayVs,selectedDriver=$('train-member').value;
- const pool=advice.vipCandidates||[],driverPlace=advice.candidates?.find(x=>x.id===selectedDriver)?.place||advice.recommended?.place||0;
- const recommendedVip=saturdayVs?pool.find(v=>v.eligible&&v.id!==selectedDriver&&v.vsRank>driverPlace):null;
- root.append(text('p',saturdayVs?
-  'Saturday VS VIP: next highest eligible score after the chosen conductor. No VIP repeat this week. '+(advice.vipEligibleCount||0)+' eligible in the saved weekly ranking.':
-  (fresh?'VIPs with no VIP turn in Stage '+advice.stage:'VIPs who have not ridden this Monday-to-Sunday week')+
+ const ranked=!!advice.scoreRanked,selectedDriver=$('train-member').value;
+ const driver=advice.candidates?.find(x=>x.id===selectedDriver)||(!selectedDriver?advice.recommended:null);
+ const suggestedVip=ranked?nextRankedVip(advice,driver?.id):null;
+ if(autoSelect&&ranked)$('train-vip').value=suggestedVip?.id||'';
+ if(ranked){
+  const card=text('div',null,'train-pair-card');
+  card.append(text('strong','Suggested pair from '+(advice.mode==='vs'?'weekly VS scores':'weekly donations'),'train-pair-heading'));
+  if(driver){
+   card.append(text('p','Conductor: #'+driver.place+' '+driver.name+' · '+fmt(driver.points)+' points','train-pair-line'));
+   card.append(text('p',suggestedVip?'VIP: #'+suggestedVip.scoreRank+' '+suggestedVip.name+' · '+fmt(suggestedVip.points)+' points':
+    'VIP: No eligible lower-ranked member found. Review the saved VIP history.','train-pair-line'));
+  }else card.append(text('p','No eligible conductor found in the saved weekly ranking.','train-pair-line'));
+  if(advice.sameDate?.length)card.append(text('p','A train is already saved on this date. Suggestions do not overwrite it.','stat-muted'));
+  pair.append(card);
+ }
+ const fresh=advice.vipMode==='stage'&&advice.mode!=='vs';
+ const pool=advice.vipCandidates||[];
+ root.append(text('p',ranked?
+  'VIP follows the next highest eligible '+(advice.mode==='vs'?'VS':'donation')+
+   ' score below the conductor. No repeat VIP in the same week. '+(advice.vipEligibleCount||0)+' eligible.':
+  (fresh?'VIPs with no VIP turn in Stage '+advice.stage:
+   'VIPs who have not ridden this Monday-to-Sunday week')+
    ' · '+(advice.vipEligibleCount||0)+' eligible. Ranked by longest time since their last VIP turn.','stat-muted'));
  for(const v of pool.slice(0,25)){
   const samePerson=v.id===selectedDriver;
-  const highlighted=saturdayVs&&recommendedVip?.id===v.id;
+  const highlighted=ranked&&suggestedVip?.id===v.id;
   const row=text('div',null,'stat-candidate'+(v.eligible&&!samePerson?' train-vip-eligible':'')+(highlighted?' train-advice-favorite':''));
   const info=text('div');info.append(text('strong','#'+v.place+' '+v.name));
-  if(saturdayVs&&v.points!==null)info.append(text('div',fmt(v.points)+' VS points','stat-muted'));
-  if(highlighted)info.append(text('div','Recommended VIP · next eligible VS score','train-advice-recommended'));
+  if(ranked&&v.points!==null)info.append(text('div',fmt(v.points)+' '+(advice.mode==='vs'?'VS points':'donations'),'stat-muted'));
+  if(highlighted)info.append(text('div','Suggested VIP · next eligible ranked score','train-advice-recommended'));
   for(const note of v.notes||[])info.append(text('div',note,'stat-muted'));
   for(const reason of v.reasons||[])info.append(text('div','Skipped: '+reason,'stat-flag blocked'));
   if(samePerson)info.append(text('div','Already selected as conductor','stat-flag blocked'));
@@ -249,19 +271,16 @@ async function candidates(){
     $('train-member').value=v.id;
     if(!v.eligible&&v.reasons?.length)$('train-reason').value=('Manual override: '+v.reasons.join('; ')).slice(0,480);
     else if(advice.recommended?.id===v.id&&advice.substitution&&!$('train-reason').value.trim())$('train-reason').value=advice.substitution.slice(0,480);
-    showVipAdvice(advice);eligibilityWarnings();
+    showVipAdvice(advice,{autoSelect:advice.scoreRanked});eligibilityWarnings();
    });
    row.append(info,button);root.append(row);
   }
   root.append(text('p',advice.limitations,'stat-muted'));
   if(advice.recommended&&!advice.sameDate?.length){
    if(mode==='r4')$('train-member').value=advice.recommended.id;
-   if(mode==='vs'&&advice.saturdayVs){
-    $('train-member').value=advice.recommended.id;
-    if(advice.recommendedVip)$('train-vip').value=advice.recommendedVip.id;
-   }
+   if(advice.scoreRanked)$('train-member').value=advice.recommended.id;
   }
-  showVipAdvice(advice);eligibilityWarnings();
+  showVipAdvice(advice,{autoSelect:!!advice.scoreRanked&&!advice.sameDate?.length});eligibilityWarnings();
  }catch(e){
   if(requestId===state.adviceRequest){
    root.replaceChildren(elEmpty(e.message||'Could not check train history'));
@@ -591,10 +610,11 @@ function wire(){
   if(mode==='never'&&!/no train|vote|roulette/i.test(slot.value))slot.value='Never had a train / participation';
   if(mode==='vs'&&validDate(date)&&new Date(date+'T00:00:00Z').getUTCDay()===6&&/^R4(?:\s|$)/i.test(slot.value))slot.value='Saturday VS top scores';
   if(mode==='r4'&&slot.value==='Saturday VS top scores')slot.value=trainLabelForDate(stageForDate(date),date)||'R4 train';
+  if(mode==='vs'||mode==='donations'){$('train-member').value='';$('train-vip').value=''}
   candidates();eligibilityWarnings();
  });
  $('train-date').addEventListener('change',()=>{const date=$('train-date').value;if(!validDate(date))return;const stage=stageForDate(date);const label=trainLabelForDate(stage,date);if(label){$('train-slot').value=label;$('train-source').value=inferTrainMode(label)}if(stage!==state.trainStage){state.trainStage=stage;$('train-stage').value=String(stage);load()}else{candidates();eligibilityWarnings()}});
- $('train-member').addEventListener('change',()=>{showVipAdvice(state.advice);eligibilityWarnings()});$('train-vip').addEventListener('change',eligibilityWarnings);$('train-vip-mode').addEventListener('change',()=>{candidates();eligibilityWarnings()});$('train-slot').addEventListener('change',()=>{candidates();eligibilityWarnings()});
+ $('train-member').addEventListener('change',()=>{showVipAdvice(state.advice,{autoSelect:!!state.advice?.scoreRanked});eligibilityWarnings()});$('train-vip').addEventListener('change',eligibilityWarnings);$('train-vip-mode').addEventListener('change',()=>{candidates();eligibilityWarnings()});$('train-slot').addEventListener('change',()=>{candidates();eligibilityWarnings()});
  $('award').addEventListener('click',()=>{const mode=$('train-source').value,source=mode==='never'&&/^r4/i.test($('train-slot').value)?'r4':mode==='never'?'manual':mode,date=$('train-date').value,id=$('train-member').value,vipId=$('train-vip').value,reason=$('train-reason').value.trim();
   if(!id||!vipId||!date||id===vipId){notice('Select a date and two different members: conductor and VIP.',true);return}
   const advice=state.advice?.date===date&&state.advice?.mode===mode&&state.advice?.vipMode===$('train-vip-mode').value?state.advice:null;
