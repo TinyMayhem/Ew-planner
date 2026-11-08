@@ -19,20 +19,20 @@ export function stageForDate(date){
 }
 export const weekStart=date=>addDays(date,-((new Date(toTime(date)).getUTCDay()+6)%7));
 export const trainRole=(award,id)=>award.member_id===id?'Driver':award.vip_member_id===id?'VIP':null;
-// Only Wednesday/Saturday R4 conductor trains use a separate eligibility lane.
+// Only Thursday/Saturday R4 conductor trains use a separate eligibility lane.
 // A Wednesday R4 vote is not a train assignment, and VIPs never use this lane.
 export function isR4Train(award){
  const date=award?.train_date||award?.date;
  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||'')))return false;
  const day=new Date(date+'T00:00:00Z').getUTCDay();
  const label=String(award?.slot||award?.selection_label||'').trim();
- return (day===3||day===6)&&
+ return (day===4||day===6)&&
    (award?.source==='r4'||/^R4(?:\s|$)/i.test(label))&&
    !/\bvote\b/i.test(label);
 }
 // Conductor and VIP are independent entitlements. Standard conductors are
 // limited to one five-week Stage; VIPs are limited to one Monday-Sunday week,
-// across ALL train types, even Wednesday/Saturday R4 trains.
+// across ALL train types, even Thursday/Saturday R4 trains.
 export function trainWarnings(awards,proposed,displayName=id=>id){
  const {train_date,member_id,vip_member_id,source,slot,id:editingId}=proposed;
  if(!train_date||(!member_id&&!vip_member_id))return [];
@@ -65,7 +65,7 @@ export function trainWarnings(awards,proposed,displayName=id=>id){
    warnings.push(name+' was already a VIP on '+prior.train_date+
     '. A VIP cannot be selected again in the same Monday-to-Sunday week.');
   }
-  if(source==='donations'||source==='ds'||source==='vs'){
+  if(source==='donations'||source==='ds'){
    const winner=previous.find(a=>a.source===source);
    if(winner){
     const label={ds:'DS MVP',donations:'Top donor',vs:'Top VS'}[source];
