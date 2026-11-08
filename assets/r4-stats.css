@@ -255,3 +255,10 @@
 .stat-missing-copy{font-size:12px;padding:5px 9px}
 .stat-missing-message{font-size:12px;margin:8px 11px}
 @media(max-width:760px){.stat-missing-wrap{padding:11px}.stat-missing-label{gap:4px;flex-direction:column}.stat-missing-day summary{align-items:center}}
+
+/* Weekly score-based train pair: conductor first, next eligible scorer as VIP. */
+#train-pair-suggestion:empty{display:none}
+.train-pair-card{padding:13px 15px;margin:14px 0;border:1px solid #c7b58d;border-radius:11px;background:#fffdf7}
+.train-pair-heading{display:block;font-size:14px;color:#29553e;margin-bottom:7px}
+.train-pair-line{font-size:13px;line-height:1.5;margin:5px 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.train-pair-card .stat-muted{font-size:12px;margin:8px 0 0}
