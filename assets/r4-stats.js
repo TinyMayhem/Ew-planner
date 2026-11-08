@@ -1,5 +1,5 @@
 import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv} from './r4-csv-utils.mjs';
-import {archivedWeeks,vsWeekSlots,vsLeaderboard,weekOf,scoreFlag} from './r4-vs-archive.mjs';
+import {archivedWeeks,vsWeekSlots,vsLeaderboard,vsMissingDaily,weekOf,scoreFlag} from './r4-vs-archive.mjs';
 import {stageForDate,stageRange,trainWarnings,isR4Train,addDays as trainAddDays} from './r4-train-rules.mjs';
 import {trainLabelForDate} from './r4-train-schedule.mjs';
 import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=auto90-v1-20261106';
@@ -56,6 +56,42 @@ function showTab(tab){
  document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
  document.querySelectorAll('.stat-tab').forEach(p=>p.hidden=p.id!=='tab-'+tab);
 }
+function renderMissingVs(){
+ const root=$('vs-missing-daily');root.replaceChildren();
+ const report=vsMissingDaily(state.data||{},state.week);
+ if(!report.reference){
+  root.append(elEmpty('No saved member scores this week to use as a reference yet.'));
+  return;
+ }
+ const ref=report.reference;
+ root.append(text('p','Reference: '+ref.count+' members in '+ref.label+' ('+ref.period+'). This is the fullest saved result for this week, not a verified alliance roster. Missing names are not zero scores.','stat-muted stat-missing-reference'));
+ for(const day of report.days){
+  const row=text('details',null,'stat-missing-day');
+  const summary=text('summary',null,'stat-missing-summary');
+  const label=text('span',null,'stat-missing-label');
+  label.append(text('strong',day.label),text('small',day.period));
+  const status=!day.hasUpload?'No upload':day.missing.length?day.missing.length+' missing':'None missing';
+  summary.append(label,text('span',status,'stat-missing-count'+(!day.hasUpload?' not-uploaded':day.missing.length?' has-missing':' all-found')));
+  row.append(summary);
+  if(!day.hasUpload){
+   row.append(text('p','No daily upload for this date, so individual missing names cannot be confirmed.','stat-muted stat-missing-message'));
+  }else if(!day.missing.length){
+   row.append(text('p','All '+ref.count+' members in the reference result appear in this upload.','stat-muted stat-missing-message'));
+  }else{
+   const content=text('div',null,'stat-missing-content');
+   content.append(text('p',day.missing.map(m=>m.name).join(' · '),'stat-missing-names'));
+   const button=text('button','Copy names','stat-button stat-missing-copy');
+   button.type='button';
+   button.addEventListener('click',async()=>{
+    try{await navigator.clipboard.writeText(day.missing.map(m=>m.name).join('\n'));button.textContent='Copied names';}
+    catch(e){notice('Could not copy names automatically. Select the text above to copy it.',true);}
+   });
+   content.append(button);row.append(content);
+   row.open=day.missing.length<=5;
+  }
+  root.append(row);
+ }
+}
 function archive(){
  const root=$('vs-weeks');root.replaceChildren();
  const weeks=archivedWeeks(state.archiveImports);
@@ -70,6 +106,7 @@ function archive(){
  const results=$('vs-week-results'),expanded=new Set([...results.querySelectorAll('details[open]')].map(x=>x.dataset.slot));
  results.replaceChildren();$('vs-week-title').textContent='Week of '+state.week;
  const slots=vsWeekSlots(state.week,state.data?.imports||[]);
+  renderMissingVs();
  for(const slot of slots){
   const details=text('details',null,'stat-vs-slot');details.dataset.slot=slot.metric+'|'+slot.period;
   const summary=text('summary',null,'stat-vs-summary');

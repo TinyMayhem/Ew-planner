@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHmac} from 'node:crypto';
-import {DAILY_TARGET,WEEKLY_TARGET,scoreFlag,weekOf,archivedWeeks,vsWeekSlots,vsLeaderboard} from '../assets/r4-vs-archive.mjs';
+import {DAILY_TARGET,WEEKLY_TARGET,scoreFlag,weekOf,archivedWeeks,vsWeekSlots,vsLeaderboard,vsMissingDaily} from '../assets/r4-vs-archive.mjs';
 import {GET as statsGET} from '../api/r4-stats.mjs';
 
 const sampleImports=[
@@ -76,12 +76,41 @@ test('full leaderboard contains every player in the imported CSV, ranking and be
  assert.equal(weekly[1].belowTarget,true);
  assert.deepEqual(vsLeaderboard(data,'vs_daily','2026-10-28'),[]);
 });
+test('daily missing names use the fullest saved VS result without counting absent uploads as zero',()=>{
+ const data={
+  imports:[sampleImports[1],sampleImports[2],sampleImports[3]],
+  members:[{id:'tiny-id',display_name:'Tiny'},{id:'mo-id',display_name:'Mo'},{id:'cat-id',display_name:'Catalyst'}],
+  aliases:[{alias_key:'tiny',member_id:'tiny-id'},{alias_key:'tiny old',member_id:'tiny-id'},{alias_key:'mo',member_id:'mo-id'},{alias_key:'cat',member_id:'cat-id'}],
+  values:[
+   {import_id:'monday-v2',alias_key:'tiny',points:7200000},
+   {import_id:'monday-v2',alias_key:'tiny old',points:7300000},
+   {import_id:'monday-v2',alias_key:'cat',points:8000000},
+   {import_id:'tuesday',alias_key:'mo',points:7000000},
+   {import_id:'tuesday',alias_key:'cat',points:7200000},
+   {import_id:'weekly',alias_key:'tiny',points:42000000},
+   {import_id:'weekly',alias_key:'mo',points:43000000},
+   {import_id:'weekly',alias_key:'cat',points:44000000}
+  ]
+ };
+ const report=vsMissingDaily(data,'2026-10-26');
+ assert.equal(report.reference.label,'Weekly Total');
+ assert.equal(report.reference.count,3);
+ assert.equal(report.days.length,6);
+ assert.deepEqual(report.days[0].missing.map(x=>x.name),['Mo']);
+ assert.deepEqual(report.days[1].missing.map(x=>x.name),['Tiny']);
+ assert.equal(report.days[2].hasUpload,false);
+ assert.deepEqual(report.days[2].missing,[]);
+ assert.equal(vsMissingDaily({...data,imports:[]},'2026-10-26').reference,null);
+});
 test('R4 page shows archive tab, seven click-to-open rows and a score threshold legend',()=>{
  const html=readFileSync(new URL('../lib/r4-stats-page.mjs',import.meta.url),'utf8');
  const app=readFileSync(new URL('../assets/r4-stats.js',import.meta.url),'utf8');
  assert.match(html,/data-tab="vsarchive"/);
  assert.match(html,/id="vs-weeks"/);
  assert.match(html,/id="vs-week-results"/);
+ assert.match(html,/id="vs-missing-daily"/);
+ assert.match(app,/vsMissingDaily\(state\.data/);
+ assert.match(app,/Copy names/);
  assert.match(html,/Daily under <b>7\.2M<\/b>/);
  assert.match(html,/Weekly under <b>42M<\/b>/);
  assert.match(app,/text\('details'/);
