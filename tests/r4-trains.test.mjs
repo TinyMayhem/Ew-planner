@@ -110,6 +110,14 @@ test('VIPs have no R4 exception: same-week repeats are flagged across both lanes
  assert.ok(warnings.some(s=>s.includes('same Monday-to-Sunday week')));
  assert.ok(!warnings.some(s=>s.includes('conductor cannot')));
 });
+test('Saturday weekly VS is not an R4 conductor exception even if its calendar label says R4',()=>{
+ const vs=a('vs','2026-11-21','a','b','vs','R4 Savvy');
+ const r4=a('r4','2026-11-21','c','d','r4','R4 Savvy');
+ const earlier=a('regular','2026-11-17','a','c','manual','Roulette');
+ assert.equal(isR4Train(vs),false);
+ assert.equal(isR4Train(r4),true);
+ assert.ok(trainWarnings([earlier],vs).some(x=>x.includes('five-week stage')));
+});
 test('historic R4 labels on Saturdays count even with manual source',()=>{
  const r4=a('r4','2026-10-17','a','b','manual','R4 Mo');
  const regular=a('regular','2026-10-18','a','c','manual','Roulette');
