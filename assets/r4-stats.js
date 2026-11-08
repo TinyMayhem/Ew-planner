@@ -187,15 +187,20 @@ function inferTrainMode(label,savedSource=''){
 function showVipAdvice(advice){
  const root=$('vip-candidates');root.replaceChildren();
  if(!advice)return;
- const fresh=advice.vipMode==='stage',selectedDriver=$('train-member').value;
- root.append(text('p',(fresh?'VIPs with no VIP turn in Stage '+advice.stage:
-  'VIPs who have not ridden this Monday-to-Sunday week')+
-  ' · '+(advice.vipEligibleCount||0)+' eligible. Ranked by longest time since their last VIP turn.','stat-muted'));
- const pool=advice.vipCandidates||[];
+ const saturdayVs=!!advice.saturdayVs,fresh=advice.vipMode==='stage'&&!saturdayVs,selectedDriver=$('train-member').value;
+ const pool=advice.vipCandidates||[],driverPlace=advice.candidates?.find(x=>x.id===selectedDriver)?.place||advice.recommended?.place||0;
+ const recommendedVip=saturdayVs?pool.find(v=>v.eligible&&v.id!==selectedDriver&&v.vsRank>driverPlace):null;
+ root.append(text('p',saturdayVs?
+  'Saturday VS VIP: next highest eligible score after the chosen conductor. No VIP repeat this week. '+(advice.vipEligibleCount||0)+' eligible in the saved weekly ranking.':
+  (fresh?'VIPs with no VIP turn in Stage '+advice.stage:'VIPs who have not ridden this Monday-to-Sunday week')+
+   ' · '+(advice.vipEligibleCount||0)+' eligible. Ranked by longest time since their last VIP turn.','stat-muted'));
  for(const v of pool.slice(0,25)){
   const samePerson=v.id===selectedDriver;
-  const row=text('div',null,'stat-candidate'+(v.eligible&&!samePerson?' train-vip-eligible':''));
+  const highlighted=saturdayVs&&recommendedVip?.id===v.id;
+  const row=text('div',null,'stat-candidate'+(v.eligible&&!samePerson?' train-vip-eligible':'')+(highlighted?' train-advice-favorite':''));
   const info=text('div');info.append(text('strong','#'+v.place+' '+v.name));
+  if(saturdayVs&&v.points!==null)info.append(text('div',fmt(v.points)+' VS points','stat-muted'));
+  if(highlighted)info.append(text('div','Recommended VIP · next eligible VS score','train-advice-recommended'));
   for(const note of v.notes||[])info.append(text('div',note,'stat-muted'));
   for(const reason of v.reasons||[])info.append(text('div','Skipped: '+reason,'stat-flag blocked'));
   if(samePerson)info.append(text('div','Already selected as conductor','stat-flag blocked'));
@@ -220,7 +225,7 @@ async function candidates(){
  else root.append(text('p','Checking saved train history and scores…','stat-muted'));
  vipRoot.append(text('p','Checking VIP history…','stat-muted'));
  try{
-  const query=new URLSearchParams({train_advice:'1',date,mode,slot,vip_mode:vipMode});
+  const query=new URLSearchParams({train_advice:'1',date,mode,slot,vip_mode:vipMode,season:state.season});
   const response=await fetch('/api/r4-stats?'+query.toString(),{credentials:'same-origin',cache:'no-store'});
   const advice=await response.json();
   if(requestId!==state.adviceRequest)return;
@@ -249,7 +254,13 @@ async function candidates(){
    row.append(info,button);root.append(row);
   }
   root.append(text('p',advice.limitations,'stat-muted'));
-  if(advice.recommended&&mode==='r4'&&!advice.sameDate?.length)$('train-member').value=advice.recommended.id;
+  if(advice.recommended&&!advice.sameDate?.length){
+   if(mode==='r4')$('train-member').value=advice.recommended.id;
+   if(mode==='vs'&&advice.saturdayVs){
+    $('train-member').value=advice.recommended.id;
+    if(advice.recommendedVip)$('train-vip').value=advice.recommendedVip.id;
+   }
+  }
   showVipAdvice(advice);eligibilityWarnings();
  }catch(e){
   if(requestId===state.adviceRequest){
@@ -325,7 +336,7 @@ function eligibilityWarnings(){
  if(!state.data)return;
  const issues=currentTrainWarnings();
  if(issues.length){root.append(text('strong','⚠ '+issues.length+' train rule warning'+(issues.length===1?'':'s'),'train-warning-title'));issues.forEach(s=>root.append(text('p',s,'train-rule-warning')))}
- root.append(text('p','Conductor: once per five-week Stage, except R4 conductor trains on Wednesday and Saturday. VIP: once per Monday-to-Sunday week across all trains. Optional VIP Stage mode prioritizes people who have not been VIP this Stage.','stat-muted'));
+ root.append(text('p','Conductor: once per five-week Stage, except R4 conductor trains on Thursday and Saturday. VIP: once per Monday-to-Sunday week across all trains. Optional VIP Stage mode prioritizes people who have not been VIP this Stage.','stat-muted'));
  root.append(text('p','R4 must also verify hive position, member rank, Wednesday first-timer preference and approved exceptions.','stat-muted'));
 }
 
@@ -575,7 +586,13 @@ function wire(){
  $('alias-save').addEventListener('click',()=>action(()=>post({action:'alias',member_id:$('alias-member').value,alias:$('alias-name').value}),'Nickname added to the member.'));
  $('ds-form').addEventListener('submit',event=>{event.preventDefault();action(()=>{const form=new FormData($('ds-form'));form.set('action','ds');form.set('season_id',state.season);return post(form,true)},'DS evidence and podium saved.')});
  $('train-stage').addEventListener('change',()=>{state.trainStage=Number($('train-stage').value);load()});
- $('train-source').addEventListener('change',()=>{if($('train-source').value==='never'&&!/no train|vote|roulette/i.test($('train-slot').value))$('train-slot').value='Never had a train / participation';candidates();eligibilityWarnings()});
+ $('train-source').addEventListener('change',()=>{
+  const date=$('train-date').value,mode=$('train-source').value,slot=$('train-slot');
+  if(mode==='never'&&!/no train|vote|roulette/i.test(slot.value))slot.value='Never had a train / participation';
+  if(mode==='vs'&&validDate(date)&&new Date(date+'T00:00:00Z').getUTCDay()===6&&/^R4(?:\s|$)/i.test(slot.value))slot.value='Saturday VS top scores';
+  if(mode==='r4'&&slot.value==='Saturday VS top scores')slot.value=trainLabelForDate(stageForDate(date),date)||'R4 train';
+  candidates();eligibilityWarnings();
+ });
  $('train-date').addEventListener('change',()=>{const date=$('train-date').value;if(!validDate(date))return;const stage=stageForDate(date);const label=trainLabelForDate(stage,date);if(label){$('train-slot').value=label;$('train-source').value=inferTrainMode(label)}if(stage!==state.trainStage){state.trainStage=stage;$('train-stage').value=String(stage);load()}else{candidates();eligibilityWarnings()}});
  $('train-member').addEventListener('change',()=>{showVipAdvice(state.advice);eligibilityWarnings()});$('train-vip').addEventListener('change',eligibilityWarnings);$('train-vip-mode').addEventListener('change',()=>{candidates();eligibilityWarnings()});$('train-slot').addEventListener('change',()=>{candidates();eligibilityWarnings()});
  $('award').addEventListener('click',()=>{const mode=$('train-source').value,source=mode==='never'&&/^r4/i.test($('train-slot').value)?'r4':mode==='never'?'manual':mode,date=$('train-date').value,id=$('train-member').value,vipId=$('train-vip').value,reason=$('train-reason').value.trim();
