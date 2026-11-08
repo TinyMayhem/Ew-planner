@@ -240,6 +240,7 @@ function showVipAdvice(advice,{autoSelect=false}={}){
 async function candidates(){
  const root=$('candidates'),vipRoot=$('vip-candidates'),date=$('train-date').value,
   mode=$('train-source').value,slot=$('train-slot').value,vipMode=$('train-vip-mode').value;
+ $('train-donations-source').hidden=mode!=='donations';
  const requestId=(state.adviceRequest||0)+1;state.adviceRequest=requestId;state.advice=null;
  root.replaceChildren();vipRoot.replaceChildren();
  if(!validDate(date)){root.append(elEmpty('Select a valid train date for recommendations.'));return}

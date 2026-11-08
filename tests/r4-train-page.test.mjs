@@ -23,6 +23,14 @@ test('selecting weekly VS or donations shows and auto-fills a ranked conductor/V
  assert.match(client,/\$\('train-vip'\)\.value=suggestedVip\?\.id\|\|''/);
  assert.match(helper,/scoreRanked=mode==='vs'\|\|mode==='donations'/);
 });
+test('weekly donations offer the authenticated Alliance Duel source link without falsely claiming automatic sync',()=>{
+ const page=readFileSync('lib/r4-stats-page.mjs','utf8');
+ const js=readFileSync('assets/r4-stats.js','utf8');
+ assert.match(page,/id="train-donations-source"/);
+ assert.match(page,/href="\/r4-planner\?duel=1"/);
+ assert.match(page,/not a live feed/);
+ assert.match(js,/train-donations-source'\)\.hidden=mode!=='donations'/);
+});
 test('the API keeps the legacy archive on the private data path',()=>{
  const source=readFileSync('api/r4-stats.mjs','utf8');
  assert.match(source,/utw_stat_train_legacy/);
