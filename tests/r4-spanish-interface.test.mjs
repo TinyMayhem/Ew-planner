@@ -76,6 +76,7 @@ test('translator and weekly VS source are parseable by Node before deployment',(
  }
  const api=readFileSync('api/r4-stats.mjs','utf8');
  assert.match(api,/mode==='vs'\?'vs_weekly':'donations_weekly'/);
- assert.match(api,/period:'eq\.'\+previousWeek/);
+ assert.match(api,/period:'eq\.'\+reportWeek/);
+ assert.match(api,/saturdayVs\?monday:dateAdd\(monday,-7\)/);
  assert.doesNotMatch(api,/mode==='vs'\?'vs_daily':'donations_weekly'/);
 });
