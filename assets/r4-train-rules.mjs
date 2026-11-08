@@ -26,9 +26,11 @@ export function isR4Train(award){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date||'')))return false;
  const day=new Date(date+'T00:00:00Z').getUTCDay();
  const label=String(award?.slot||award?.selection_label||'').trim();
- return (day===4||day===6)&&
-   (award?.source==='r4'||/^R4(?:\s|$)/i.test(label))&&
-   !/\bvote\b/i.test(label);
+ const source=String(award?.source||'').toLowerCase();
+ // An explicitly selected VS / DS / donation train cannot inherit an
+ // R4 exemption merely because its calendar date has an R4 default label.
+ const actualR4=source==='r4'||(!source||source==='manual')&&/^R4(?:\s|$)/i.test(label);
+ return (day===4||day===6)&&actualR4&&!/\bvote\b/i.test(label);
 }
 // Conductor and VIP are independent entitlements. Standard conductors are
 // limited to one five-week Stage; VIPs are limited to one Monday-Sunday week,
