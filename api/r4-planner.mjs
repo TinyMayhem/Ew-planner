@@ -93,22 +93,19 @@ function changePage(error='',first=true){return htmlHead('Change your password',
 function locationCookie(request,account,kind='active',redirect='/r4-planner'){return new Response(null,{status:303,headers:{'Location':redirect,'Set-Cookie':sessionSetCookie(request,account,kind),'Cache-Control':'no-store'}})}
 async function noAccounts(){return (await accountCount())===0}
 export async function authorizedAccess(request){
- // Member statistics remain restricted to UTW R4 and the owner, never VON accounts.
- try{const user=await sessionUser(request);if(user)return ['admin','r4'].includes(user.role);return authorized(request)&&await noAccounts()}catch{return false}
+ // Temporary owner-only access. Keep R4/VON accounts intact for future reopening.
+ try { const user=await sessionUser(request);return user?.role==='admin'; }catch{return false}
 }
 export async function authorizedAlliance(request,alliance='utw'){
  if(!['utw','von'].includes(alliance))return false;
- try{
-  const user=await sessionUser(request);
-  if(user)return user.role==='admin'||(alliance==='utw'&&user.role==='r4')||(alliance==='von'&&user.role==='von');
-  return alliance==='utw'&&authorized(request)&&await noAccounts();
- }catch{return false}
+ return authorizedAccess(request);
 }
 export async function GET(request){
  const u=new URL(request.url),q=u.searchParams;
- if(!configured())return oldGET(request);
+ if(!process.env.UTW_SESSION_SECRET||process.env.UTW_SESSION_SECRET.length<32||!process.env.SUPABASE_URL||!process.env.SUPABASE_SECRET_KEY)return new Response('Command Centre authentication is not configured.',{status:503,headers:NO_STORE});
  try{
   const account=await sessionUser(request,{allowPending:true});
+  if(account&&account.role!=='admin')return new Response('The Command Centre is temporarily available only to the UTW owner.',{status:403,headers:NO_STORE});
   if(q.get('setup')==='1')return new Response(await noAccounts()?setupLogin():userLogin('Individual logins have already been configured.'),{headers:NO_STORE});
   if(q.get('change')==='1')return new Response(account?changePage('',account.must_change_password):userLogin('Please sign in first.'),{headers:NO_STORE});
   if(q.get('admin')==='1')return new Response(null,{status:303,headers:{Location:'/r4-planner','Cache-Control':'no-store'}});
@@ -120,7 +117,7 @@ export async function GET(request){
    if(!await authorizedAlliance(request,alliance))return new Response('No access to this alliance workspace.',{status:403,headers:NO_STORE});
    return new Response(q.get('duel')==='1'?duelFor(alliance):plannerFor(alliance,account.role),{headers:NO_STORE});
   }
-  if(await noAccounts())return oldGET(request);
+  if(await noAccounts())return new Response(userLogin('Owner setup is required before access.'),{headers:NO_STORE});
   return new Response(userLogin(),{headers:NO_STORE});
  }catch{return new Response(login('Account database unavailable. Please retry.'),{status:503,headers:NO_STORE})}
 }
@@ -147,18 +144,19 @@ export async function POST(request){
   if(action==='user_login'){
    await rateLogin(request,f.get('username'));const account=await verifyCredentials(f.get('username'),f.get('password'));
    if(!account)return new Response(userLogin('Incorrect username or password.'),{status:401,headers:NO_STORE});
+    if(account.role!=='admin')return new Response(userLogin('The Command Centre is temporarily owner-only.'),{status:403,headers:NO_STORE});
    return locationCookie(request,account,account.must_change_password?'pending':'active',account.must_change_password?'/r4-planner?change=1':account.role==='von'?'/r4-planner?alliance=von':'/r4-planner');
   }
   const actor=await sessionUser(request,{allowPending:true});
   if(action==='change_password'){
-   if(!actor)return new Response(userLogin('Please sign in again.'),{status:401,headers:NO_STORE});
+   if(!actor||actor.role!=='admin')return new Response(userLogin('Owner sign-in required.'),{status:403,headers:NO_STORE});
    if(!actor.must_change_password&&!passwordMatches(f.get('current_password'),actor.password_hash))return new Response(changePage('Current password is incorrect.',false),{status:401,headers:NO_STORE});
    if(!strongPassword(f.get('password'))||passwordMatches(f.get('password'),actor.password_hash))return new Response(changePage('Use a new password of at least 10 characters.',actor.must_change_password),{status:400,headers:NO_STORE});
    const account=await updateAccount(actor.id,{password_hash:passwordHash(f.get('password')),must_change_password:false,temporary_expires_at:null,session_version:actor.session_version+1});
    return locationCookie(request,account,'active',account.role==='von'?'/r4-planner?alliance=von':'/r4-planner');
   }
   if(['account_create','account_toggle','account_reset'].includes(action))return new Response('R4 account administration is handled privately by the UTW owner through ChatGPT.',{status:403,headers:NO_STORE});
-  if(await noAccounts())return oldPOST(new Request(request.url,{method:'POST',headers:request.headers,body:raw}));
+  // Legacy shared-passcode login stays disabled while this page is owner-only.
   return new Response(userLogin('Use your individual R4 credentials.'),{status:401,headers:NO_STORE});
  }catch(e){const err=e.message.includes('duplicate')?'Username already in use.':e.message;return new Response(userLogin(err),{status:503,headers:NO_STORE})}
 }
