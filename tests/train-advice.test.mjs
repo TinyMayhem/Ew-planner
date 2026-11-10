@@ -214,7 +214,7 @@ test('longest wait still outranks VS participation after everyone has a train',(
  const roster=[m('older','A Older'),m('recent','Z Recent')];
  const advice=buildTrainAdvice({date:'2026-11-25',mode:'never',members:roster,
   rosterIds:['older','recent'],rosterDate:'2026-11-23',
-  legacy:[t('2026-02-15','A Older','Z Recent'),t('2026-10-18','Z Recent','A Older')],
+  legacy:[t('2026-02-15','A Older','Unknown'),t('2026-10-18','Z Recent','Unknown')],
   vsRecordCounts:{older:2,recent:55}});
  // The actual latest train turn determines priority, not participation count.
  assert.equal(advice.candidates[0].id,'older');
