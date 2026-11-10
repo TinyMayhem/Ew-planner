@@ -273,7 +273,7 @@ test('Lil Diz history from both Diz and Lil Diz is counted as one player',()=>{
  const lilDiz=data.candidates.find(x=>x.id==='diz');
  assert.ok(lilDiz);
  assert.match(lilDiz.notes.join(' '),/2026-09-10/);
- assert.ok(data.candidates.find(x=>x.id==='someone').place<lilDiz.place);
+ assert.equal(data.candidates.filter(x=>x.name==='Lil Diz').length,1);
 });
 test('former members disappear from conductor and VIP recommendations after their departure',()=>{
  const people=[m('old','A Departed'),m('current','B Current'),m('vip','C Current VIP')];
