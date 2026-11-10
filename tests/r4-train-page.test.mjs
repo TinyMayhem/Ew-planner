@@ -62,3 +62,16 @@ test('historical stage selector and original worksheet slot labels are included'
  assert.match(den,/trainLabelForDate/);
  assert.match(labels,/Top donation last week/);
 });
+
+
+test('Train Desk displays confirmed historical names and filters former members only for new selections',()=>{
+ const client=readFileSync('assets/r4-stats.js','utf8');
+ const helper=readFileSync('lib/train-advice.mjs','utf8');
+ assert.match(client,/const departedOn=/);
+ assert.match(client,/const displayTrainName=/);
+ assert.match(client,/Former UTW/);
+ assert.match(client,/displayTrainName\(award\.vipName\)/);
+ assert.match(client,/departedOn\(m\.id,\$\('train-date'\)/);
+ assert.match(helper,/const candidateRows=rows\.filter\(item=>!departed\.has\(item\.id\)\)/);
+ assert.match(helper,/!departed\.has\(m\.id\)/);
+});
