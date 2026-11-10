@@ -234,3 +234,77 @@ test('VS score ranking stays above VS history counts',()=>{
  assert.equal(advice.recommended.id,'top');
  assert.equal(advice.vipCandidates[0].id,'top');
 });
+
+
+test('confirmed Train Desk aliases resolve correctly without merging distinct lookalikes',()=>{
+ const actualMembers=[
+  m('yi','YI ᝰ'),m('evo','Mr EvoSan'),m('tally','MFKN Tally'),
+  m('tabby','MFKN TABBY'),m('diz','Lil Diz')
+ ];
+ const actualAliases=[
+  {alias:'Yi',alias_key:'yi',member_id:'yi'},
+  {alias:'Mr Byuk Temu Version',alias_key:'mr byuk temu version',member_id:'evo'},
+  {alias:'mrevosan',alias_key:'mrevosan',member_id:'evo'},
+  {alias:'Tally',alias_key:'tally',member_id:'tally'},
+  {alias:'Tabby',alias_key:'tabby',member_id:'tabby'},
+  {alias:'Diz',alias_key:'diz',member_id:'diz'}
+ ];
+ const match=resolveNames(actualMembers,actualAliases);
+ assert.equal(match('Yi'),match('YI ᝰ'));
+ assert.equal(match('Mr Byuk Temu Version'),match('Mr EvoSan'));
+ assert.equal(match('mrevosan'),match('Mr EvoSan'));
+ assert.equal(match('Mr Byuk'),null);
+ assert.equal(match('Tally'),'tally');
+ assert.equal(match('Tabby'),'tabby');
+ assert.notEqual(match('Tally'),match('Tabby'));
+ assert.equal(match('Diz'),match('Lil Diz'));
+});
+test('Lil Diz history from both Diz and Lil Diz is counted as one player',()=>{
+ const people=[m('diz','Lil Diz'),m('someone','Other Member')];
+ const data=buildTrainAdvice({date:'2026-11-22',mode:'never',members:people,
+  aliases:[{alias:'Diz',alias_key:'diz',member_id:'diz'}],
+  rosterIds:['diz','someone'],rosterDate:'2026-11-21',
+  legacy:[
+   t('2026-02-14','Diz','Other Member'),
+   t('2026-03-19','Other Member','Diz'),
+   t('2026-06-29','Other Member','Lil Diz'),
+   t('2026-09-10','Other Member','Lil Diz')
+  ]});
+ const lilDiz=data.candidates.find(x=>x.id==='diz');
+ assert.ok(lilDiz);
+ assert.match(lilDiz.notes.join(' '),/2026-09-10/);
+ assert.ok(data.candidates.find(x=>x.id==='someone').place<lilDiz.place);
+});
+test('former members disappear from conductor and VIP recommendations after their departure',()=>{
+ const people=[m('old','A Departed'),m('current','B Current'),m('vip','C Current VIP')];
+ const departed=[{active:true,member_id:'old',scope:'all',starts_on:'2026-11-10',
+  ends_on:'2099-12-31',reason:'No longer in UTW (confirmed November 10, 2026)'}];
+ const advice=buildTrainAdvice({date:'2026-11-22',mode:'never',members:people,
+  rosterIds:people.map(x=>x.id),rosterDate:'2026-11-21',exceptions:departed,
+  vsRecordCounts:{old:200,current:10,vip:5}});
+ assert.equal(advice.recommended.id,'current');
+ assert.ok(!advice.candidates.some(x=>x.id==='old'));
+ assert.ok(!advice.vipCandidates.some(x=>x.id==='old'));
+ assert.equal(advice.excludedDepartedCount,1);
+ const ranked=buildTrainAdvice({date:'2026-11-21',mode:'vs',members:people,
+  exceptions:departed,scoreDate:'2026-11-16',
+  scoreboard:[{member_id:'old',points:300},{member_id:'current',points:200},
+   {member_id:'vip',points:100}]});
+ assert.equal(ranked.recommended.id,'current');
+ assert.equal(ranked.recommended.place,2);
+ assert.equal(ranked.recommendedVip.id,'vip');
+ assert.equal(ranked.recommendedVip.scoreRank,3);
+ assert.ok(!ranked.candidates.some(x=>x.id==='old'));
+ assert.ok(!ranked.vipCandidates.some(x=>x.id==='old'));
+});
+test('historical train dates still allow members who left later',()=>{
+ const people=[m('old','A Departed'),m('current','B Current')];
+ const advice=buildTrainAdvice({date:'2026-11-01',mode:'never',members:people,
+  rosterIds:['old','current'],rosterDate:'2026-10-31',
+  exceptions:[{active:true,member_id:'old',scope:'all',starts_on:'2026-11-10',
+   ends_on:'2099-12-31',reason:'No longer in UTW'}],
+  vsRecordCounts:{old:30,current:5}});
+ assert.equal(advice.recommended.id,'old');
+ assert.ok(advice.vipCandidates.some(x=>x.id==='old'));
+ assert.equal(advice.excludedDepartedCount,0);
+});
