@@ -200,3 +200,37 @@ test('VIP suggestions prefer players with no matched VIP history, then oldest pr
  assert.ok(data.vipCandidates.find(c=>c.id==='new').place<data.vipCandidates.find(c=>c.id==='devi').place);
  assert.ok(data.vipCandidates.find(c=>c.id==='devi').place<data.vipCandidates.find(c=>c.id==='mo').place);
 });
+
+test('VS history wins alphabetical ties among members who have never had a train',()=>{
+ const roster=[m('newcomer','A Newcomer'),m('veteran','Z Veteran')];
+ const advice=buildTrainAdvice({date:'2026-11-25',mode:'never',members:roster,
+  rosterIds:['newcomer','veteran'],rosterDate:'2026-11-23',
+  vsRecordCounts:{newcomer:2,veteran:37}});
+ assert.equal(advice.recommended.id,'veteran');
+ assert.deepEqual(advice.candidates.map(x=>x.id),['veteran','newcomer']);
+ assert.match(advice.candidates[0].notes.join(' '),/37 archived VS reports/);
+});
+test('longest wait still outranks VS participation after everyone has a train',()=>{
+ const roster=[m('older','A Older'),m('recent','Z Recent')];
+ const advice=buildTrainAdvice({date:'2026-11-25',mode:'never',members:roster,
+  rosterIds:['older','recent'],rosterDate:'2026-11-23',
+  legacy:[t('2026-02-15','A Older','Unknown'),t('2026-10-18','Z Recent','Unknown')],
+  vsRecordCounts:{older:2,recent:55}});
+ // The actual latest train turn determines priority, not participation count.
+ assert.equal(advice.candidates[0].id,'older');
+});
+test('non-score VIP recommendations use VS history instead of alphabetical ties',()=>{
+ const roster=[m('newcomer','A Newcomer'),m('veteran','Z Veteran')];
+ const advice=buildTrainAdvice({date:'2026-11-25',mode:'manual',members:roster,
+  vsRecordCounts:{newcomer:2,veteran:37}});
+ assert.equal(advice.vipCandidates[0].id,'veteran');
+ assert.equal(advice.vipCandidates[0].vsRecords,37);
+});
+test('VS score ranking stays above VS history counts',()=>{
+ const roster=[m('top','A Top Score'),m('veteran','Z Veteran')];
+ const advice=buildTrainAdvice({date:'2026-11-25',mode:'vs',members:roster,
+  scoreboard:[{member_id:'top',points:100},{member_id:'veteran',points:90}],
+  vsRecordCounts:{top:1,veteran:100}});
+ assert.equal(advice.recommended.id,'top');
+ assert.equal(advice.vipCandidates[0].id,'top');
+});

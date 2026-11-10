@@ -172,24 +172,28 @@ export async function GET(request){
     const podium=await list('utw_stat_ds',{select:'event_date,first_member,second_member,third_member',event_date:'gte.'+dateAdd(date,-14),order:'event_date.desc,created_at.desc',limit:'30'});
     dsEvent=podium.find(x=>x.event_date<=date)||null;
    }
-   let rosterIds=[],rosterDate=null;
-   if(mode==='never'){
-    // The current VS roster is the eligibility pool, not everyone ever entered into the directory.
-    const candidates=await list('utw_stat_imports',{
-     select:'id,period,metric,row_count,created_at',metric:'in.(vs_daily,vs_weekly)',
-     period:'lte.'+date,order:'period.desc,created_at.desc',limit:'40'
+   let rosterIds=[],rosterDate=null,vsRecordCounts={};
+   if(mode!=='vs'&&mode!=='donations'){
+    // Use active snapshots across all seasons. The existing reports RPC picks
+    // only the latest upload for each season/metric/date, so reuploads do not
+    // falsely inflate how long a member appears in the archived VS history.
+    const report=await db('rpc/utw_stat_member_report_data',{
+     method:'POST',body:JSON.stringify({p_to:date})
     });
-    const latest=candidates[0];
-    if(latest){
-     const values=await list('utw_stat_values',{select:'alias_key',import_id:'eq.'+latest.id,limit:'501'});
-     if(values.length===latest.row_count){
-      const byAlias=new Map(aliases.map(x=>[x.alias_key,x.member_id]));
-      rosterIds=[...new Set(values.map(x=>byAlias.get(x.alias_key)).filter(Boolean))];
-      rosterDate=latest.period;
-     }
+    if(!report||!Array.isArray(report.snapshots)||!Array.isArray(report.observations))
+     throw Error('VS history for train recommendations is unavailable');
+    const vsIds=new Set(report.snapshots.filter(x=>x.metric==='vs_daily'||x.metric==='vs_weekly').map(x=>x.id));
+    for(const observation of report.observations){
+     if(!vsIds.has(observation.snapshotId)||!observation.memberId)continue;
+     vsRecordCounts[observation.memberId]=(vsRecordCounts[observation.memberId]||0)+1;
+    }
+    if(mode==='never'){
+     // The latest VS report identifies who is currently eligible for selection.
+     rosterIds=Array.isArray(report.roster)?report.roster:[];
+     rosterDate=report.rosterDate||null;
     }
    }
-   return json(buildTrainAdvice({date,mode,slot,vipMode,members,aliases,legacy,awards,exceptions,scoreboard,scoreDate,dsEvent,rosterIds,rosterDate}));
+   return json(buildTrainAdvice({date,mode,slot,vipMode,members,aliases,legacy,awards,exceptions,scoreboard,scoreDate,dsEvent,rosterIds,rosterDate,vsRecordCounts}));
   }
   const seasons=await list('utw_stat_seasons',{select:'id,label,sort_order',order:'sort_order.asc',limit:'50'});
   const season=q.get('season')||'post-s5';

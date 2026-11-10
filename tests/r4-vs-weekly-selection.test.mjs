@@ -18,6 +18,20 @@ function backend(queries,weeklyExists=true){
  return async (url,options={})=>{
   const u=new URL(String(url)),q=u.searchParams,route=u.pathname;
   queries.push({route,params:Object.fromEntries(q)});
+  if(route.endsWith('/rpc/utw_stat_member_report_data'))return Response.json({
+   snapshots:[
+    {id:'vs-a',metric:'vs_daily',date:'2026-11-06'},
+    {id:'vs-b',metric:'vs_weekly',date:'2026-11-02'},
+    {id:'vs-c',metric:'vs_daily',date:'2026-11-07'},
+    {id:'donation',metric:'donations_weekly',date:'2026-11-02'}],
+   observations:[
+    {snapshotId:'vs-a',memberId:ids.tiny},
+    {snapshotId:'vs-b',memberId:ids.tiny},
+    {snapshotId:'vs-c',memberId:ids.tiny},
+    {snapshotId:'vs-c',memberId:ids.devi},
+    {snapshotId:'donation',memberId:ids.devi}],
+   roster:[ids.tiny,ids.devi],rosterDate:'2026-11-07'
+  });
   if(route.endsWith('/utw_stat_members'))return Response.json([{id:ids.tiny,display_name:'TinyMayhem'},{id:ids.devi,display_name:'Devi'}]);
   if(route.endsWith('/utw_stat_aliases'))return Response.json([{alias_key:'tinymayhem',alias:'TinyMayhem',member_id:ids.tiny},{alias_key:'devi',alias:'Devi',member_id:ids.devi}]);
   if(route.endsWith('/utw_stat_imports')){
@@ -134,4 +148,18 @@ test('Spanish labels preserve actual member names and weeks without translating 
  assert.equal(translateR4Text('Train Desk','en'),'Train Desk');
  assert.equal(ES_CHECKLIST['Season settlement & after-action review'],'Cierre de temporada y evaluación final');
  assert.equal(ES_CHECKLIST['Confirm all eight participating servers and their two factions'],'Confirmar los ocho servidores participantes y sus dos facciones');
+});
+
+test('never-had API uses distinct active VS reports as tenure tie-breaker',async()=>{
+ const queries=[],saved=globalThis.fetch;globalThis.fetch=backend(queries);
+ try{
+  const response=await GET(new Request('https://test.example/api/r4-stats?train_advice=1&date=2026-11-22&mode=never',{headers:auth()}));
+  assert.equal(response.status,200);
+  const advice=await response.json();
+  assert.equal(advice.recommended.name,'TinyMayhem');
+  assert.deepEqual(advice.candidates.map(x=>x.name),['TinyMayhem','Devi']);
+  assert.match(advice.candidates[0].notes.join(' '),/3 archived VS reports/);
+  assert.equal(advice.candidates[1].vsRecords,undefined);
+  assert.equal(queries.filter(x=>x.route.endsWith('/rpc/utw_stat_member_report_data')).length,1);
+ }finally{globalThis.fetch=saved}
 });
