@@ -215,7 +215,7 @@ function showVipAdvice(advice,{autoSelect=false}={}){
    ' score below the conductor. No repeat VIP in the same week. '+(advice.vipEligibleCount||0)+' eligible.':
   (fresh?'VIPs with no VIP turn in Stage '+advice.stage:
    'VIPs who have not ridden this Monday-to-Sunday week')+
-   ' · '+(advice.vipEligibleCount||0)+' eligible. Ranked by longest time since their last VIP turn.','stat-muted'));
+   ' · '+(advice.vipEligibleCount||0)+' eligible. Ranked by longest time since their last VIP turn, then archived VS appearances instead of alphabetical order.','stat-muted'));
  for(const v of pool.slice(0,25)){
   const samePerson=v.id===selectedDriver;
   const highlighted=ranked&&suggestedVip?.id===v.id;
