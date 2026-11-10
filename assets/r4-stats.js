@@ -18,12 +18,14 @@ const members=()=>state.data?.members||[];
 const aliases=()=>state.data?.aliases||[];
 const byId=id=>members().find(m=>m.id===id);
 const memberName=id=>byId(id)?.display_name||'Unknown member';
+const departedOn=(id,date)=>!!id&&!!date&&(state.data?.exceptions||[]).some(x=>x.member_id===id&&x.active&&x.scope==='all'&&/^No longer in UTW\b/i.test(x.reason||'')&&x.starts_on<=date&&x.ends_on>=date);
+const displayTrainName=raw=>{const alias=aliases().find(a=>normalize(a.alias)===normalize(raw));const canonical=byId(alias?.member_id)?.display_name;return canonical&&normalize(canonical)!==normalize(raw)?raw+' (now '+canonical+')':raw;};
 const elEmpty=msg=>text('p',msg,'stat-empty');
 const setContent=(id,...nodes)=>$(id).replaceChildren(...nodes);
 const notice=(message,error=false)=>{const n=$('notice');n.hidden=!message;n.className='stat-notice'+(error?' error':'');n.textContent=message||'';if(message)n.scrollIntoView({block:'nearest'})};
 async function post(body,multipart=false){notice('');const r=await fetch('/api/r4-stats',{method:'POST',credentials:'same-origin',headers:multipart?{}:{'Content-Type':'application/json'},body:multipart?body:JSON.stringify(body)});const data=await r.json().catch(()=>({}));if(r.status===401){location.href='/r4-planner';throw Error('R4 sign-in expired')}if(!r.ok)throw Error(data.error||'Could not save the change');return data}
 async function action(fn,success){try{await fn();await load();notice(success)}catch(e){notice(e.message,true)}}
-const opt=(id,includeBlank=false)=>{const select=$(id),old=select.value;select.replaceChildren();if(includeBlank){const o=new Option(id==='train-member'?'Choose conductor':id==='train-vip'?'Choose VIP':'Not recorded','');select.append(o)}for(const m of members())select.append(new Option(m.display_name,m.id));if([...select.options].some(o=>o.value===old))select.value=old};
+const opt=(id,includeBlank=false)=>{const select=$(id),old=select.value;select.replaceChildren();if(includeBlank){const o=new Option(id==='train-member'?'Choose conductor':id==='train-vip'?'Choose VIP':'Not recorded','');select.append(o)}for(const m of members()){if((id==='train-member'||id==='train-vip')&&departedOn(m.id,$('train-date')?.value||serverToday()))continue;select.append(new Option(m.display_name,m.id))}if([...select.options].some(o=>o.value===old))select.value=old};
 function ranking(metric,period){
  const imp=state.data.imports.find(x=>x.metric===metric&&x.period===period);
  if(!imp)return [];
@@ -155,7 +157,7 @@ function imports(){
 function directory(){
  const query=normalize($('member-search').value),root=$('directory');root.replaceChildren();
  const filtered=members().filter(m=>normalize(m.display_name).includes(query)||aliases().some(a=>a.member_id===m.id&&normalize(a.alias).includes(query)));
- for(const m of filtered.slice(0,300)){const card=text('div',null,'stat-person');card.append(text('b',m.display_name));card.append(text('span',aliases().filter(a=>a.member_id===m.id).map(a=>a.alias).join(' · ')||'No nicknames'));root.append(card)}
+ for(const m of filtered.slice(0,300)){const card=text('div',null,'stat-person');card.append(text('b',m.display_name));card.append(text('span',aliases().filter(a=>a.member_id===m.id).map(a=>a.alias).join(' · ')||'No nicknames'));if(departedOn(m.id,serverToday()))card.append(text('small','Former UTW · excluded from new train selections','stat-muted'));root.append(card)}
  if(!filtered.length)root.append(elEmpty('No matching members.'));
 }
 function memberFields(){
@@ -256,6 +258,7 @@ async function candidates(){
   if(!response.ok)throw Error(advice.error||'Recommendations unavailable');
   state.advice=advice;root.replaceChildren();
   root.append(text('p',advice.context,'stat-muted'));
+   if(advice.excludedDepartedCount)root.append(text('p','Former UTW members are excluded from new recommendations. Their historical train entries are still kept.','stat-muted'));
   if(advice.sameDate?.length)root.append(text('p','Already saved for this date: '+advice.sameDate.map(x=>x.driver+' (VIP: '+x.vip+')').join(' / ')+'. Use Edit above to change an existing assignment.','stat-flag'));
   if(advice.substitution)root.append(text('p',advice.substitution,'train-advice-substitution'));
   if(advice.hostProposed)root.append(text('p','Stage 16 R4 rotation proposal, not a confirmed assignment. Verify with the R4 team.','stat-muted'));
@@ -408,11 +411,11 @@ function trainCalendar(){
   for(let d=0;d<7;d++){
    const date=trainAddDays(range.start,w*7+d),td=text('td',null,'train-cell'),current=schedule.get(date)||[];
    const dateBtn=text('button',date.slice(5),'train-date-button');dateBtn.type='button';dateBtn.title='Select '+date+' for train planning';
-   dateBtn.addEventListener('click',()=>{$('train-date').value=date;const slot=current[0]?.slot||trainLabelForDate(state.trainStage,date)||trainLabel[d];$('train-slot').value=slot;$('train-source').value=inferTrainMode(slot,current[0]?.source);candidates();eligibilityWarnings();$('train-date').scrollIntoView({block:'center'})});
+   dateBtn.addEventListener('click',()=>{$('train-date').value=date;const slot=current[0]?.slot||trainLabelForDate(state.trainStage,date)||trainLabel[d];$('train-slot').value=slot;$('train-source').value=inferTrainMode(slot,current[0]?.source);opt('train-member',true);opt('train-vip',true);candidates();eligibilityWarnings();$('train-date').scrollIntoView({block:'center'})});
    td.append(dateBtn,text('small',current[0]?.slot||trainLabelForDate(state.trainStage,date)||trainLabel[d],'train-type'));
    for(const award of current){
     const item=text('div',null,'train-entry'+(award.legacy?' train-archive-entry':'')+(isR4Train(award)?' train-r4-entry':''));
-    item.append(text('strong','D: '+award.driverName),text('span','VIP: '+award.vipName));
+    item.append(text('strong','D: '+(award.legacy?displayTrainName(award.driverName):award.driverName)),text('span','VIP: '+(award.legacy?displayTrainName(award.vipName):award.vipName)));
     if(award.legacy)item.append(text('small','Spreadsheet history','train-archive-note'));
     if(isR4Train(award))item.append(text('small','R4 train · separate eligibility','train-archive-note'));
     if(award.notes)item.append(text('small',award.notes,'train-archive-note'));
@@ -614,10 +617,11 @@ function wire(){
   if(mode==='vs'||mode==='donations'){$('train-member').value='';$('train-vip').value=''}
   candidates();eligibilityWarnings();
  });
- $('train-date').addEventListener('change',()=>{const date=$('train-date').value;if(!validDate(date))return;const stage=stageForDate(date);const label=trainLabelForDate(stage,date);if(label){$('train-slot').value=label;$('train-source').value=inferTrainMode(label)}if(stage!==state.trainStage){state.trainStage=stage;$('train-stage').value=String(stage);load()}else{candidates();eligibilityWarnings()}});
+ $('train-date').addEventListener('change',()=>{const date=$('train-date').value;if(!validDate(date))return;const stage=stageForDate(date);const label=trainLabelForDate(stage,date);if(label){$('train-slot').value=label;$('train-source').value=inferTrainMode(label)}if(stage!==state.trainStage){state.trainStage=stage;$('train-stage').value=String(stage);load()}else{opt('train-member',true);opt('train-vip',true);candidates();eligibilityWarnings()}});
  $('train-member').addEventListener('change',()=>{showVipAdvice(state.advice,{autoSelect:!!state.advice?.scoreRanked});eligibilityWarnings()});$('train-vip').addEventListener('change',eligibilityWarnings);$('train-vip-mode').addEventListener('change',()=>{candidates();eligibilityWarnings()});$('train-slot').addEventListener('change',()=>{candidates();eligibilityWarnings()});
  $('award').addEventListener('click',()=>{const mode=$('train-source').value,source=mode==='never'&&/^r4/i.test($('train-slot').value)?'r4':mode==='never'?'manual':mode,date=$('train-date').value,id=$('train-member').value,vipId=$('train-vip').value,reason=$('train-reason').value.trim();
   if(!id||!vipId||!date||id===vipId){notice('Select a date and two different members: conductor and VIP.',true);return}
+   if(departedOn(id,date)||departedOn(vipId,date)){notice('A selected player is no longer in UTW. Choose an active member for this date.',true);return}
   const advice=state.advice?.date===date&&state.advice?.mode===mode&&state.advice?.vipMode===$('train-vip-mode').value?state.advice:null;
    const selected=advice?.candidates?.find(c=>c.id===id);
    if(selected&&!selected.eligible&&(!reason||!confirm('Saved train records flag this conductor:\\n'+selected.reasons.join('\\n')+'\\nSave override anyway?'))){notice('Add an override reason and confirm the eligibility warning.',true);return}
