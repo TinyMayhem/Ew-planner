@@ -398,6 +398,28 @@ export async function POST(request){
     await recordAudit(request,'alias',{alias_key:key(alias),alias,member_id:memberId},true);
     return json({ok:true},201);
    }
+   case 'set_display_name':{
+    const memberId=body.member_id,chosen=name(body.alias);
+    if(!uuid(memberId)||!chosen||chosen.length>60)return json({error:'Choose a valid member and linked nickname'},400);
+    const [record,linked]=await Promise.all([
+     list('utw_stat_members',{select:'id,display_name',id:'eq.'+memberId,limit:'1'}),
+     list('utw_stat_aliases',{select:'alias,member_id',alias_key:'eq.'+key(chosen),limit:'1'})
+    ]);
+    if(record.length!==1)return json({error:'Member not found'},404);
+    if(linked.length!==1||linked[0].member_id!==memberId)return json({error:'Link this nickname to the member before making it current.'},409);
+    const previous=record[0].display_name,current=linked[0].alias;
+    if(previous===current)return json({ok:true,alreadyCurrent:true,display_name:current});
+    // Keep the former display name searchable so past train/VS records still resolve.
+    const oldAlias=await list('utw_stat_aliases',{select:'alias_key,member_id',alias_key:'eq.'+key(previous),limit:'1'});
+    if(oldAlias.length&&oldAlias[0].member_id!==memberId)return json({error:'The previous display name belongs to a different member. Review aliases first.'},409);
+    if(!oldAlias.length)await insert('utw_stat_aliases',{alias_key:key(previous),alias:previous,member_id:memberId});
+    const updated=await db('utw_stat_members?'+urlParams({id:'eq.'+memberId}),{
+     method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({display_name:current})
+    });
+    if(!Array.isArray(updated)||updated.length!==1||updated[0].display_name!==current)return json({error:'Could not verify the updated display name. Refresh before trying again.'},409);
+    await recordAudit(request,'set_display_name',{member_id:memberId,previous_name:previous,display_name:current},false);
+    return json({ok:true,display_name:current,previous_name:previous});
+   }
    case 'delete_alias':{
     const alias=name(body.alias),memberId=body.member_id;
     if(!alias||alias.length>60||!uuid(memberId))return json({error:'Choose a valid nickname and member'},400);
