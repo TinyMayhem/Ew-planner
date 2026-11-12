@@ -105,7 +105,7 @@ test('daily missing names use the fullest saved VS result without counting absen
 test('R4 page shows archive tab, seven click-to-open rows and a score threshold legend',()=>{
  const html=readFileSync(new URL('../lib/r4-stats-page.mjs',import.meta.url),'utf8');
  const app=readFileSync(new URL('../assets/r4-stats.js',import.meta.url),'utf8');
- assert.match(html,/data-tab="vsarchive"/);
+ assert.match(html,/id="tab-vsarchive" hidden/);
  assert.match(html,/id="vs-weeks"/);
  assert.match(html,/id="vs-week-results"/);
  assert.match(html,/id="vs-missing-daily"/);
