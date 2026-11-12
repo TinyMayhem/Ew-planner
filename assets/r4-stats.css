@@ -276,3 +276,16 @@
 .stat-thp-controls button{padding:9px 12px}
 .stat-thp-feedback{color:#7a4d25;font-size:12px;flex-basis:100%}
 @media(max-width:720px){.stat-thp-row{grid-template-columns:1fr;gap:10px}.stat-thp-controls input{flex:1}}
+
+/* THP dated upload review and missing snapshot records. */
+.stat-thp-missing{border-style:dashed;border-color:#c5a675;background:#fcf8ed}
+.stat-thp-import{margin-top:12px;box-shadow:none}
+.stat-thp-unmatched{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;margin:6px 0;border:1px solid #dbc79e;border-radius:9px;background:#fff8ea;font-size:12px}
+.stat-thp-unmatched span{flex:1;min-width:200px}
+.stat-thp-unmatched select{min-width:180px;max-width:100%;padding:8px;border:1px solid #bdad86;border-radius:8px;background:#fff}
+#thp-files{display:block;width:100%;max-width:600px;padding:12px;border:1px dashed #b19b6b;border-radius:10px;margin-top:12px}
+#thp-date{display:block;width:100%;padding:10px;border-radius:8px;border:1px solid #bfb18e;background:#fff}
+#tab-thp .stat-fields{margin:12px 0}
+#tab-thp .stat-fields label{min-width:160px}
+#tab-thp .stat-fields select{width:100%;padding:10px;border:1px solid #bdad86;border-radius:8px;background:#fff}
+#thp-upload-all{margin-top:16px}
