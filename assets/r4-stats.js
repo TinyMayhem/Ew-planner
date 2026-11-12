@@ -19,7 +19,7 @@ const aliases=()=>state.data?.aliases||[];
 const byId=id=>members().find(m=>m.id===id);
 const memberName=id=>byId(id)?.display_name||'Unknown member';
 const departedOn=(id,date)=>!!id&&!!date&&(state.data?.exceptions||[]).some(x=>x.member_id===id&&x.active&&x.scope==='all'&&/^No longer in UTW\b/i.test(x.reason||'')&&x.starts_on<=date&&x.ends_on>=date);
-const displayTrainName=raw=>{const alias=aliases().find(a=>normalize(a.alias)===normalize(raw));const canonical=byId(alias?.member_id)?.display_name;return canonical&&normalize(canonical)!==normalize(raw)?raw+' (now '+canonical+')':raw;};
+const displayTrainName=raw=>{const alias=aliases().find(a=>normalize(a.alias)===normalize(raw));const canonical=byId(alias?.member_id)?.display_name;return canonical&&normalize(canonical)!==normalize(raw)?canonical+' (formerly '+raw+')':raw;};
 const elEmpty=msg=>text('p',msg,'stat-empty');
 const setContent=(id,...nodes)=>$(id).replaceChildren(...nodes);
 const notice=(message,error=false)=>{const n=$('notice');n.hidden=!message;n.className='stat-notice'+(error?' error':'');n.textContent=message||'';if(message)n.scrollIntoView({block:'nearest'})};

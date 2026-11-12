@@ -58,6 +58,20 @@ function draw(){
    const chip=n('div',null,'nickname-alias'+(primary?' main':''));
    chip.append(n('span',entry.alias+(primary?' (main name)':'')));
    if(!primary){
+    const setCurrent=n('button','Make current','stat-button');
+    setCurrent.type='button';
+    setCurrent.title='Show '+entry.alias+' as this member’s main name in all R4 reports';
+    setCurrent.onclick=async()=>{
+     if(busy||!confirm('Make “'+entry.alias+'” the current display name for this player? Previous names will stay linked for historical records.'))return;
+     busy=true;setCurrent.disabled=true;
+     try{
+      await request({action:'set_display_name',member_id:keep,alias:entry.alias});
+      await reload();
+      message('Current display name updated to “'+entry.alias+'”. Previous names still match old records.');
+     }catch(error){message(error.message,true)}
+     finally{busy=false;setCurrent.disabled=false}
+    };
+    chip.append(setCurrent);
     const remove=n('button','×');remove.type='button';remove.title='Remove alias '+entry.alias;
     remove.onclick=async()=>{
      if(busy||!confirm('Stop linking '+entry.alias+' to '+member.display_name+'? Older scores may become unlinked until that nickname is added back.'))return;
