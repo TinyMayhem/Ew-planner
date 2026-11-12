@@ -1,3 +1,4 @@
+import {roleForPair} from './r4-thp-roles.mjs';
 // Train guest designation only. Does not alter conductor/VIP eligibility.
 (()=>{
 'use strict';
@@ -36,9 +37,11 @@ async function update(){
   const conductor=$('train-member')?.selectedOptions[0]?.textContent||'Conductor';
   const vipName=$('train-vip')?.selectedOptions[0]?.textContent||'VIP';
   const prefix=conductor+': '+fmt(d.thp)+' THP ('+d.recorded_on+') · '+vipName+': '+fmt(v.thp)+' THP ('+v.recorded_on+'). ';
-  if(d.thp>v.thp)show('Suggested VIP role: Special Guest',prefix+'Conductor THP is higher than VIP THP. VIP is the Special Guest.');
-  else if(d.thp<v.thp)show('Suggested VIP role: Guest Defender',prefix+'VIP THP is higher than conductor THP. VIP is the Guest Defender.');
-  else show('Equal THP: no role preference',prefix+'The conductor and VIP have identical recorded THP.');
+  const role=roleForPair(Number(d.thp),Number(v.thp));
+  if(role==='Special Guest')show('Suggested VIP role: Special Guest',prefix+'Conductor THP is higher than VIP THP. VIP is the Special Guest.');
+  else if(role==='Guest Defender')show('Suggested VIP role: Guest Defender',prefix+'VIP THP is higher than conductor THP. VIP is the Guest Defender.');
+  else if(role==='Equal THP')show('Equal THP: no role preference',prefix+'The conductor and VIP have identical recorded THP.');
+  else show('THP guest designation unavailable','A THP entry is invalid.',true);
  }catch(e){if(seq===current)show('THP guest designation unavailable',e.message,true)}
 }
 let pending=false;
