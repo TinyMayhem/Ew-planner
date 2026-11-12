@@ -206,3 +206,73 @@ test('merge API never returns success when the database merge cannot be verified
   assert.match((await response.json()).error,/could not be fully verified/);
  }finally{globalThis.fetch=saved}
 });
+
+
+test('promoting a linked nickname changes only the display name and retains older aliases',async()=>{
+ const headers={...signedHeaders(),origin:'https://example.test','content-type':'application/json'};
+ const saved=globalThis.fetch;
+ const currentMember={id:susId,display_name:'Sus'};
+ const savedAliases=[
+  {member_id:susId,alias:'Sus',alias_key:'sus'},
+  {member_id:susId,alias:'Fkn Up Your Couch',alias_key:'fkn up your couch'},
+  {member_id:susId,alias:'A Tribe Called SuS',alias_key:'a tribe called sus'}
+ ];
+ let didUpdate=false;
+ globalThis.fetch=async(url,options={})=>{
+  const parsed=new URL(String(url)),path=parsed.pathname,query=parsed.searchParams;
+  if(path.endsWith('/rpc/utw_buddy_rate_limit'))return Response.json(1);
+  if(path.endsWith('/utw_stat_members')){
+   if(options.method==='PATCH'){
+    assert.equal(query.get('id'),'eq.'+susId);
+    assert.deepEqual(JSON.parse(options.body),{display_name:'A Tribe Called SuS'});
+    currentMember.display_name='A Tribe Called SuS';
+    didUpdate=true;
+    return Response.json([{...currentMember}]);
+   }
+   return Response.json([currentMember]);
+  }
+  if(path.endsWith('/utw_stat_aliases')){
+   const aliasKey=query.get('alias_key')?.slice(3);
+   return Response.json(aliasKey?savedAliases.filter(a=>a.alias_key===aliasKey):savedAliases);
+  }
+  if(path.endsWith('/utw_stat_audit'))return Response.json([]);
+  if(path.endsWith('/utw_stat_train_legacy')||path.includes('/r4_'))return Response.json([]);
+  return Response.json([]);
+ };
+ try{
+  const response=await statsPost(new Request('https://example.test/api/r4-stats',{
+   method:'POST',headers,body:JSON.stringify({action:'set_display_name',member_id:susId,alias:'A Tribe Called SuS'})
+  }));
+  assert.equal(response.status,200);
+  const data=await response.json();
+  assert.equal(data.display_name,'A Tribe Called SuS');
+  assert.equal(data.previous_name,'Sus');
+  assert.equal(didUpdate,true);
+  assert.deepEqual(savedAliases.map(a=>a.alias),['Sus','Fkn Up Your Couch','A Tribe Called SuS']);
+  const current=matchRoster('Sus',[currentMember],savedAliases);
+  assert.equal(current.name,'A Tribe Called SuS');
+  assert.equal(matchRoster('Fkn Up Your Couch',[currentMember],savedAliases).id,susId);
+ }finally{globalThis.fetch=saved}
+});
+
+test('cannot make another member’s nickname the current name',async()=>{
+ const headers={...signedHeaders(),origin:'https://example.test','content-type':'application/json'};
+ const saved=globalThis.fetch;
+ globalThis.fetch=fakeDb;
+ try{
+  const response=await statsPost(new Request('https://example.test/api/r4-stats',{
+   method:'POST',headers,body:JSON.stringify({action:'set_display_name',member_id:susId,alias:'Fkn Up Your Couch'})
+  }));
+  assert.equal(response.status,409);
+  assert.match((await response.json()).error,/Link this nickname/);
+ }finally{globalThis.fetch=saved}
+});
+
+test('Nickname Manager provides a current name promotion action and historical train names show current first',()=>{
+ const page=readFileSync('lib/r4-nicknames-page.mjs','utf8');
+ const script=readFileSync('assets/r4-nicknames.js','utf8');
+ const stats=readFileSync('assets/r4-stats.js','utf8');
+ assert.match(page,/Make current/);
+ assert.match(script,/action:'set_display_name'/);
+ assert.match(stats,/canonical\+' \(formerly '\+raw/);
+});
