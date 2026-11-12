@@ -66,6 +66,64 @@ function renderDuelRows(target,rows,limit=10){
   root.append(line);
  });
 }
+function renderDuelDailyCategory(kind,daily){
+ const target=kind==='missing'?'duel-missing-list':'duel-under-list';
+ const statusId=kind==='missing'?'duel-missing-status':'duel-under-status';
+ const root=$(target),status=$(statusId);
+ if(!root||!status)return;
+ root.replaceChildren();
+ if(!daily||!daily.daysUploaded){
+  status.textContent='No Alliance Duel daily VS results uploaded for this week yet. Missing scores cannot be determined until a day has data.';
+  root.append(elEmpty('No uploaded VS days to compare. Select an earlier week above to view past results.'));
+  return;
+ }
+ if(kind==='missing'){
+  status.textContent=fmt(daily.missingEntries)+' unrecorded daily entries across '+daily.daysUploaded+'/6 uploaded VS days ('+fmt(daily.missingMembers)+' different members). Reference: '+fmt(daily.referenceCount)+' players from '+daily.referenceLabel+'.';
+ }else{
+  status.textContent=fmt(daily.underEntries)+' uploaded daily scores below 7.2M, from '+fmt(daily.underMembers)+' different members. Zero-point uploads count; absent records do not.';
+ }
+ let expanded=false;
+ for(const day of daily.days){
+  const rows=kind==='missing'?day.missing:day.under;
+  const details=text('details',null,'stat-missing-day');
+  const summary=text('summary',null,'stat-missing-summary');
+  const label=text('span',null,'stat-missing-label');
+  label.append(text('strong','VS Day '+day.dayNumber),text('small',day.date));
+  const countLabel=!day.uploaded?'Not uploaded':rows.length?fmt(rows.length)+(kind==='missing'?' missing':' under 7.2M'):(kind==='missing'?'None missing':'All ≥7.2M');
+  const countStyle=!day.uploaded?'not-uploaded':rows.length?'has-missing':'all-found';
+  summary.append(label,text('span',countLabel,'stat-missing-count '+countStyle));
+  details.append(summary);
+  if(!day.uploaded){
+   details.append(text('p','No Alliance Duel daily scores were uploaded for this day. No member is marked missing or below minimum.','stat-muted stat-missing-message'));
+  }else if(!rows.length){
+   details.append(text('p',kind==='missing'?'All '+daily.referenceCount+' reference players appear in this day’s upload.':'No uploaded scores below 7,200,000 on this day.','stat-muted stat-missing-message'));
+  }else{
+   const body=text('div',null,'stat-missing-content');
+   if(kind==='missing'){
+    body.append(text('p',rows.map(r=>r.name).join(' · '),'stat-missing-names'));
+   }else{
+    for(const row of rows){
+     const line=text('div',null,'stat-line');
+     line.append(text('span','!', 'stat-rank'),text('strong',row.name),text('span',fmt(row.points),'stat-points'));
+     body.append(line);
+    }
+   }
+   const copy=text('button','Copy names','stat-button stat-missing-copy');
+   copy.type='button';
+   copy.addEventListener('click',async()=>{
+    const content=kind==='missing'?rows.map(r=>r.name).join('\n'):rows.map(r=>r.name+' - '+fmt(r.points)).join('\n');
+    try{await navigator.clipboard.writeText(content);copy.textContent='Copied';}catch{notice('Could not copy automatically. You can select the names above.',true)}
+   });
+   body.append(copy);details.append(body);
+   if(!expanded){details.open=true;expanded=true}
+  }
+  root.append(details);
+ }
+}
+function renderDuelDaily(daily){
+ renderDuelDailyCategory('missing',daily);
+ renderDuelDailyCategory('under',daily);
+}
 async function refreshDuelOverview(week){
  const status=$('duel-status');
  status.textContent='Checking Alliance Duel scores for week of '+week+'…';
@@ -77,11 +135,16 @@ async function refreshDuelOverview(week){
   if(state.week!==week)return;
   renderDuelRows('weekly-vs',data.vs||[],10);
   renderDuelRows('weekly-donations',data.donations||[],20);
-  setContent('summary',statBox('Members in R4 directory',fmt(state.data.members.length)),statBox('Alliance Duel weekly VS entries',fmt((data.vs||[]).length)),statBox('DS results this week',fmt(state.data.ds.length)));
-  status.textContent='Live source: Alliance Duel · Week of '+week+'. Scores refresh from the other team whenever you select a week or press Refresh.';
+  renderDuelDaily(data.daily);
+  setContent('summary',statBox('Members in R4 directory',fmt(state.data.members.length)),
+   statBox('Missing daily VS entries',fmt(data.daily?.missingEntries||0)),
+   statBox('Daily scores under 7.2M',fmt(data.daily?.underEntries||0)));
+  status.textContent='Live source: Alliance Duel · Week of '+week+'. '+(data.daily?.daysUploaded||0)+'/6 daily VS uploads available. Select another week or press Refresh for updated results.';
  }catch(e){
   if(state.week!==week)return;
-  status.textContent='Alliance Duel temporarily unavailable ('+e.message+'). Showing previously saved R4 scores where available.';
+  status.textContent='Alliance Duel temporarily unavailable ('+e.message+'). Showing previously saved R4 weekly scores where available.';
+  for(const id of ['duel-missing-status','duel-under-status'])if($(id))$(id).textContent='Alliance Duel daily scores unavailable.';
+  for(const id of ['duel-missing-list','duel-under-list'])if($(id))$(id).replaceChildren(elEmpty('Unable to load daily VS entries from Alliance Duel.'));
  }
 }
 function showTab(tab){
