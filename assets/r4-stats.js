@@ -54,6 +54,7 @@ function overview(){
  select.value=[...select.options].some(o=>o.value===old)?old:serverToday()>=week&&serverToday()<=dateAdd(week,6)?serverToday():week;
  lines('daily-vs',ranking('vs_daily',select.value),20,'vs_daily');
  void refreshDuelOverview(week);
+ void refreshDuelBackupStatus();
 }
 function renderDuelRows(target,rows,limit=10){
  const root=$(target);root.replaceChildren();
@@ -124,6 +125,19 @@ function renderDuelDaily(daily){
  renderDuelDailyCategory('missing',daily);
  renderDuelDailyCategory('under',daily);
 }
+async function refreshDuelBackupStatus(){
+ const status=$('duel-backup-status');
+ if(!status)return;
+ try{
+  const response=await fetch('/api/r4-stats?duel_backup_status=1',{credentials:'same-origin',cache:'no-store'});
+  const data=await response.json();
+  if(!response.ok)throw Error('Backup status unavailable');
+  const last=data.lastRun;
+  if(!last){status.textContent='Independent backup: no successful copies recorded yet.';return}
+  const time=last.finished_at?new Date(last.finished_at).toLocaleString():'Not finished';
+  status.textContent='Independent UTW backup: '+last.status.toUpperCase()+' · Last run '+time+'. '+(last.status==='success'?'Historical scores are saved in your own database.':'Check the backup logs for details.');
+ }catch(e){status.textContent='Independent backup status currently unavailable.'}
+}
 async function refreshDuelOverview(week){
  const status=$('duel-status');
  status.textContent='Checking Alliance Duel scores for week of '+week+'…';
@@ -139,7 +153,7 @@ async function refreshDuelOverview(week){
   setContent('summary',statBox('Members in R4 directory',fmt(state.data.members.length)),
    statBox('Missing daily VS entries',fmt(data.daily?.missingEntries||0)),
    statBox('Daily scores under 7.2M',fmt(data.daily?.underEntries||0)));
-  status.textContent='Live source: Alliance Duel · Week of '+week+'. '+(data.daily?.daysUploaded||0)+'/6 daily VS uploads available. Select another week or press Refresh for updated results.';
+  status.textContent='Score source: '+(data.source||'Alliance Duel')+' · Week of '+week+'. '+(data.daily?.daysUploaded||0)+'/6 daily VS days available. Select another week or press Refresh to check updated results.';
  }catch(e){
   if(state.week!==week)return;
   status.textContent='Alliance Duel temporarily unavailable ('+e.message+'). Showing previously saved R4 weekly scores where available.';
