@@ -8,11 +8,12 @@ import {GET as reportsPage} from '../lib/r4-reports-page.mjs';
 import {GET as nicknamesPage} from '../lib/r4-nicknames-page.mjs';
 import {buildMemberPerformance} from '../lib/member-performance.mjs';
 import {stageRange,stageForDate,weekStart} from '../assets/r4-train-rules.mjs';
-import {buildTrainAdvice} from '../lib/train-advice.mjs';
+import {buildTrainAdvice,resolveNames} from '../lib/train-advice.mjs';
 import {utwConfigured,utwScoreboard,utwWeeklyOverview} from '../lib/utw-scores.mjs';
 import {GET as runDuelBackupCron} from '../lib/r4-duel-backup.mjs';
 
 const HEADERS={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
+export const validThp=value=>Number.isSafeInteger(value)&&value>=0;
 const json=(body,status=200)=>Response.json(body,{status,headers:HEADERS});
 const isoDate=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v+'T00:00:00Z'))&&new Date(v+'T00:00:00Z').toISOString().slice(0,10)===v;
 const isMonday=v=>isoDate(v)&&new Date(v+'T00:00:00Z').getUTCDay()===1;
@@ -93,6 +94,33 @@ export async function GET(request){
     order:'started_at.desc',limit:'1'
    });
    return json({lastRun:runs[0]||null});
+  }
+  if(q.get('member_thp')==='1'){
+   const actor=await sessionUser(request);
+   if(actor?.role==='von')return json({error:'UTW R4 access required'},403);
+   const at=q.get('date');
+   if(!isoDate(at))return json({error:'Choose a valid THP snapshot date'},400);
+   const [records,latest,members,aliases]=await Promise.all([
+    list('utw_r4_member_thp_history',{
+     select:'source_member_id,member_name,thp,recorded_on,entry_source,updated_at,updated_by',
+     recorded_on:'eq.'+at,order:'member_name.asc',limit:'1000'
+    }),
+    db('rpc/utw_r4_thp_latest',{method:'POST',body:JSON.stringify({p_date:at})}),
+    list('utw_stat_members',{select:'id,display_name',limit:'1000'}),
+    list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'})
+   ]);
+   if(![records,latest,members,aliases].every(Array.isArray))throw Error('Incomplete THP snapshot');
+   const resolve=resolveNames(members,aliases),mapped=new Map(),conflicts=new Set(),unmatched=[];
+   for(const r of latest){
+    const deskId=resolve(r.member_name);
+    if(!deskId){unmatched.push(r.member_name);continue}
+    if(mapped.has(deskId)){conflicts.add(deskId);continue}
+    mapped.set(deskId,{member_id:deskId,source_member_id:r.source_member_id,name:r.member_name,thp:r.thp,recorded_on:r.recorded_on});
+   }
+   for(const id of conflicts)mapped.delete(id);
+   return json({date:at,records,latest,mapped:[...mapped.values()],unmatched,
+    ambiguous:conflicts.size,
+    explanation:'Latest THP for each member at or before date, not necessarily measured that day'});
   }
   if(q.get('image'))return await evidence(request,q.get('image'));
   if(q.get('audit')==='1'){
@@ -318,6 +346,41 @@ export async function POST(request){
   if(raw.length>150000)return json({error:'Request too large'},413);
   const body=JSON.parse(raw);
   switch(body.action){
+   case 'member_thp':{
+    const actor=await sessionUser(request);
+    if(actor?.role==='von')return json({error:'UTW R4 access required'},403);
+    const date=body.recorded_on,mode=body.mode,source=clean(body.entry_source||'manual',180)||'manual';
+    if(!isoDate(date))return json({error:'Choose a valid THP measurement date'},400);
+    const normalizeRow=r=>{
+     const id=r?.source_member_id,n=name(r?.member_name);
+     if(typeof id!=='string'||!(/^[A-Za-z0-9_-]{1,100}$/).test(id)||
+       !n||n.length>100||/[\x00-\x1f\x7f]/.test(n)||
+       !validThp(r?.thp))return null;
+     return {source_member_id:id,member_name:n,thp:r.thp,recorded_on:date,
+      entry_source:source,updated_at:new Date().toISOString(),
+      updated_by:String(actor?.username||actor?.display_name||'R4').slice(0,80)};
+    };
+    if(mode==='clear'){
+     const id=body.source_member_id;
+     if(typeof id!=='string'||!(/^[A-Za-z0-9_-]{1,100}$/).test(id))return json({error:'Choose a valid member'},400);
+     await del('utw_r4_member_thp_history',{source_member_id:'eq.'+id,recorded_on:'eq.'+date});
+     await recordAudit(request,'member_thp_clear',{source_member_id:id,recorded_on:date},false);
+     return json({ok:true,deleted:true});
+    }
+    const inputs=mode==='save'?[body]:mode==='bulk'&&Array.isArray(body.rows)?body.rows:null;
+    if(!inputs||!inputs.length||inputs.length>500)return json({error:'Upload 1 to 500 dated THP entries'},400);
+    const rows=inputs.map(normalizeRow);
+    if(rows.some(r=>!r))return json({error:'Each THP entry requires a matched roster member and valid whole-number power'},400);
+    const ids=new Set(rows.map(r=>r.source_member_id));
+    if(ids.size!==rows.length)return json({error:'Duplicate members in this THP upload'},400);
+    const saved=await db('utw_r4_member_thp_history?on_conflict=source_member_id,recorded_on',{
+     method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},
+     body:JSON.stringify(rows)
+    });
+    if(!Array.isArray(saved)||saved.length!==rows.length)throw Error('Incomplete THP save');
+    await recordAudit(request,'member_thp_'+mode,{recorded_on:date,entries:rows.length,entry_source:source},false);
+    return json({ok:true,records:saved,record:saved[0]});
+   }
    case 'import':return await importCsv(body,request);
    case 'alias':{
     const alias=name(body.alias),memberId=body.member_id;

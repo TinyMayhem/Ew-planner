@@ -27,9 +27,9 @@ test('weekly donations offer the authenticated Alliance Duel source link without
  const page=readFileSync('lib/r4-stats-page.mjs','utf8');
  const js=readFileSync('assets/r4-stats.js','utf8');
  assert.match(page,/id="train-donations-source"/);
- assert.match(page,/href="\/r4-planner\?duel=1"/);
- assert.match(page,/not a live feed/);
- assert.match(js,/train-donations-source'\)\.hidden=mode!=='donations'/);
+ assert.match(page,/href="\/r4-stats\?duel=1"/);
+ assert.match(page,/read Alliance Duel automatically/);
+ assert.match(js,/train-donations-source'\)\.hidden=mode!=='vs'&&mode!=='donations'/);
 });
 test('the API keeps the legacy archive on the private data path',()=>{
  const source=readFileSync('api/r4-stats.mjs','utf8');

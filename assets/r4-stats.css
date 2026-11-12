@@ -262,3 +262,30 @@
 .train-pair-heading{display:block;font-size:14px;color:#29553e;margin-bottom:7px}
 .train-pair-line{font-size:13px;line-height:1.5;margin:5px 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .train-pair-card .stat-muted{font-size:12px;margin:8px 0 0}
+
+/* Editable member THP tracker from the connected Alliance Duel roster. */
+.stat-thp-search-label{display:block;margin:15px 0;font-weight:700;max-width:390px}
+.stat-thp-search-label input{display:block;width:100%;margin-top:5px;padding:10px 12px;border:1px solid #bbad88;border-radius:9px;background:#fffef9;color:#224a35}
+.stat-thp-list{display:grid;gap:9px;margin:14px 0 20px}
+.stat-thp-row{display:grid;grid-template-columns:minmax(150px,1fr) minmax(300px,1.5fr);gap:18px;align-items:center;border:1px solid #ded2af;padding:12px 15px;border-radius:12px;background:#fffdf7}
+.stat-thp-person{min-width:0;overflow-wrap:anywhere}
+.stat-thp-person strong,.stat-thp-person small{display:block}
+.stat-thp-person small{font-size:12px;margin-top:4px}
+.stat-thp-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.stat-thp-controls input{width:min(100%,190px);min-width:130px;padding:10px;border:1px solid #bdb28d;border-radius:9px;background:#fff;color:#173e2b;font-variant-numeric:tabular-nums}
+.stat-thp-controls button{padding:9px 12px}
+.stat-thp-feedback{color:#7a4d25;font-size:12px;flex-basis:100%}
+@media(max-width:720px){.stat-thp-row{grid-template-columns:1fr;gap:10px}.stat-thp-controls input{flex:1}}
+
+/* THP dated upload review and missing snapshot records. */
+.stat-thp-missing{border-style:dashed;border-color:#c5a675;background:#fcf8ed}
+.stat-thp-import{margin-top:12px;box-shadow:none}
+.stat-thp-unmatched{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;margin:6px 0;border:1px solid #dbc79e;border-radius:9px;background:#fff8ea;font-size:12px}
+.stat-thp-unmatched span{flex:1;min-width:200px}
+.stat-thp-unmatched select{min-width:180px;max-width:100%;padding:8px;border:1px solid #bdad86;border-radius:8px;background:#fff}
+#thp-files{display:block;width:100%;max-width:600px;padding:12px;border:1px dashed #b19b6b;border-radius:10px;margin-top:12px}
+#thp-date{display:block;width:100%;padding:10px;border-radius:8px;border:1px solid #bfb18e;background:#fff}
+#tab-thp .stat-fields{margin:12px 0}
+#tab-thp .stat-fields label{min-width:160px}
+#tab-thp .stat-fields select{width:100%;padding:10px;border:1px solid #bdad86;border-radius:8px;background:#fff}
+#thp-upload-all{margin-top:16px}

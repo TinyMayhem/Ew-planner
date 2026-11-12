@@ -32,6 +32,7 @@ const duelFor=(alliance)=>{
 const plannerFor=(alliance,role)=>{
   const isVon=alliance==='von';
   let dashboard=isVon?DASHBOARD_HTML.replaceAll('UTW','VON'):DASHBOARD_HTML;
+  if(!isVon)dashboard=dashboard.replace('<p style="margin-top:10px"><a class="r4-btn primary" href="/r4-reports">','<p style="margin-top:10px"><a class="r4-btn primary" href="/r4-stats?thp=1">🛡 Member THP Tracker →</a></p><p style="margin-top:10px"><a class="r4-btn primary" href="/r4-reports">');
   if(isVon)dashboard=dashboard.replace(/<p style="margin-top:16px"><a class="r4-btn primary" href="\/r4-stats">[\s\S]*?<\/a><\/p>/,'').replace(/<p style="margin-top:10px"><a class="r4-btn primary" href="\/r4-reports">[\s\S]*?<\/a><\/p>/,'').replace(/<p style="margin-top:10px"><a class="r4-btn primary" href="\/r4-nicknames">[\s\S]*?<\/a><\/p>/,'');
   const switcher=role==='admin'
    ?'<div class="r4-note"><strong>Alliance workspace</strong><p><a class="r4-btn'+(isVon?'':' primary')+'" href="/r4-planner?alliance=utw">UTW checklist</a> <a class="r4-btn'+(isVon?' primary':'')+'" href="/r4-planner?alliance=von">VON checklist</a></p></div>'
