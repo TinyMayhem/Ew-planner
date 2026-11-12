@@ -167,7 +167,7 @@ export async function GET(request){
       const duel=await utwScoreboard({mode,reportWeek,members,aliases});
       if(duel?.scoreboard.length){
        scoreboard=duel.scoreboard;scoreDate=duel.scoreDate;
-       scoreSourceNote=' Scores read from Alliance Duel.'+
+       scoreSourceNote=' Scores read from '+(duel.scoreSource||'Alliance Duel')+'.'+
         (duel.unmatched.length?' Not matched to a Train Desk member (link these names in Nicknames): '+duel.unmatched.join(', ')+'.':'');
       }else if(duel){
        scoreSourceNote=' Alliance Duel scores exist, but no players matched the R4 member directory.';
