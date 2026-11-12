@@ -48,11 +48,41 @@ function statBox(label,value){const box=text('div',null,'stat-summary');box.appe
 function overview(){
  const d=state.data,week=state.week,donations=ranking('donations_weekly',week),vs=ranking('vs_weekly',week);
  const unique=new Set(d.values.map(v=>d.aliases.find(a=>a.alias_key===v.alias_key)?.member_id).filter(Boolean));
- setContent('summary',statBox('Members in directory',fmt(d.members.length)),statBox('Members with active CSV stats',fmt(unique.size)),statBox('DS records this week',fmt(d.ds.length)));
+ setContent('summary',statBox('Members in directory',fmt(d.members.length)),statBox('Members with saved historical scores',fmt(unique.size)),statBox('DS records this week',fmt(d.ds.length)));
  lines('weekly-vs',vs,10,'vs_weekly');lines('weekly-donations',donations);
  const select=$('daily-date'),old=select.value;select.replaceChildren();for(let i=0;i<7;i++){const v=dateAdd(week,i);select.append(new Option(v,v))}
  select.value=[...select.options].some(o=>o.value===old)?old:serverToday()>=week&&serverToday()<=dateAdd(week,6)?serverToday():week;
  lines('daily-vs',ranking('vs_daily',select.value),20,'vs_daily');
+ void refreshDuelOverview(week);
+}
+function renderDuelRows(target,rows,limit=10){
+ const root=$(target);root.replaceChildren();
+ if(!rows.length){root.append(elEmpty('No Alliance Duel results have been uploaded for this week yet.'));return}
+ rows.slice(0,limit).forEach((r,i)=>{
+  const line=text('div',null,'stat-line');
+  line.append(text('span','#'+(i+1),'stat-rank'));
+  const mid=text('div');mid.append(text('strong',r.name));
+  line.append(mid,text('span',fmt(r.points),'stat-points'));
+  root.append(line);
+ });
+}
+async function refreshDuelOverview(week){
+ const status=$('duel-status');
+ status.textContent='Checking Alliance Duel scores for week of '+week+'…';
+ try{
+  const response=await fetch('/api/r4-stats?duel_scores=1&week='+encodeURIComponent(week),{credentials:'same-origin',cache:'no-store'});
+  if(response.status===401){location.href='/r4-planner';return}
+  const data=await response.json();
+  if(!response.ok)throw Error(data.error||'Alliance Duel data unavailable');
+  if(state.week!==week)return;
+  renderDuelRows('weekly-vs',data.vs||[],10);
+  renderDuelRows('weekly-donations',data.donations||[],20);
+  setContent('summary',statBox('Members in R4 directory',fmt(state.data.members.length)),statBox('Alliance Duel weekly VS entries',fmt((data.vs||[]).length)),statBox('DS results this week',fmt(state.data.ds.length)));
+  status.textContent='Live source: Alliance Duel · Week of '+week+'. Scores refresh from the other team whenever you select a week or press Refresh.';
+ }catch(e){
+  if(state.week!==week)return;
+  status.textContent='Alliance Duel temporarily unavailable ('+e.message+'). Showing previously saved R4 scores where available.';
+ }
 }
 function showTab(tab){
  document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
@@ -242,7 +272,7 @@ function showVipAdvice(advice,{autoSelect=false}={}){
 async function candidates(){
  const root=$('candidates'),vipRoot=$('vip-candidates'),date=$('train-date').value,
   mode=$('train-source').value,slot=$('train-slot').value,vipMode=$('train-vip-mode').value;
- $('train-donations-source').hidden=mode!=='donations';
+ $('train-donations-source').hidden=mode!=='vs'&&mode!=='donations';
  const requestId=(state.adviceRequest||0)+1;state.adviceRequest=requestId;state.advice=null;
  root.replaceChildren();vipRoot.replaceChildren();
  if(!validDate(date)){root.append(elEmpty('Select a valid train date for recommendations.'));return}
@@ -634,6 +664,7 @@ function wire(){
  });
  $('exception-save').addEventListener('click',()=>action(()=>post({action:'exception',member_id:$('exception-member').value,scope:$('exception-scope').value,starts_on:$('exception-start').value,ends_on:$('exception-end').value,reason:$('exception-reason').value}), 'Exception saved.'));
  initScreenshotWizard({getMembers:members,getAliases:aliases,getSeason:()=>state.season,reload:load,submit:post,today:serverToday});
+ if(new URLSearchParams(location.search).get('duel')==='1')showTab('duel');
  load();
 }
 wire();
