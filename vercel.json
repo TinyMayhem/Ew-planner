@@ -10,9 +10,6 @@
     },
     "api/builds.mjs": {
       "maxDuration": 30
-    },
-    "api/r4-duel-backup.mjs": {
-      "maxDuration": 60
     }
   },
   "headers": [
@@ -62,11 +59,15 @@
     {
       "source": "/b/:id",
       "destination": "/ew-planner.html?shared=:id"
+    },
+    {
+      "source": "/r4-duel-backup",
+      "destination": "/api/r4-stats?duel_backup=1"
     }
   ],
   "crons": [
     {
-      "path": "/api/r4-duel-backup",
+      "path": "/r4-duel-backup",
       "schedule": "17 10 * * *"
     }
   ]
