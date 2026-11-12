@@ -13,6 +13,7 @@ import {utwConfigured,utwScoreboard,utwWeeklyOverview} from '../lib/utw-scores.m
 import {GET as runDuelBackupCron} from '../lib/r4-duel-backup.mjs';
 
 const HEADERS={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
+export const validThp=value=>Number.isSafeInteger(value)&&value>=0;
 const json=(body,status=200)=>Response.json(body,{status,headers:HEADERS});
 const isoDate=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v+'T00:00:00Z'))&&new Date(v+'T00:00:00Z').toISOString().slice(0,10)===v;
 const isMonday=v=>isoDate(v)&&new Date(v+'T00:00:00Z').getUTCDay()===1;
@@ -93,6 +94,12 @@ export async function GET(request){
     order:'started_at.desc',limit:'1'
    });
    return json({lastRun:runs[0]||null});
+  }
+  if(q.get('member_thp')==='1'){
+   const actor=await sessionUser(request);
+   if(actor?.role==='von')return json({error:'UTW R4 access required'},403);
+   const records=await list('utw_r4_member_thp',{select:'source_member_id,member_name,thp,updated_at,updated_by',order:'member_name.asc',limit:'2000'});
+   return json({records});
   }
   if(q.get('image'))return await evidence(request,q.get('image'));
   if(q.get('audit')==='1'){
@@ -318,6 +325,33 @@ export async function POST(request){
   if(raw.length>150000)return json({error:'Request too large'},413);
   const body=JSON.parse(raw);
   switch(body.action){
+   case 'member_thp':{
+    const actor=await sessionUser(request);
+    if(actor?.role==='von')return json({error:'UTW R4 access required'},403);
+    const id=body.source_member_id,memberName=name(body.member_name);
+    if(typeof id!=='string'||!(/^[A-Za-z0-9_-]{1,100}$/).test(id)||
+       !memberName||memberName.length>100||/[\x00-\x1f\x7f]/.test(memberName))
+      return json({error:'Choose a valid member from the VS roster'},400);
+    if(body.mode==='clear'){
+     await del('utw_r4_member_thp',{source_member_id:'eq.'+id});
+     await recordAudit(request,'member_thp_clear',{source_member_id:id,member_name:memberName},true);
+     return json({ok:true,deleted:true});
+    }
+    if(body.mode!=='save'||!validThp(body.thp))
+     return json({error:'Enter a valid whole-number THP'},400);
+    const rows=await db('utw_r4_member_thp?on_conflict=source_member_id',{
+     method:'POST',
+     headers:{Prefer:'resolution=merge-duplicates,return=representation'},
+     body:JSON.stringify({
+      source_member_id:id,member_name:memberName,thp:body.thp,
+      updated_at:new Date().toISOString(),
+      updated_by:String(actor?.username||actor?.display_name||'R4').slice(0,80)
+     })
+    });
+    if(!Array.isArray(rows)||rows.length!==1)throw Error('THP value was not saved');
+    await recordAudit(request,'member_thp_save',{source_member_id:id,member_name:memberName,thp:body.thp},true);
+    return json({ok:true,record:rows[0]});
+   }
    case 'import':return await importCsv(body,request);
    case 'alias':{
     const alias=name(body.alias),memberId=body.member_id;
