@@ -9,6 +9,7 @@ import {GET as nicknamesPage} from '../lib/r4-nicknames-page.mjs';
 import {buildMemberPerformance} from '../lib/member-performance.mjs';
 import {stageRange,stageForDate,weekStart} from '../assets/r4-train-rules.mjs';
 import {buildTrainAdvice} from '../lib/train-advice.mjs';
+import {utwConfigured,utwScoreboard,utwWeeklyOverview} from '../lib/utw-scores.mjs';
 
 const HEADERS={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
 const json=(body,status=200)=>Response.json(body,{status,headers:HEADERS});
@@ -132,6 +133,12 @@ export async function GET(request){
    if(!Array.isArray(imports)||!Array.isArray(ds))throw Error('Screenshot upload history unavailable');
    return json({imports,ds});
   }
+  if(q.get('duel_scores')==='1'){
+   const reportWeek=q.get('week');
+   if(!isMonday(reportWeek))return json({error:'Choose a valid Monday to view Alliance Duel rankings'},400);
+   if(!utwConfigured())return json({error:'Alliance Duel scores are not connected'},503);
+   return json(await utwWeeklyOverview(reportWeek));
+  }
   if(q.get('train_advice')==='1'){
    const date=q.get('date'),mode=q.get('mode'),slot=clean(q.get('slot'),100),vipMode=q.get('vip_mode')||'weekly',selectedSeason=q.get('season');
    if(!isoDate(date)||date<'2025-12-29'||stageForDate(date)>40||
@@ -147,24 +154,41 @@ export async function GET(request){
    if(![members,aliases,legacy,awards,exceptions].every(Array.isArray))throw Error('Incomplete train records');
    let scoreboard=[],scoreDate=null,dsEvent=null;
    const monday=weekStart(date);
+   let scoreSourceNote='';
    if(mode==='vs'||mode==='donations'){
-    // Saturday VS uses THIS week's saved weekly total (Monday through Saturday).
-    // Other VS dates and donation selection retain the prior completed week.
-    // Daily VS uploads are never used as a substitute for the weekly report.
     const metric=mode==='vs'?'vs_weekly':'donations_weekly';
     const saturdayVs=mode==='vs'&&new Date(date+'T00:00:00Z').getUTCDay()===6;
     const reportWeek=saturdayVs?monday:dateAdd(monday,-7);
-    const filters={select:'id,period,created_at,row_count',metric:'eq.'+metric,
-     period:'eq.'+reportWeek,order:'created_at.desc',limit:'50'};
-    if(selectedSeason)filters.season_id='eq.'+selectedSeason;
-    const imports=await list('utw_stat_imports',filters);
-    const latest=imports[0];
-    if(latest){
-     const values=await list('utw_stat_values',{select:'alias_key,points',import_id:'eq.'+latest.id,limit:'501'});
-     if(values.length===latest.row_count){
-      const byAlias=new Map(aliases.map(x=>[x.alias_key,x.member_id]));
-      scoreboard=values.map(x=>({member_id:byAlias.get(x.alias_key),points:Number(x.points)}));
-      scoreDate=latest.period;
+    // Alliance Duel is now the primary source. R4 uploads are historical fallback only.
+    if(utwConfigured()){
+     try{
+      const duel=await utwScoreboard({mode,reportWeek,members,aliases});
+      if(duel?.scoreboard.length){
+       scoreboard=duel.scoreboard;scoreDate=duel.scoreDate;
+       scoreSourceNote=' Scores read from Alliance Duel.'+
+        (duel.unmatched.length?' Not matched to a Train Desk member (link these names in Nicknames): '+duel.unmatched.join(', ')+'.':'');
+      }else if(duel){
+       scoreSourceNote=' Alliance Duel scores exist, but no players matched the R4 member directory.';
+      }else scoreSourceNote=' Alliance Duel has no weekly report for '+reportWeek+'.';
+     }catch(e){
+      scoreSourceNote=' Alliance Duel could not be reached ('+e.message+').';
+     }
+    }else scoreSourceNote=' Alliance Duel integration is not configured.';
+    if(!scoreDate){
+     // Use previous R4 uploads for a missing/unavailable external week; never overwrite them.
+     const filters={select:'id,period,created_at,row_count',metric:'eq.'+metric,
+      period:'eq.'+reportWeek,order:'created_at.desc',limit:'50'};
+     if(selectedSeason)filters.season_id='eq.'+selectedSeason;
+     const imports=await list('utw_stat_imports',filters);
+     const latest=imports[0];
+     if(latest){
+      const values=await list('utw_stat_values',{select:'alias_key,points',import_id:'eq.'+latest.id,limit:'501'});
+      if(values.length===latest.row_count){
+       const byAlias=new Map(aliases.map(x=>[x.alias_key,x.member_id]));
+       scoreboard=values.map(x=>({member_id:byAlias.get(x.alias_key),points:Number(x.points)}));
+       scoreDate=latest.period;
+       scoreSourceNote+=' Using previously saved R4 report as fallback.';
+      }
      }
     }
    }
@@ -193,7 +217,9 @@ export async function GET(request){
      rosterDate=report.rosterDate||null;
     }
    }
-   return json(buildTrainAdvice({date,mode,slot,vipMode,members,aliases,legacy,awards,exceptions,scoreboard,scoreDate,dsEvent,rosterIds,rosterDate,vsRecordCounts}));
+   const advice=buildTrainAdvice({date,mode,slot,vipMode,members,aliases,legacy,awards,exceptions,scoreboard,scoreDate,dsEvent,rosterIds,rosterDate,vsRecordCounts});
+   advice.context+=scoreSourceNote;
+   return json(advice);
   }
   const seasons=await list('utw_stat_seasons',{select:'id,label,sort_order',order:'sort_order.asc',limit:'50'});
   const season=q.get('season')||'post-s5';
