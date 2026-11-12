@@ -87,6 +87,13 @@ export async function GET(request){
  if(!await authorizedAccess(request))return json({error:'R4 sign-in required'},401);
  const q=new URL(request.url).searchParams;
  try{
+  if(q.get('duel_backup_status')==='1'){
+   const runs=await list('utw_duel_backup_runs',{
+    select:'id,status,started_at,finished_at,source_counts',
+    order:'started_at.desc',limit:'1'
+   });
+   return json({lastRun:runs[0]||null});
+  }
   if(q.get('image'))return await evidence(request,q.get('image'));
   if(q.get('audit')==='1'){
    if(!await owner(request))return json({error:'Owner account required'},403);
