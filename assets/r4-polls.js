@@ -1,5 +1,5 @@
 import {matchRoster} from './r4-ocr-parser.mjs';
-import {parsePollOcrText,parsePollCsv} from './r4-poll-parser.mjs';
+import {parsePollOcrText,parsePollCsv,resolvePollOcrName,rankPollMemberMatches} from './r4-poll-parser.mjs';
 import {languagesForOcr} from './r4-ocr-languages.mjs';
 
 const $=id=>document.getElementById(id), node=(tag,value,cls)=>{const e=document.createElement(tag);if(value!==undefined&&value!==null)e.textContent=String(value);if(cls)e.className=cls;return e};
@@ -125,8 +125,9 @@ function clearPreview(){
  const thumbs=$('poll-image-thumbs');if(thumbs)thumbs.remove();
 }
 const asRow=(name,response,source)=>{
- const match=matchRoster(name,store.members,store.aliases);
- return {name,response,source,member_id:match.type==='exact'?match.id:'',suggestion:match.id||'',confidence:match.type};
+ const matched=resolvePollOcrName(name,store.members,store.aliases);
+ return {name:matched.name||name,response,source,
+  member_id:matched.member_id||'',suggestion:matched.suggestion||'',confidence:matched.confidence};
 };
 function preparePreview(rows){
  clearPreview();
@@ -145,15 +146,19 @@ function drawPreview(){
   const row=node('div',null,'poll-review-entry'+(!item.member_id||!allowed.has(item.member_id)?' issue':''));
   const inputLabel=node('label','Recognized name');
   const input=node('input');input.value=item.name;input.maxLength=90;
-  input.onchange=()=>{item.name=input.value.trim();const m=matchRoster(item.name,store.members,store.aliases);item.member_id=m.type==='exact'?m.id:'';item.suggestion=m.id||'';item.confidence=m.type;drawPreview()};
+  input.onchange=()=>{const m=resolvePollOcrName(input.value.trim(),store.members,store.aliases);item.name=m.name||input.value.trim();item.member_id=m.member_id||'';item.suggestion=m.suggestion||'';item.confidence=m.confidence;drawPreview()};
   inputLabel.append(input);
-  const memberLabel=node('label','Confirm member');
-  const select=node('select');select.append(new Option('Select member (required)',''));
-  for(const m of active.slice().sort((a,b)=>nameOf(a.id).localeCompare(nameOf(b.id))))select.append(new Option(nameOf(m.id),m.id));
+  const memberLabel=node('label','Confirm member (closest matches first)');
+  const select=node('select');select.append(new Option('Choose member (required)',''));
+  const eligible=active.map(m=>({id:m.id,display_name:nameOf(m.id)||m.name}));
+  const ranked=rankPollMemberMatches(item.name,eligible,store.aliases);
+  for(const m of ranked)select.append(new Option(m.name,m.id));
   select.value=item.member_id||'';select.onchange=()=>{item.member_id=select.value;item.confidence='confirmed';drawPreview()};
   memberLabel.append(select);
   const status=node('div',null,'poll-review-indicator');
-  status.append(node('small',!item.member_id?item.suggestion?'Check suggestion: '+nameOf(item.suggestion):'Unmatched: select a member':item.confidence==='matched'?'Exact nickname match':'R4 confirmed'));
+  const best=ranked[0];
+  const suggestion=!item.member_id&&best?.score>=0.5?'Closest match: '+best.name+' (check before selecting)':'Unmatched: select a member';
+  status.append(node('small',!item.member_id?suggestion:item.confidence==='matched'?'Exact roster/nickname match':'R4 confirmed'));
   const opts=node('select');for(const response of ['yes','no','maybe'])opts.append(new Option(response.toUpperCase(),response));
   opts.value=item.response;opts.onchange=()=>{item.response=opts.value};
   const del=node('button','Remove','stat-button');del.type='button';del.onclick=()=>{item.deleted=true;drawPreview()};
@@ -177,8 +182,9 @@ async function cropNames(file){
  const bitmap=await createImageBitmap(file);
  try{
   // Game's Voting Members popup puts the commander name and Power line on the right.
-  const x=Math.round(bitmap.width*.22),y=Math.round(bitmap.height*.26);
-  const w=Math.round(bitmap.width*.75),h=Math.round(bitmap.height*.49);
+  // Skip the rank badge on the left, while leaving padding before the name.
+  const x=Math.round(bitmap.width*.30),y=Math.round(bitmap.height*.26);
+  const w=Math.round(bitmap.width*.68),h=Math.round(bitmap.height*.49);
   const canvas=document.createElement('canvas');const scale=Math.min(2.3,1400/w);
   canvas.width=Math.max(1,Math.round(w*scale));canvas.height=Math.max(1,Math.round(h*scale));
   const ctx=canvas.getContext('2d',{willReadFrequently:true});
@@ -210,7 +216,11 @@ async function scanImages(){
   }
   // Don't throw away names when the overlap appears on several screenshots.
   const seen=new Set(),dedup=[];
-  for(const r of rows){const k=tidy(r.name);if(k&&!seen.has(k)){seen.add(k);dedup.push(r)}}
+  for(const r of rows){
+   const m=matchRoster(r.name,store.members,store.aliases);
+   const k=m.type==='exact'&&m.id?'id:'+m.id:'name:'+tidy(r.name);
+   if(k&&!seen.has(k)){seen.add(k);dedup.push(r)}
+  }
   if(!dedup.length)throw Error('No player names detected. Try a clearer screenshot, or use CSV/manual entry.');
   preparePreview(dedup);
   for(const f of files)store.imageUrls.push(URL.createObjectURL(f));

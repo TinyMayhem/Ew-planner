@@ -1,4 +1,4 @@
-import {matchRoster} from './r4-ocr-parser.mjs';
+import {matchRoster,normalizeIgn,levenshtein} from './r4-ocr-parser.mjs';
 const simplify=s=>String(s||'').trim().normalize('NFKC').replace(/\s+/g,' ');
 const ignored=/^(?:Voting Members|Alliance Announcement|Voting Notice|The following members|chose option|Power|LV\.?\s*\d|R[1-5]|Comment|Like|Dislike|Warzone Duel)$/i;
 export function cleanPollName(line){
@@ -11,17 +11,85 @@ export function cleanPollName(line){
   .replace(/[\s♂♀🚹🚺]+$/u,'');
  return simplify(s);
 }
+// Voting cards show rank badges and gender icons directly before names.
+// OCR often mistakes them for short text prefixes, such as "sa", "m3" or "ç/".
+// Only remove possible prefixes when a roster name/alias supports the match.
+export function pollNameCandidates(raw){
+ const name=cleanPollName(raw),out=[],seen=new Set();
+ const push=(value,removed=0)=>{
+  value=simplify(value);
+  if(value&&!seen.has(value)){out.push({name:value,removed});seen.add(value)}
+ };
+ if(!name)return out;
+ push(name);
+ const tokens=name.split(/\s+/);
+ const looksLikeIcon=token=>{
+  if(token.length>3)return false;
+  if(/[0-9/\\|*@#%+=<>]/u.test(token))return true;
+  if(/^[a-z]{1,2}$/.test(token))return true;
+  return /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Bopomofo}]{1,2}$/u.test(token);
+ };
+ for(let i=1;i<=Math.min(3,tokens.length-1);i++){
+  const prefixTokens=tokens.slice(0,i),prefix=prefixTokens.join(' ');
+  if(prefix.length>11||!prefixTokens.every(looksLikeIcon))break;
+  push(tokens.slice(i).join(' '),prefix.length+1);
+ }
+ // A badge can get glued to the first letter: m3Sorree Baba.
+ const joined=name.match(/^([a-z]\d|[^\p{L}\p{N}]{1,3})(?=\p{Lu})/u);
+ if(joined)push(name.slice(joined[0].length),joined[0].length);
+ return out;
+}
+const pollKey=value=>normalizeIgn(value).replace(/[^\p{L}\p{N}]/gu,'');
+const nameSimilarity=(a,b)=>{
+ const x=pollKey(a),y=pollKey(b);
+ return x&&y?Math.max(0,1-levenshtein(x,y)/Math.max(x.length,y.length)):0;
+};
+export function rankPollMemberMatches(raw,members=[],aliases=[]){
+ const candidates=pollNameCandidates(raw);
+ const namesById=new Map(members.map(m=>[String(m.id),[m.display_name]]));
+ for(const a of aliases){
+  const labels=namesById.get(String(a.member_id));
+  if(!labels)continue;
+  if(a.alias)labels.push(a.alias);
+  if(a.alias_key)labels.push(a.alias_key);
+ }
+ return members.map(m=>{
+  let score=0;
+  for(const c of candidates){
+   for(const label of namesById.get(String(m.id))||[m.display_name]){
+    score=Math.max(score,nameSimilarity(c.name,label));
+   }
+  }
+  return {id:m.id,name:m.display_name,score};
+ }).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,undefined,{sensitivity:'base'}));
+}
+export function resolvePollOcrName(raw,members=[],aliases=[]){
+ const candidates=pollNameCandidates(raw);
+ if(!candidates.length)return {name:'',member_id:null,suggestion:null,confidence:'unmatched'};
+ const matches=candidates.map(c=>({candidate:c,match:matchRoster(c.name,members,aliases)}));
+ // A complete exact name wins over a partial exact nickname.
+ const exact=matches.filter(x=>x.match.type==='exact')
+  .sort((a,b)=>a.candidate.removed-b.candidate.removed)[0];
+ if(exact)return {name:exact.candidate.name,member_id:exact.match.id,
+  suggestion:exact.match.id,confidence:'matched'};
+ // A fuzzy match can clean noise, but never automatically confirms a member.
+ const fuzzy=matches.filter(x=>x.match.type==='suggested'&&x.match.similarity>=0.76)
+  .sort((a,b)=>b.match.similarity-a.match.similarity||a.candidate.removed-b.candidate.removed)[0];
+ if(fuzzy)return {name:fuzzy.candidate.name,member_id:null,
+  suggestion:fuzzy.match.id,confidence:'suggested'};
+ const original=candidates[0].name,ranked=rankPollMemberMatches(original,members,aliases);
+ return {name:original,member_id:null,
+  suggestion:ranked[0]?.score>=0.65?ranked[0].id:null,confidence:'unmatched'};
+}
 export function parsePollOcrText(raw,members=[],aliases=[]){
  const lines=String(raw||'').split(/\r?\n/).map(simplify).filter(Boolean),names=[];
  const seen=new Set();
  function add(candidate){
-  const name=cleanPollName(candidate);
+  const found=resolvePollOcrName(candidate,members,aliases),name=found.name;
   if(!name||name.length>70||!/\p{L}/u.test(name)||ignored.test(name)||/^Power|^LV\b/i.test(name))return;
-  const key=name.toLocaleLowerCase();
-  if(seen.has(key))return;seen.add(key);
-  const m=matchRoster(name,members,aliases);
-  names.push({name,member_id:m.type==='exact'?m.id:null,suggestion:m.id||null,
-   confidence:m.type==='exact'?'matched':m.type==='suggested'?'suggested':'unmatched'});
+  const key=found.member_id?'member:'+found.member_id:'name:'+pollKey(name);
+  if(seen.has(key))return;
+  seen.add(key);names.push(found);
  }
  // The poll uses the member name just above the Power: and LV.35 line.
  for(let i=0;i<lines.length;i++){
@@ -35,9 +103,8 @@ export function parsePollOcrText(raw,members=[],aliases=[]){
  // If a name's Power line was cut off, an exact roster-name match is still reviewable.
  for(const line of lines){
   if(/Power|LV\.?\s*\d|following members|option \d|voting|announc/i.test(line))continue;
-  const cleaned=cleanPollName(line);
-  const m=matchRoster(cleaned,members,aliases);
-  if(m.type==='exact')add(cleaned);
+  const result=resolvePollOcrName(line,members,aliases);
+  if(result.member_id)add(line);
  }
  return names;
 }
