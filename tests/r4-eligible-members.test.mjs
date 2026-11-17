@@ -20,7 +20,7 @@ const accounts=[
 ];
 test('active R4 roster deduplicates accounts and resolves current names from aliases',()=>{
  const roster=activeR4MemberOptions(accounts,members,aliases);
- assert.deepEqual(roster.members.map(x=>x.name),['CalllMeBaba','TinyMayhem','Ɖevi']);
+ assert.deepEqual(roster.members.map(x=>x.name),['CalllMeBaba','Ɖevi','TinyMayhem']);
  assert.deepEqual(roster.unmatched,['Unlinked R4']);
  assert.equal(roster.members.filter(x=>x.name==='TinyMayhem').length,1);
 });
