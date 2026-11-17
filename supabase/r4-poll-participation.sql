@@ -141,6 +141,13 @@ begin
   if jsonb_array_length(e.roster)=0 then raise exception 'Add a VS roster before finalizing'; end if;
   update public.utw_poll_events set status='finalized' where id=p_poll_id;
   insert into public.utw_poll_changes(poll_id,action,details,actor) values(p_poll_id,'finalize','{}'::jsonb,p_actor);
+ elsif p_operation='remove_vote' then
+  begin mid:=(p_payload->>'member_id')::uuid; exception when others then raise exception 'Choose a valid member vote'; end;
+  select * into old_vote from public.utw_poll_votes where poll_id=p_poll_id and member_id=mid;
+  if not found then raise exception 'That vote no longer exists'; end if;
+  delete from public.utw_poll_votes where poll_id=p_poll_id and member_id=mid;
+  insert into public.utw_poll_changes(poll_id,member_id,action,old_response,details,actor)
+    values(p_poll_id,mid,'remove_vote',old_vote.response,jsonb_build_object('reason',left(coalesce(p_payload->>'reason','Erroneous entry'),500),'source',old_vote.source),p_actor);
  elsif p_operation='eligibility' then
   category:=coalesce(p_payload->>'mode','');
   begin mid:=(p_payload->>'member_id')::uuid; exception when others then raise exception 'Invalid member'; end;
