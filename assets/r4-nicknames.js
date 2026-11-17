@@ -1,7 +1,7 @@
 import {trainAliasSuggestions} from './r4-train-alias-suggestions.mjs?version=review-v1-20261106';
 const $=id=>document.getElementById(id);
 const n=(tag,content,cls)=>{const e=document.createElement(tag);if(content!==undefined&&content!==null)e.textContent=String(content);if(cls)e.className=cls;return e};
-let members=[],aliases=[],trainLegacy=[],selected='',busy=false;
+let members=[],aliases=[],trainLegacy=[],weeklyChanges=[],selected='',busy=false;
 const hiddenSuggestions=new Set();
 const normalized=value=>String(value||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLocaleLowerCase();
 const namesOf=id=>aliases.filter(a=>a.member_id===id).sort((a,b)=>a.alias.localeCompare(b.alias));
@@ -23,7 +23,7 @@ async function reload(){
  const data=await fetch('/api/r4-stats?nicknames=1',{credentials:'same-origin',cache:'no-store'});
  if(data.status===401){location.href='/r4-planner';return}
  const payload=await data.json();if(!data.ok)throw Error(payload.error||'Could not load member nicknames');
- members=payload.members||[];aliases=payload.aliases||[];trainLegacy=payload.trainLegacy||[];
+ members=payload.members||[];aliases=payload.aliases||[];trainLegacy=payload.trainLegacy||[];weeklyChanges=payload.weeklyChanges||[];
  if(selected&&!members.some(m=>m.id===selected))selected='';
  draw();
 }
@@ -85,6 +85,25 @@ function draw(){
   }
   if(!rows.length)linked.append(n('p','No nicknames linked yet.','nickname-empty'));
  }
+ const archiveButton=$('nickname-archive-toggle');
+ const member=members.find(m=>m.id===keep);
+ archiveButton.hidden=!member;
+ if(member){
+  archiveButton.textContent=member.archived_at?'↩ Restore to active roster':'📦 Archive member';
+  archiveButton.classList.toggle('nickname-restore',Boolean(member.archived_at));
+  archiveButton.onclick=async()=>{
+   if(busy)return;
+   const archive=!member.archived_at;
+   if(archive&&!confirm('Archive '+member.display_name+' as a former UTW member? Saved nicknames, scores and train history will be preserved. They will no longer appear in new Train Desk recommendations.'))return;
+   busy=true;archiveButton.disabled=true;
+   try{
+    await request({action:archive?'archive_member':'restore_member',member_id:member.id});
+    await reload();
+    message(member.display_name+(archive?' archived. Historical data was preserved.':' restored to the active roster.'));
+   }catch(e){message(e.message,true)}finally{busy=false;archiveButton.disabled=false}
+  };
+ }
+ drawWeekly();
  drawDirectory();
  drawTrainNameSuggestions();
 }
@@ -120,18 +139,56 @@ function drawTrainNameSuggestions(){
  }
  if(suggestions.length>40)root.append(n('p','Showing the first 40 likely matches. Link or skip reviewed names to reveal more.','stat-muted'));
 }
-function drawDirectory(){
- const query=normalized($('nickname-search').value),root=$('nickname-directory');root.replaceChildren();
- const matched=members.filter(m=>normalized(m.display_name).includes(query)||namesOf(m.id).some(a=>normalized(a.alias).includes(query)));
- $('nickname-count').textContent=matched.length+' members shown of '+members.length+'.';
- for(const person of matched.slice(0,250)){
-  const button=n('button',null,'nickname-person'+(person.id===selected?' selected':''));button.type='button';
-  button.append(n('strong',person.display_name));
-  const list=namesOf(person.id).filter(a=>normalized(a.alias)!==normalized(person.display_name)).map(x=>x.alias);
-  button.append(n('small',list.length?'Other names: '+list.join(' · '):'No other nicknames'));
-  button.onclick=()=>choose(person.id);root.append(button);
+function drawWeekly(){
+ const root=$('nickname-weekly-list');if(!root)return;
+ root.replaceChildren();
+ const seen=new Set(),rows=[];
+ for(const event of weeklyChanges){
+  const info=event.details||{},member=members.find(m=>m.id===info.member_id);
+  const nickname=event.action==='set_display_name'?info.display_name:info.alias;
+  if(!member||!nickname)continue;
+  const id=member.id+'|'+normalized(nickname);
+  if(seen.has(id))continue;seen.add(id);
+  rows.push({event,member,nickname,previous:info.previous_name||''});
  }
- if(!matched.length)root.append(n('p','No member or nickname matched.','nickname-empty'));
+ $('nickname-week-count').textContent=rows.length+' recorded';
+ if(!rows.length){
+  root.append(n('p','No nickname changes recorded since Monday.','stat-muted'));return;
+ }
+ for(const row of rows.slice(0,70)){
+  const item=n('div',null,'nickname-week-row');
+  const who=n('div',null,'nickname-week-person');
+  who.append(n('strong',row.event.action==='set_display_name'&&row.previous?row.previous:row.member.display_name),
+   n('small',row.event.action==='set_display_name'?'Main name changed':'Nickname added','stat-muted'));
+  const changed=n('div',null,'nickname-week-new');
+  changed.append(n('span','→','nickname-week-arrow'),n('strong',row.nickname));
+  const when=n('small',new Date(row.event.created_at).toLocaleDateString(undefined,{month:'short',day:'numeric'}),'stat-muted');
+  item.append(who,changed,when);
+  root.append(item);
+ }
+ if(rows.length>70)root.append(n('p','Showing the 70 most recent changes.','stat-muted'));
+}
+function drawDirectory(){
+ const query=normalized($('nickname-search').value);
+ const matched=members.filter(m=>normalized(m.display_name).includes(query)||namesOf(m.id).some(a=>normalized(a.alias).includes(query)));
+ const active=matched.filter(m=>!m.archived_at),archived=matched.filter(m=>Boolean(m.archived_at));
+ const allActive=members.filter(m=>!m.archived_at).length,allArchived=members.length-allActive;
+ $('nickname-count').textContent=active.length+' active members shown of '+allActive+'.';
+ $('nickname-archived-count').textContent=allArchived+' archived';
+ const render=(root,people,empty)=>{
+  root.replaceChildren();
+  for(const person of people.slice(0,250)){
+   const button=n('button',null,'nickname-person'+(person.id===selected?' selected':''));button.type='button';
+   button.append(n('strong',person.display_name));
+   const other=namesOf(person.id).filter(a=>normalized(a.alias)!==normalized(person.display_name)).map(a=>a.alias);
+   button.append(n('small',other.length?'Other names: '+other.join(' · '):'No other nicknames'));
+   if(person.archived_at)button.append(n('small','Archived '+new Date(person.archived_at).toLocaleDateString(),'stat-muted'));
+   button.onclick=()=>choose(person.id);root.append(button);
+  }
+  if(!people.length)root.append(n('p',empty,'nickname-empty'));
+ };
+ render($('nickname-directory'),active,'No active members matched.');
+ render($('nickname-archived-directory'),archived,query?'No archived members matched.':'No members archived yet.');
 }
 function showCollision(alias,memberToKeepId,existingMemberId){
  const root=$('nickname-collision');root.hidden=false;root.replaceChildren();
