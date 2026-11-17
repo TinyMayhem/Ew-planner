@@ -162,7 +162,7 @@ function updateDynamic(){
  $('territory-priority').innerHTML='<h3>Section priority (top wins)</h3>'+state.territories.filter(t=>t.allianceId===activeAlliance).sort((a,b)=>a.priority-b.priority).map((t,i)=>'<div class="rank-row"><span>'+ (i+1)+'. '+esc(t.name)+'</span><button class="btn" data-priority="'+esc(t.id)+'" data-direction="-1" aria-label="Move section up">↑</button><button class="btn" data-priority="'+esc(t.id)+'" data-direction="1" aria-label="Move section down">↓</button></div>').join('');
  document.querySelectorAll('[data-priority]').forEach(b=>b.onclick=()=>movePriority(b.dataset.priority,Number(b.dataset.direction)));
  if(!$('coord-x').dataset.initialized){$('coord-x').value=state.center.x;$('coord-y').value=state.center.y;$('coord-x').dataset.initialized='yes';}
- renderSelection();renderReports();
+ renderSelection();renderReports();renderGroupUI();
 }
 function renameAlliance(){
  const current=alliance();
@@ -676,6 +676,7 @@ function beginPinchGesture(){
   areaGesture=null;
   showTerritoryDraft();
  }
+ groupBox=null;groupDrag=null;
  pointer=null;dragMove=null;hoverCell=null;
  ignoreTouchUntilRelease=true;
  const ids=Array.from(touchPoints.keys()).slice(0,2);
@@ -738,9 +739,57 @@ function cancelAreaGesture(){
   showTerritoryDraft();
  }
 }
+function renderGroupUI(){
+ const panel=$('group-controls');if(!panel||!state)return;
+ panel.hidden=tool!=='group';
+ for(const id of [...groupSelection])if(!state.bases.some(b=>b.id===id))groupSelection.delete(id);
+ const chosen=state.bases.filter(b=>groupSelection.has(b.id));
+ const locked=chosen.filter(b=>b.locked).length;
+ $('group-count').textContent=chosen.length+' base'+(chosen.length===1?'':'s')+' selected';
+ $('group-status').textContent=locked
+  ?locked+' locked. Unlock or deselect before moving.'
+  :chosen.length?'Long-press a highlighted base to drag all '+chosen.length+' together.':'Draw around bases or tap them to select.';
+ $('group-move').disabled=!chosen.length;
+ $('group-clear').disabled=!chosen.length;
+}
+function groupHit(x,y){
+ return [...state.bases].reverse().find(b=>b.allianceId===activeAlliance&&contains(footprint(b,state),x,y));
+}
+function toggleGroupAt(x,y){
+ const b=groupHit(x,y);
+ if(!b)return;
+ if(groupSelection.has(b.id))groupSelection.delete(b.id);else groupSelection.add(b.id);
+ renderGroupUI();draw();
+}
+function selectGroupRectangle(area,additive=false){
+ const hits=basesInSelection(state,area,activeAlliance);
+ if(!additive)groupSelection.clear();
+ for(const b of hits)groupSelection.add(b.id);
+ selected=null;renderSelection();renderGroupUI();draw();
+ inform(hits.length+' '+nameFor(activeAlliance)+' bases selected in this area. Hold a highlighted base to drag or use the X/Y offset.');
+}
+function finishGroupMove(ids,dx,dy){
+ if(!dx&&!dy)return inform('No group movement entered. The bases stayed in place.');
+ const check=inspectGroupMove(state,ids,dx,dy);
+ if(check.hard.length)return inform('Group move blocked: '+check.hard.slice(0,4).join('; ')+(check.hard.length>4?' and '+(check.hard.length-4)+' more':''),true);
+ if(check.warnings.length&&!confirm('Move '+check.count+' bases by X '+dx+', Y '+dy+'?\n\n'+
+  check.warnings.slice(0,8).join('\n')+
+  (check.warnings.length>8?'\n...and '+(check.warnings.length-8)+' more warnings':'')+
+  '\n\nContinue despite these warnings?')){
+  return inform('Group move cancelled. No bases were changed.');
+ }
+ const moves=new Map(check.moves.map(m=>[m.id,m]));
+ const next=clone(state);
+ for(const b of next.bases){
+  const moved=moves.get(b.id);
+  if(moved){b.x=moved.x;b.y=moved.y;}
+ }
+ commit(next,'Moved '+check.count+' commander bases together by X '+dx+', Y '+dy);
+}
 function handleMapTap(x,y){
  if(!valid(x)||!valid(y))return;
  $('coord-x').value=x;$('coord-y').value=y;
+ if(tool==='group'){toggleGroupAt(x,y);return;}
  if(tool==='base')createBase(x,y);
  else if(tool==='obstacle')createObstacle(x,y,$('obstacle-type').value);
  else if(tool==='city')createCity(x,y);
