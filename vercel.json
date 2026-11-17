@@ -50,7 +50,11 @@
     },
     {
       "source": "/r4-polls",
-      "destination": "/api/r4-polls?view=page"
+      "destination": "/api/r4-stats?view=polls"
+    },
+    {
+      "source": "/api/r4-polls",
+      "destination": "/api/r4-stats?view=polls_api"
     },
     {
       "source": "/r4-audit",
