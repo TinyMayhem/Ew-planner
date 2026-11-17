@@ -59,7 +59,7 @@ export function inMud(base,state){
 export function sectionFor(base,state){
  const own=(state.territories||[]).filter(t=>t.allianceId===base.allianceId);
  if(base.sectionOverride){const pinned=own.find(t=>t.id===base.sectionOverride);if(pinned)return pinned;}
- return own.filter(t=>contains(t,base.x,base.y)).sort((a,b)=>(a.priority||0)-(b.priority||0)||a.id.localeCompare(b.id))[0]||null;
+ return own.filter(t=>base.x>=t.x1&&base.x<=t.x2&&base.y>=t.y1&&base.y<=t.y2).sort((a,b)=>(a.priority||0)-(b.priority||0)||a.id.localeCompare(b.id))[0]||null;
 }
 export function inspectPlacement(base,state,{spacing=null,extra=[],ignoreId=null}={}){
  const r=footprint(base,state),hard=[],warnings=[];
