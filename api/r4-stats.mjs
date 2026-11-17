@@ -8,7 +8,7 @@ import {GET as reportsPage} from '../lib/r4-reports-page.mjs';
 import {GET as nicknamesPage} from '../lib/r4-nicknames-page.mjs';
 import {buildMemberPerformance} from '../lib/member-performance.mjs';
 import {stageRange,stageForDate,weekStart} from '../assets/r4-train-rules.mjs';
-import {buildTrainAdvice,resolveNames} from '../lib/train-advice.mjs';
+import {buildTrainAdvice,resolveNames,isTopDonationTrain,resolveR4RoleMembers} from '../lib/train-advice.mjs';
 import {utwConfigured,utwScoreboard,utwWeeklyOverview} from '../lib/utw-scores.mjs';
 import {GET as runDuelBackupCron} from '../lib/r4-duel-backup.mjs';
 
@@ -33,6 +33,26 @@ async function db(path,options={}){
 const urlParams=(obj)=>new URLSearchParams(obj).toString();
 async function list(table,params){return db(table+'?'+urlParams(params))}
 async function insert(table,data){const rows=await db(table,{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(data)});return rows}
+// Re-read the private UTW R4 department roles for every donation recommendation/save.
+// Do not silently assume an unknown or unlinked R4 is an eligible donor.
+async function utwR4Membership(members,aliases){
+ const roles=await list('utw_r4_roles',{select:'leader,backup,additional_backups',alliance:'eq.utw',limit:'50'});
+ if(!Array.isArray(roles))throw Error('UTW R4 roles list is unavailable');
+ const mapped=resolveR4RoleMembers(roles,members,aliases);
+ if(!mapped.nameCount)throw Error('UTW R4 Roles list has no saved members. Add R4 leaders and backups before using Top Donation trains.');
+ if(mapped.unmatched.length)throw Error('Link these UTW R4 role names in Train Desk Nicknames before using Top Donation trains: '+mapped.unmatched.slice(0,8).join(', ')+(mapped.unmatched.length>8?' and others':''));
+ return mapped.ids;
+}
+async function donationR4Conflict(source,slot,conductorId,vipId){
+ if(!isTopDonationTrain(source,slot))return '';
+ const [members,aliases]=await Promise.all([
+  list('utw_stat_members',{select:'id,display_name',limit:'1000'}),
+  list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'})
+ ]);
+ const r4=await utwR4Membership(members,aliases);
+ const offenders=members.filter(m=>r4.has(m.id)&&(m.id===conductorId||m.id===vipId));
+ return offenders.length?'R4 members cannot be conductor or VIP on Top Donation trains: '+offenders.map(m=>m.display_name).join(', '):'';
+}
 async function del(table,filters){await db(table+'?'+urlParams(filters),{method:'DELETE',headers:{Prefer:'return=minimal'}})}
 function authorizeWrite(request){return request.headers.get('origin')===new URL(request.url).origin}
 async function rateLimit(request){
@@ -254,7 +274,8 @@ export async function GET(request){
      rosterDate=report.rosterDate||null;
     }
    }
-   const advice=buildTrainAdvice({date,mode,slot,vipMode,members,aliases,legacy,awards,exceptions,scoreboard,scoreDate,dsEvent,rosterIds,rosterDate,vsRecordCounts});
+   const r4MemberIds=isTopDonationTrain(mode,slot)?[...await utwR4Membership(members,aliases)]:[];
+   const advice=buildTrainAdvice({date,mode,slot,vipMode,members,aliases,legacy,awards,exceptions,scoreboard,scoreDate,dsEvent,rosterIds,rosterDate,vsRecordCounts,r4MemberIds});
    advice.context+=scoreSourceNote;
    return json(advice);
   }
@@ -474,6 +495,8 @@ export async function POST(request){
    case 'award':{
     const season=body.season_id||'post-s5';if(!/^[a-z0-9-]{2,30}$/.test(season)||(await list('utw_stat_seasons',{select:'id',id:'eq.'+season,limit:'1'})).length!==1)return json({error:'Invalid season'},400);
     if(!isoDate(body.train_date)||!uuid(body.member_id)||!uuid(body.vip_member_id)||body.member_id===body.vip_member_id||!['ds','donations','vs','manual','r4'].includes(body.source)||!name(body.slot)||name(body.slot).length>50)return json({error:'Choose different conductor and VIP members, a valid date, source and train slot'},400);
+    const donorConflict=await donationR4Conflict(body.source,body.slot,body.member_id,body.vip_member_id);
+    if(donorConflict)return json({error:donorConflict},400);
     const created=await insert('utw_stat_awards',{season_id:season,train_date:body.train_date,member_id:body.member_id,vip_member_id:body.vip_member_id,source:body.source,slot:name(body.slot),reason:clean(body.reason,500)});
     await recordAudit(request,'award',{id:created[0].id,season,date:body.train_date,slot:body.slot,member_id:body.member_id},true);
     return json({ok:true},201);
@@ -482,6 +505,8 @@ export async function POST(request){
     if(!uuid(body.id)||!uuid(body.member_id)||!uuid(body.vip_member_id)||body.member_id===body.vip_member_id)return json({error:'Choose different valid conductor and VIP members'},400);
     const old=await list('utw_stat_awards',{select:'*',id:'eq.'+body.id,limit:'1'});
     if(old.length!==1)return json({error:'Train assignment not found'},404);
+    const donorConflict=await donationR4Conflict(old[0].source,old[0].slot,body.member_id,body.vip_member_id);
+    if(donorConflict)return json({error:donorConflict},400);
     const editReason=clean(body.reason,200);
     if(old[0].member_id!==body.member_id&&!editReason)return json({error:'Explain why the conductor changed (for example, no-show)'},400);
     if(typeof body.reason==='string'&&body.reason.trim().length>200)return json({error:'Replacement reason must be under 200 characters'},400);
