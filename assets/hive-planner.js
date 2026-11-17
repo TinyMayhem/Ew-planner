@@ -1119,7 +1119,7 @@ function bind(){
  $('set-capitol').onclick=()=>{try{const c=coord();const next=clone(state);next.center=c;next.capitolPlaced=true;next.calibration.verified=false;commit(next,'Set Capitol center '+c.x+','+c.y);}catch(e){inform(e.message,true)}};
  $('save-calibration').onclick=()=>{const next=clone(state);next.calibration={evenX:$('even-x').value,evenY:$('even-y').value,verified:false};commit(next,'Adjusted even-sized object anchor convention');};
  $('verify-calibration').onclick=()=>{if(!confirm('Have you compared the planner against real in-game edge coordinates?'))return;const next=clone(state);next.calibration.verified=true;commit(next,'Marked coordinate calibration tested in game');};
- $('alliance').onchange=e=>{activeAlliance=e.target.value;preview=[];updateDynamic();draw();};
+ $('alliance').onchange=e=>{activeAlliance=e.target.value;preview=[];groupSelection.clear();groupBox=null;groupDrag=null;updateDynamic();draw();};
  $('add-alliance').onclick=()=>{
   const name=$('new-alliance').value.trim().slice(0,28),id=name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   if(!id||state.alliances.some(a=>a.id===id||a.name.toLowerCase()===name.toLowerCase()))return inform('Enter a unique alliance name',true);
@@ -1149,12 +1149,28 @@ function bind(){
  }
  $('suggest').onclick=generateSuggestions;$('approve').onclick=approveSuggestions;
  $('discard').onclick=()=>{preview=[];$('approve').disabled=true;$('preview-info').textContent='Preview cleared.';draw();};
+ $('group-select-all').onclick=()=>{
+  groupSelection.clear();
+  for(const b of state.bases)if(b.allianceId===activeAlliance)groupSelection.add(b.id);
+  renderGroupUI();draw();
+ };
+ $('group-clear').onclick=()=>{
+  groupSelection.clear();groupBox=null;groupDrag=null;renderGroupUI();draw();
+ };
+ $('group-move').onclick=()=>{
+  const dx=Number($('group-dx').value),dy=Number($('group-dy').value);
+  if(!Number.isSafeInteger(dx)||!Number.isSafeInteger(dy))return inform('Enter whole-cell X and Y offsets.',true);
+  finishGroupMove([...groupSelection],dx,dy);
+ };
  for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>{
-  tool=b.dataset.tool;hoverCell=null;
+  tool=b.dataset.tool;hoverCell=null;groupBox=null;groupDrag=null;
   document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
+  renderGroupUI();
   inform(tool==='territory'
-  ?'Draw or edit a highlighted territory. Drag corners to resize, drag inside to move, or draw outside for a new section.'
-  :'Tool: '+b.textContent+'. Drag to pan unless drawing a territory.');
+   ?'Draw or edit a highlighted territory. Drag corners to resize, drag inside to move, or draw outside for a new section.'
+   :tool==='group'
+    ?'Select only '+nameFor(activeAlliance)+' bases: drag an area, or tap to toggle. Hold a selected base to move the whole group.'
+    :'Tool: '+b.textContent+'. Drag to pan unless drawing a territory.');
   draw();
  };
  $('zoom-in').onclick=()=>{view.scale=clamp(view.scale*1.3,1,70);draw();};
@@ -1175,6 +1191,6 @@ async function start(){
  app.innerHTML=html;bind();sync('Loading…');
  try{await fetchData(true,true);showNames=state.settings.showNames;view.x=state.center.x;view.y=state.center.y;fitMap(false);draw();inform('Ready. Set a Capitol center, then place bases or tap a tool. Coordinate alignment is unverified until game testing.');}
  catch(e){sync('Connection error');inform(e.message,true);}
- setInterval(async()=>{if(busy||polling||pointer?.holdBaseId||dragMove||pinchGesture||touchPoints.size>0||document.visibilityState==='hidden')return;polling=true;try{const was=revision;const changed=await fetchData(false,false);if(changed&&was!==revision)inform('Shared map updated by another R4. Revision '+revision);}catch(e){sync('Offline · retrying');}finally{polling=false;}},5000);
+ setInterval(async()=>{if(busy||polling||pointer||dragMove||groupDrag||groupBox||pinchGesture||touchPoints.size>0||document.visibilityState==='hidden')return;polling=true;try{const was=revision;const changed=await fetchData(false,false);if(changed&&was!==revision)inform('Shared map updated by another R4. Revision '+revision);}catch(e){sync('Offline · retrying');}finally{polling=false;}},5000);
 }
 start();
