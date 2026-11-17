@@ -48,3 +48,22 @@ html,body{max-width:100%;overflow-x:clip}
  .draft-bar .actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
  .draft-bar .btn{padding:10px 5px}
 }
+
+/* Mobile group move: controls stay visible below the canvas while selecting. */
+.group-controls[hidden]{display:none!important}
+.group-controls{padding:12px;display:flex;flex-direction:column;gap:10px;
+ background:#183b2a;border-top:2px solid #a9bf74;border-bottom:1px solid #5b8053}
+.group-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.group-header strong{font-size:14px;color:#fff0bf}
+.group-header span{font-size:12px;color:#c7dbc7}
+.group-actions{display:flex;flex-wrap:wrap;gap:8px}
+.group-actions .btn{flex:1 1 120px}
+.group-move-fields{display:flex;align-items:end;flex-wrap:wrap;gap:8px}
+.group-move-fields label{display:flex;flex:1 1 90px;min-width:0;flex-direction:column;gap:5px;font-size:12px;color:#e5eccf}
+.group-move-fields input{width:100%;min-width:0}
+.group-move-fields button{flex:1 1 130px}
+.group-controls .hint{font-size:12px;margin:0;line-height:1.55}
+@media (max-width:600px){
+ .group-move-fields{display:grid;grid-template-columns:1fr 1fr}
+ .group-move-fields button{grid-column:1/-1}
+}

@@ -1,4 +1,4 @@
-import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds,allianceBaseClusters,allianceUsage,packingGrid} from './hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds,allianceBaseClusters,allianceUsage,packingGrid,basesInSelection,inspectGroupMove} from './hive-geometry.js';
 
 const API='/r4-hive',app=document.getElementById('hive-app');
 const $=id=>document.getElementById(id);
@@ -9,7 +9,8 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
 let state=null,revision=0,history=[],members=[],aliases=[],user=null,busy=false;
 let activeAlliance='utw',tool='select',selected=null,preview=[],showNames='auto',displayMud=true,displayBuff=true,displayGrid=true;
-let view={x:499,y:499,scale:10},pointer=null,dragMove=null,hoverCell=null,drawArea=null,areaGesture=null,editingTerritoryId=null,canvas,ctx,width=900,height=600,polling=false;
+let view={x:499,y:499,scale:10},pointer=null,dragMove=null,groupBox=null,groupDrag=null,hoverCell=null,drawArea=null,areaGesture=null,editingTerritoryId=null,canvas,ctx,width=900,height=600,polling=false;
+const groupSelection=new Set();
 const touchPoints=new Map();let pinchGesture=null,ignoreTouchUntilRelease=false;
 const LONG_PRESS_MS=450, LONG_PRESS_SLOP_PX=9;
 const typeChoices=Object.entries(OBJECTS).filter(([k])=>!['base','capitol','city'].includes(k));
@@ -67,16 +68,21 @@ const html=[
  '<div class="actions"><button id="undo" class="btn">Undo last edit</button><button id="restore" class="btn">Restore selected revision</button><button id="snapshot" class="btn">Mark snapshot</button></div>',
  '<div id="history-list" class="history"></div></section></aside>',
  '<div class="map-column"><section class="map-card"><div class="map-tools"><div class="toolset">',
- '<button class="btn active" data-tool="select">Select / Pan</button><button class="btn" data-tool="base">Tap: Base</button><button class="btn" data-tool="city">Tap: City</button><button class="btn" data-tool="obstacle">Tap: Obstacle</button><button class="btn" data-tool="territory">Draw territory</button>',
+ '<button class="btn active" data-tool="select">Select / Pan</button><button class="btn" data-tool="group">Select Group</button><button class="btn" data-tool="base">Tap: Base</button><button class="btn" data-tool="city">Tap: City</button><button class="btn" data-tool="obstacle">Tap: Obstacle</button><button class="btn" data-tool="territory">Draw territory</button>',
  '</div><div class="zoomset"><button class="btn" id="zoom-out">−</button><button class="btn" id="zoom-in">+</button><button class="btn" id="fit">Fit active area</button></div></div>',
  '<div class="map-wrap"><canvas id="map-canvas" aria-label="Interactive UTW map coordinate grid"></canvas><div class="map-overlay" id="map-coordinate">X: 499 · Y: 499</div></div>',
+ '<div id="group-controls" class="group-controls" hidden>',
+ '<div class="group-header"><strong id="group-count">0 bases selected</strong><span id="group-status">Draw around bases or tap them to select.</span></div>',
+ '<div class="group-actions"><button class="btn" id="group-select-all">Select all current alliance</button><button class="btn" id="group-clear">Clear selection</button></div>',
+ '<div class="group-move-fields"><label>Move X cells <input id="group-dx" type="number" value="0" step="1"></label><label>Move Y cells <input id="group-dy" type="number" value="0" step="1"></label><button id="group-move" class="btn primary">Move selected</button></div>',
+ '<p class="hint">Drag a rectangle around bases to select them. Tap individual bases to add or remove. Long-press a selected base, then drag the entire group. Pinch with two fingers to pan or zoom. Locked bases cannot move.</p></div>',
  '<div id="territory-draft-bar" class="draft-bar" hidden><span id="territory-draft-summary"></span><div class="actions"><button id="draft-save" class="btn primary">Save territory</button><button id="draft-edit" class="btn">Edit coordinates</button><button id="draft-clear" class="btn">Clear</button></div></div>',
  '<div class="map-legend"><span><i class="swatch" style="background:#b16b4b"></i>Contaminated</span><span><i class="swatch" style="background:#b69a58"></i>Physical obstacle</span><span><i class="swatch" style="background:#b1eb8a"></i>3×3 green preview = placeable</span><span><i class="swatch" style="background:#e5b37e"></i>City label = level and name</span>',
  '<span>Solid = assigned territory</span><span>Dashed = occupied territory</span><span>↑ Y increases north · → X increases east</span><span id="overview-mode-note" hidden>Overview: alliance colours and names. Zoom in for individual bases.</span>',
  '<label style="display:inline"><input id="mud-toggle" type="checkbox" checked style="width:auto"> Mud</label>',
  '<label style="display:inline"><input id="buff-toggle" type="checkbox" checked style="width:auto"> Influence</label>',
  '<label style="display:inline"><input id="grid-toggle" type="checkbox" checked style="width:auto"> Grid</label></div>',
- '<div class="mobile-caption">Faint 1×1 cells and gentle 3-cell guides match base-sized placement. Guides do not force snapping. One finger: tap to select, long-hold a base to move, or drag to pan. Two fingers: slide together to pan, or pinch apart/together to zoom. Buttons still work.</div></section>',
+ '<div class="mobile-caption">Faint 1×1 cells and gentle 3-cell guides match base-sized placement. Guides do not force snapping. One finger: tap to select, long-hold a base to move, or drag to pan. Select Group: draw over bases, then long-hold one to move them together. Two fingers: slide together to pan, or pinch apart/together to zoom. Buttons still work.</div></section>',
  '<section id="selection" class="details"><h2>Selected item</h2><p class="muted">Tap a base, obstacle or territory to edit it.</p></section>',
  '<section class="report"><h2>Alliance ranges & base counts</h2><div class="report-grid" id="reports"></div></section>',
  '<div id="message" class="status" aria-live="polite"></div></div></div>'
@@ -156,7 +162,7 @@ function updateDynamic(){
  $('territory-priority').innerHTML='<h3>Section priority (top wins)</h3>'+state.territories.filter(t=>t.allianceId===activeAlliance).sort((a,b)=>a.priority-b.priority).map((t,i)=>'<div class="rank-row"><span>'+ (i+1)+'. '+esc(t.name)+'</span><button class="btn" data-priority="'+esc(t.id)+'" data-direction="-1" aria-label="Move section up">↑</button><button class="btn" data-priority="'+esc(t.id)+'" data-direction="1" aria-label="Move section down">↓</button></div>').join('');
  document.querySelectorAll('[data-priority]').forEach(b=>b.onclick=()=>movePriority(b.dataset.priority,Number(b.dataset.direction)));
  if(!$('coord-x').dataset.initialized){$('coord-x').value=state.center.x;$('coord-y').value=state.center.y;$('coord-x').dataset.initialized='yes';}
- renderSelection();renderReports();
+ renderSelection();renderReports();renderGroupUI();
 }
 function renameAlliance(){
  const current=alliance();
@@ -613,6 +619,33 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
   ctx.fillStyle='rgba(79,54,16,.96)';ctx.fillRect(labelX,labelY,textW,24);
   ctx.fillStyle='#fff3bd';ctx.fillText(label,labelX+7,labelY+16,textW-10);
  }
+ if(exportKind==='screen'&&tool==='group'){
+  // A group has no stored shape. Highlight every selected base and draw a
+  // translated ghost only while dragging. Image exports are unaffected.
+  for(const base of state.bases){
+   if(!groupSelection.has(base.id))continue;
+   const p=rxy(footprint(base,state));
+   ctx.fillStyle='rgba(255,228,137,.15)';ctx.fillRect(...p);
+   ctx.lineWidth=Math.max(2,Math.min(3,scale*.45));
+   ctx.strokeStyle=base.locked?'#fa6565':'#ffe59d';
+   ctx.setLineDash([5,3]);ctx.strokeRect(...p);ctx.setLineDash([]);
+  }
+  if(groupDrag){
+   const blocked=groupDrag.check.hard.length>0,warning=groupDrag.check.warnings.length>0;
+   const color=blocked?'#ff6e65':warning?'#ffcc65':'#85f58a';
+   for(const moved of groupDrag.check.moves){
+    const p=rxy(footprint(moved,state));
+    ctx.fillStyle=blocked?'rgba(245,83,70,.58)':warning?'rgba(236,168,53,.5)':'rgba(94,230,104,.52)';
+    ctx.fillRect(...p);
+    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.strokeRect(...p);
+   }
+  }
+  if(groupBox){
+   const p=rxy({left:groupBox.x1,right:groupBox.x2,top:groupBox.y1,bottom:groupBox.y2});
+   ctx.fillStyle='rgba(138,219,255,.18)';ctx.fillRect(...p);
+   ctx.strokeStyle='#c4edff';ctx.lineWidth=2.5;ctx.setLineDash([6,4]);ctx.strokeRect(...p);ctx.setLineDash([]);
+  }
+ }
  if(selected&&!dragMove){
   const o=(selected.kind==='base'?state.bases:selected.kind==='obstacle'?state.obstacles:state.territories).find(x=>x.id===selected.id);
   if(o){const r=selected.kind==='territory'?{left:o.x1,right:o.x2,top:o.y1,bottom:o.y2}:footprint(o,state);ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.strokeRect(...rxy(r));}
@@ -627,8 +660,11 @@ function draw(){
  }
  ctx.setTransform(dpr,0,0,dpr,0,0);
  scene(ctx,width,height,view.x,view.y,view.scale,{showMud:displayMud,showBuff:displayBuff,showGrid:displayGrid});
- $('overview-mode-note').hidden=!(view.scale<4.5&&!dragMove);
- $('map-coordinate').textContent=dragMove
+ $('overview-mode-note').hidden=!(view.scale<4.5&&!dragMove&&!groupDrag);
+ $('map-coordinate').textContent=groupDrag
+  ?'Moving '+groupDrag.ids.length+' bases · ΔX '+groupDrag.dx+' · ΔY '+groupDrag.dy+
+   (groupDrag.check.hard.length?' · BLOCKED':groupDrag.check.warnings.length?' · WARNING':' · Valid')
+  :dragMove
   ?'Moving base to X '+dragMove.x+' · Y '+dragMove.y+
    (dragMove.check.hard.length?' · BLOCKED':dragMove.check.warnings.length?' · WARNING':' · Valid')
   :hoverCell&&['base','city','obstacle'].includes(tool)
@@ -670,6 +706,7 @@ function beginPinchGesture(){
   areaGesture=null;
   showTerritoryDraft();
  }
+ groupBox=null;groupDrag=null;
  pointer=null;dragMove=null;hoverCell=null;
  ignoreTouchUntilRelease=true;
  const ids=Array.from(touchPoints.keys()).slice(0,2);
@@ -732,9 +769,57 @@ function cancelAreaGesture(){
   showTerritoryDraft();
  }
 }
+function renderGroupUI(){
+ const panel=$('group-controls');if(!panel||!state)return;
+ panel.hidden=tool!=='group';
+ for(const id of [...groupSelection])if(!state.bases.some(b=>b.id===id))groupSelection.delete(id);
+ const chosen=state.bases.filter(b=>groupSelection.has(b.id));
+ const locked=chosen.filter(b=>b.locked).length;
+ $('group-count').textContent=chosen.length+' base'+(chosen.length===1?'':'s')+' selected';
+ $('group-status').textContent=locked
+  ?locked+' locked. Unlock or deselect before moving.'
+  :chosen.length?'Long-press a highlighted base to drag all '+chosen.length+' together.':'Draw around bases or tap them to select.';
+ $('group-move').disabled=!chosen.length;
+ $('group-clear').disabled=!chosen.length;
+}
+function groupHit(x,y){
+ return [...state.bases].reverse().find(b=>b.allianceId===activeAlliance&&contains(footprint(b,state),x,y));
+}
+function toggleGroupAt(x,y){
+ const b=groupHit(x,y);
+ if(!b)return;
+ if(groupSelection.has(b.id))groupSelection.delete(b.id);else groupSelection.add(b.id);
+ renderGroupUI();draw();
+}
+function selectGroupRectangle(area,additive=false){
+ const hits=basesInSelection(state,area,activeAlliance);
+ if(!additive)groupSelection.clear();
+ for(const b of hits)groupSelection.add(b.id);
+ selected=null;renderSelection();renderGroupUI();draw();
+ inform(hits.length+' '+nameFor(activeAlliance)+' bases selected in this area. Hold a highlighted base to drag or use the X/Y offset.');
+}
+function finishGroupMove(ids,dx,dy){
+ if(!dx&&!dy)return inform('No group movement entered. The bases stayed in place.');
+ const check=inspectGroupMove(state,ids,dx,dy);
+ if(check.hard.length)return inform('Group move blocked: '+check.hard.slice(0,4).join('; ')+(check.hard.length>4?' and '+(check.hard.length-4)+' more':''),true);
+ const detail=check.warnings.length?'\n\nWarnings:\n'+check.warnings.slice(0,8).join('\n')+
+  (check.warnings.length>8?'\n...and '+(check.warnings.length-8)+' more warnings':''):'';
+ if(!confirm('Move '+check.count+' selected bases by X '+dx+', Y '+dy+'?'+detail+
+   '\n\nAll positions will save together as one undoable map revision.')){
+  return inform('Group move cancelled. No bases were changed.');
+ }
+ const moves=new Map(check.moves.map(m=>[m.id,m]));
+ const next=clone(state);
+ for(const b of next.bases){
+  const moved=moves.get(b.id);
+  if(moved){b.x=moved.x;b.y=moved.y;}
+ }
+ commit(next,'Moved '+check.count+' commander bases together by X '+dx+', Y '+dy);
+}
 function handleMapTap(x,y){
  if(!valid(x)||!valid(y))return;
  $('coord-x').value=x;$('coord-y').value=y;
+ if(tool==='group'){toggleGroupAt(x,y);return;}
  if(tool==='base')createBase(x,y);
  else if(tool==='obstacle')createObstacle(x,y,$('obstacle-type').value);
  else if(tool==='city')createCity(x,y);
@@ -805,6 +890,25 @@ function attachCanvas(){
     },LONG_PRESS_MS);
    }
   }
+  if(tool==='group'){
+   groupBox=territoryBoundsFromCorners(initial,initial);
+   const hit=groupHit(initial.x,initial.y);
+   if(hit&&groupSelection.has(hit.id)){
+    pointer.holdBaseId=hit.id;
+    const holdId=e.pointerId;
+    pointer.holdTimer=setTimeout(()=>{
+     if(!pointer||pointer.id!==holdId||pointer.moved||busy||touchPoints.size>1)return;
+     clearPressTimer();
+     const ids=[...groupSelection];
+     const check=inspectGroupMove(state,ids,0,0);
+     if(check.hard.length){groupBox=null;inform(check.hard[0],true);draw();return;}
+     groupDrag={ids,dx:0,dy:0,check};
+     groupBox=null;hoverCell=null;
+     inform('Moving '+ids.length+' bases together. Drag and release to preview safety checks.');
+     draw();
+    },LONG_PRESS_MS);
+   }
+  }
   if(tool==='territory'){
    const action=chooseTerritoryAction(initial,e.pointerType==='touch');
    areaGesture={mode:action.mode,initial,original:drawArea?{...drawArea}:null,previous:drawArea?{...drawArea}:null,previousEditingId:editingTerritoryId};
@@ -832,9 +936,17 @@ function attachCanvas(){
   const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
   if(Math.hypot(dx,dy)>LONG_PRESS_SLOP_PX){
    pointer.moved=true;
-   if(!dragMove)clearPressTimer();
+   if(!dragMove&&!groupDrag)clearPressTimer();
   }
-  if(dragMove){
+  if(groupDrag){
+   const cell=eventCell(e),mx=cell.x-pointer.cell.x,my=cell.y-pointer.cell.y;
+   if(mx!==groupDrag.dx||my!==groupDrag.dy){
+    groupDrag.dx=mx;groupDrag.dy=my;
+    groupDrag.check=inspectGroupMove(state,groupDrag.ids,mx,my);draw();
+   }
+  }else if(tool==='group'&&groupBox){
+   if(pointer.moved){groupBox=territoryBoundsFromCorners(pointer.cell,eventCell(e));draw();}
+  }else if(dragMove){
    // Finger maintains the same offset inside the base while it moves.
    const cell=eventCell(e);
    const x=dragMove.initialX+cell.x-pointer.cell.x;
@@ -864,6 +976,21 @@ function attachCanvas(){
   if(!pointer||e.pointerId!==pointer.id)return;
   clearPressTimer();
   const wasMoving=dragMove,hadMoved=pointer.moved;
+  if(tool==='group'){
+   const moving=groupDrag,cell=eventCell(e);
+   if(moving){
+    const dx=cell.x-pointer.cell.x,dy=cell.y-pointer.cell.y;
+    pointer=null;groupDrag=null;groupBox=null;hoverCell=null;
+    draw();finishGroupMove(moving.ids,dx,dy);return;
+   }
+   groupBox=null;
+   if(hadMoved){
+    selectGroupRectangle(territoryBoundsFromCorners(pointer.cell,cell),e.shiftKey===true);
+   }else{
+    toggleGroupAt(cell.x,cell.y);
+   }
+   pointer=null;hoverCell=null;draw();return;
+  }
   if(wasMoving){
    const c=eventCell(e);
    wasMoving.x=wasMoving.initialX+c.x-pointer.cell.x;
@@ -892,7 +1019,7 @@ function attachCanvas(){
     draw();return;
    }
   }
-  clearPressTimer();cancelAreaGesture();pointer=null;dragMove=null;hoverCell=null;draw();
+  clearPressTimer();cancelAreaGesture();pointer=null;dragMove=null;groupDrag=null;groupBox=null;hoverCell=null;draw();
  });
  canvas.addEventListener('lostpointercapture',e=>{
   // Browser/OS interruption: abandon any pending single-finger placement.
@@ -902,7 +1029,7 @@ function attachCanvas(){
    ignoreTouchUntilRelease=touchPoints.size>0;
   }
   if(pointer?.id===e.pointerId){
-   clearPressTimer();cancelAreaGesture();pointer=null;dragMove=null;hoverCell=null;draw();
+   clearPressTimer();cancelAreaGesture();pointer=null;dragMove=null;groupDrag=null;groupBox=null;hoverCell=null;draw();
   }
  });
  canvas.addEventListener('pointerleave',()=>{if(!pointer&&!pinchGesture){hoverCell=null;draw();}});
@@ -992,7 +1119,7 @@ function bind(){
  $('set-capitol').onclick=()=>{try{const c=coord();const next=clone(state);next.center=c;next.capitolPlaced=true;next.calibration.verified=false;commit(next,'Set Capitol center '+c.x+','+c.y);}catch(e){inform(e.message,true)}};
  $('save-calibration').onclick=()=>{const next=clone(state);next.calibration={evenX:$('even-x').value,evenY:$('even-y').value,verified:false};commit(next,'Adjusted even-sized object anchor convention');};
  $('verify-calibration').onclick=()=>{if(!confirm('Have you compared the planner against real in-game edge coordinates?'))return;const next=clone(state);next.calibration.verified=true;commit(next,'Marked coordinate calibration tested in game');};
- $('alliance').onchange=e=>{activeAlliance=e.target.value;preview=[];updateDynamic();draw();};
+ $('alliance').onchange=e=>{activeAlliance=e.target.value;preview=[];groupSelection.clear();groupBox=null;groupDrag=null;updateDynamic();draw();};
  $('add-alliance').onclick=()=>{
   const name=$('new-alliance').value.trim().slice(0,28),id=name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   if(!id||state.alliances.some(a=>a.id===id||a.name.toLowerCase()===name.toLowerCase()))return inform('Enter a unique alliance name',true);
@@ -1022,12 +1149,28 @@ function bind(){
  }
  $('suggest').onclick=generateSuggestions;$('approve').onclick=approveSuggestions;
  $('discard').onclick=()=>{preview=[];$('approve').disabled=true;$('preview-info').textContent='Preview cleared.';draw();};
+ $('group-select-all').onclick=()=>{
+  groupSelection.clear();
+  for(const b of state.bases)if(b.allianceId===activeAlliance)groupSelection.add(b.id);
+  renderGroupUI();draw();
+ };
+ $('group-clear').onclick=()=>{
+  groupSelection.clear();groupBox=null;groupDrag=null;renderGroupUI();draw();
+ };
+ $('group-move').onclick=()=>{
+  const dx=Number($('group-dx').value),dy=Number($('group-dy').value);
+  if(!Number.isSafeInteger(dx)||!Number.isSafeInteger(dy))return inform('Enter whole-cell X and Y offsets.',true);
+  finishGroupMove([...groupSelection],dx,dy);
+ };
  for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>{
-  tool=b.dataset.tool;hoverCell=null;
+  tool=b.dataset.tool;hoverCell=null;groupBox=null;groupDrag=null;
   document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
+  renderGroupUI();
   inform(tool==='territory'
-  ?'Draw or edit a highlighted territory. Drag corners to resize, drag inside to move, or draw outside for a new section.'
-  :'Tool: '+b.textContent+'. Drag to pan unless drawing a territory.');
+   ?'Draw or edit a highlighted territory. Drag corners to resize, drag inside to move, or draw outside for a new section.'
+   :tool==='group'
+    ?'Select only '+nameFor(activeAlliance)+' bases: drag an area, or tap to toggle. Hold a selected base to move the whole group.'
+    :'Tool: '+b.textContent+'. Drag to pan unless drawing a territory.');
   draw();
  };
  $('zoom-in').onclick=()=>{view.scale=clamp(view.scale*1.3,1,70);draw();};
@@ -1048,6 +1191,6 @@ async function start(){
  app.innerHTML=html;bind();sync('Loading…');
  try{await fetchData(true,true);showNames=state.settings.showNames;view.x=state.center.x;view.y=state.center.y;fitMap(false);draw();inform('Ready. Set a Capitol center, then place bases or tap a tool. Coordinate alignment is unverified until game testing.');}
  catch(e){sync('Connection error');inform(e.message,true);}
- setInterval(async()=>{if(busy||polling||pointer?.holdBaseId||dragMove||pinchGesture||touchPoints.size>0||document.visibilityState==='hidden')return;polling=true;try{const was=revision;const changed=await fetchData(false,false);if(changed&&was!==revision)inform('Shared map updated by another R4. Revision '+revision);}catch(e){sync('Offline · retrying');}finally{polling=false;}},5000);
+ setInterval(async()=>{if(busy||polling||pointer||dragMove||groupDrag||groupBox||pinchGesture||touchPoints.size>0||document.visibilityState==='hidden')return;polling=true;try{const was=revision;const changed=await fetchData(false,false);if(changed&&was!==revision)inform('Shared map updated by another R4. Revision '+revision);}catch(e){sync('Offline · retrying');}finally{polling=false;}},5000);
 }
 start();
