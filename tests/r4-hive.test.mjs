@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel} from '../assets/hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel,mapToPixel,pixelToMap,screenFootprint} from '../assets/hive-geometry.js';
 import {GET as hiveGet,POST as hivePost,validateState} from '../lib/r4-hive-handler.mjs';
 const make=()=>({center:{x:499,y:499},capitolPlaced:true,calibration:{evenX:'negative',evenY:'negative',verified:false},alliances:[{id:'utw',name:'UTW',color:'#3478c0'}],territories:[],obstacles:[],bases:[],settings:{spacing:1,showNames:'auto'}});
 const base=(id,x,y)=>({id,type:'base',x,y,allianceId:'utw',memberName:'',locked:false,sectionOverride:null});
@@ -93,4 +93,43 @@ test('City editing metadata is validated without changing obstacles schema',()=>
  city.level=11;assert.match(validateState(state),/Invalid city/);
  city.level=4;city.ownerAllianceId='unknown';assert.match(validateState(state),/Invalid city/);
  city.ownerAllianceId=null;city.name='a'.repeat(71);assert.match(validateState(state),/Invalid city/);
+});
+
+test('Last War Y increases upward, confirmed by 436/476, 436/479, 436/482 screenshots',()=>{
+ const camera={x:436,y:479,width:600,height:600,scale:12};
+ const p476=mapToPixel(436,476,camera);
+ const p479=mapToPixel(436,479,camera);
+ const p482=mapToPixel(436,482,camera);
+ assert.equal(p476.x,p479.x);
+ assert.equal(p479.x,p482.x);
+ assert.equal(p476.y-p479.y,36);
+ assert.equal(p479.y-p482.y,36);
+ assert.equal(p482.y,264);
+ assert.equal(p479.y,300);
+ assert.equal(p476.y,336);
+});
+test('Touch-to-coordinate is the inverse of the displayed north-positive map',()=>{
+ const camera={x:499,y:499,width:800,height:600,scale:11};
+ for(const [x,y] of [[436,476],[436,479],[436,482],[550,540],[499,499]]){
+  const pixel=mapToPixel(x,y,camera);
+  const roundTrip=pixelToMap(pixel.x,pixel.y,camera);
+  assert.equal(Math.round(roundTrip.x),x);
+  assert.equal(Math.round(roundTrip.y),y);
+ }
+});
+test('3x3 footprints occupy three square cells and remain north-positive',()=>{
+ const camera={x:436,y:479,width:600,height:600,scale:12};
+ const south=screenFootprint(footprint(base('south',436,476),make()),camera);
+ const north=screenFootprint(footprint(base('north',436,479),make()),camera);
+ assert.deepEqual(south,[282,318,36,36]);
+ assert.deepEqual(north,[282,282,36,36]);
+ assert.equal(north[1]+north[3],south[1]);
+});
+test('Even-sized mud and city outlines preserve positive screen height',()=>{
+ const state=make();
+ const camera={x:499,y:499,width:1200,height:800,scale:4};
+ const mud=screenFootprint(zoneRects(state)[0],camera);
+ assert.equal(mud[2],400);
+ assert.equal(mud[3],400);
+ assert.ok(mud[1]<mapToPixel(499,499,camera).y);
 });

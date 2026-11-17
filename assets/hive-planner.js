@@ -1,4 +1,4 @@
-import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel} from './hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint} from './hive-geometry.js';
 
 const API='/r4-hive',app=document.getElementById('hive-app');
 const $=id=>document.getElementById(id);
@@ -21,7 +21,7 @@ const html=[
  '<div class="actions"><button class="btn primary" id="jump">Jump to X/Y</button><button class="btn" id="set-capitol">Set Capitol center</button><button class="btn" id="test-coordinate">Test 3×3 base here</button></div>',
  '<p class="hint">Capitol: 21×21 cells; contaminated zone: 100×100. Even-size alignment is provisional until tested in-game.</p>',
  '<div class="fields"><div class="field"><label>Even-width X side</label><select id="even-x"><option value="negative">Extra west cell</option><option value="positive">Extra east cell</option></select></div>',
- '<div class="field"><label>Even-height Y side</label><select id="even-y"><option value="negative">Extra north cell</option><option value="positive">Extra south cell</option></select></div></div>',
+ '<div class="field"><label>Even-height Y side</label><select id="even-y"><option value="negative">Extra south cell</option><option value="positive">Extra north cell</option></select></div></div>',
  '<div class="actions"><button id="save-calibration" class="btn">Save calibration</button><button id="verify-calibration" class="btn">Mark tested</button></div><p class="hint" id="calibration-message">Not verified against an in-game mud edge.</p><p id="calibration-result" class="notice">Enter a known game coordinate, then use Test 3×3 base here to compare the predicted footprint with your screenshot.</p></section>',
  '<section class="panel"><h2>🏳 Alliances & Bases</h2><div class="fields"><div class="field wide"><label>Current alliance</label><select id="alliance"></select></div>',
  '<div class="field"><label>New alliance initials</label><input id="new-alliance" maxlength="28" placeholder="VON"></div><div class="field"><label>Colour</label><input id="alliance-color" type="color" value="#be654e"></div></div>',
@@ -65,7 +65,7 @@ const html=[
  '</div><div class="zoomset"><button class="btn" id="zoom-out">−</button><button class="btn" id="zoom-in">+</button><button class="btn" id="fit">Fit active area</button></div></div>',
  '<div class="map-wrap"><canvas id="map-canvas" aria-label="Interactive UTW map coordinate grid"></canvas><div class="map-overlay" id="map-coordinate">X: 499 · Y: 499</div></div>',
  '<div class="map-legend"><span><i class="swatch" style="background:#b16b4b"></i>Contaminated</span><span><i class="swatch" style="background:#b69a58"></i>Physical obstacle</span><span><i class="swatch" style="background:#b1eb8a"></i>3×3 green preview = placeable</span><span><i class="swatch" style="background:#e5b37e"></i>City label = level and name</span>',
- '<span>Solid = assigned territory</span><span>Dashed = occupied territory</span>',
+ '<span>Solid = assigned territory</span><span>Dashed = occupied territory</span><span>↑ Y increases north · → X increases east</span>',
  '<label style="display:inline"><input id="mud-toggle" type="checkbox" checked style="width:auto"> Mud</label>',
  '<label style="display:inline"><input id="buff-toggle" type="checkbox" checked style="width:auto"> Influence</label>',
  '<label style="display:inline"><input id="grid-toggle" type="checkbox" checked style="width:auto"> Grid</label></div>',
@@ -311,8 +311,9 @@ function deleteSelected(){
  selected=null;commit(next,'Removed '+key.slice(0,-1));
 }
 function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=true,showGrid=true}={}){
- const sx=x=>(x-cx)*scale+w/2,sy=y=>(y-cy)*scale+h/2;
- const rxy=r=>[sx(r.left-.5),sy(r.top-.5),(r.right-r.left+1)*scale,(r.bottom-r.top+1)*scale];
+ const projection={x:cx,y:cy,width:w,height:h,scale};
+ const sx=x=>mapToPixel(x,cy,projection).x,sy=y=>mapToPixel(cx,y,projection).y;
+ const rxy=r=>screenFootprint(r,projection);
  // Game-style olive field. At low zoom, hide tiny cell boundaries to avoid noise.
  ctx.fillStyle='#4c5a3c';ctx.fillRect(0,0,w,h);
  const xl=Math.floor(cx-w/(2*scale)),xr=Math.ceil(cx+w/(2*scale)),yt=Math.floor(cy-h/(2*scale)),yb=Math.ceil(cy+h/(2*scale));
@@ -329,7 +330,7 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
    const major=((y%3)+3)%3===0;
    if(!major&&!minor)continue;
    ctx.strokeStyle=major?'rgba(249,232,177,.22)':'rgba(249,232,177,.085)';
-   const py=sy(y-.5);ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(w,py);ctx.stroke();
+   const py=sy(y+.5);ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(w,py);ctx.stroke();
   }
  }
  if(showMud)for(const r of zoneRects(state)){const p=rxy(r);ctx.fillStyle='rgba(176,98,59,.34)';ctx.fillRect(...p);ctx.setLineDash([8,5]);ctx.strokeStyle='#e39e6d';ctx.lineWidth=2;ctx.strokeRect(...p);ctx.setLineDash([]);}
@@ -437,7 +438,8 @@ function fitMap(all=false){
 }
 function eventCell(e){
  const r=canvas.getBoundingClientRect();
- return {x:Math.round(view.x+(e.clientX-r.left-width/2)/view.scale),y:Math.round(view.y+(e.clientY-r.top-height/2)/view.scale)};
+ const point=pixelToMap(e.clientX-r.left,e.clientY-r.top,{...view,width,height});
+ return {x:Math.round(point.x),y:Math.round(point.y)};
 }
 function pick(x,y){
  const b=[...state.bases].reverse().find(o=>contains(footprint(o,state),x,y));
@@ -475,7 +477,7 @@ function attachCanvas(){
   const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
   if(Math.hypot(dx,dy)>6)pointer.moved=true;
   if(tool==='territory'&&drawArea){const c=eventCell(e);drawArea.x2=c.x;drawArea.y2=c.y;draw();}
-  else if(pointer.moved){hoverCell=null;view.x=pointer.originX-dx/view.scale;view.y=pointer.originY-dy/view.scale;draw();}
+  else if(pointer.moved){hoverCell=null;view.x=pointer.originX-dx/view.scale;view.y=pointer.originY+dy/view.scale;draw();}
   else if(hoverCell){hoverCell=eventCell(e);draw();}
  });
  canvas.addEventListener('pointerup',e=>{
@@ -521,7 +523,7 @@ function exportMap(kind){
  const c=document.createElement('canvas');c.width=innerW+112;c.height=innerH+175+legendHeight;
  const context=c.getContext('2d');context.fillStyle='#102b20';context.fillRect(0,0,c.width,c.height);
  context.fillStyle='#f4e3b7';context.font='bold 27px Georgia';context.fillText(kind==='detailed'?'UTW Detailed Hive Map':'Alliance Territory Overview',28,37);
- context.font='14px system-ui';context.fillStyle='#c9d9c2';context.fillText('Warzone 1395 · Center coordinates · Snapshot v'+revision,28,59);
+ context.font='14px system-ui';context.fillStyle='#c9d9c2';context.fillText('Warzone 1395 · X → east · Y ↑ north · Snapshot v'+revision,28,59);
  const left=60,top=85;
  context.save();context.translate(left,top);
  scene(context,innerW,innerH,(b.left+b.right)/2,(b.top+b.bottom)/2,scale,{exportKind:kind,showMud:true,showBuff:true,showGrid:true});
@@ -534,7 +536,7 @@ function exportMap(kind){
   context.fillText(String(x),px-14,top+innerH+15);
  }
  for(let y=Math.ceil((b.top-padding)/step)*step;y<=b.bottom+padding;y+=step){
-  const py=top+(y-(b.top+b.bottom)/2)*scale+innerH/2;
+  const py=top+((b.top+b.bottom)/2-y)*scale+innerH/2;
   context.fillText(String(y),9,py);
   context.fillText(String(y),left+innerW+10,py);
  }

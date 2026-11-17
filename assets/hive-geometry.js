@@ -32,6 +32,18 @@ export function cityLabel(city){
  const name=typeof city.name==='string'&&city.name.trim()?city.name.trim():'City';
  return level+' · '+name;
 }
+// Last War displays increasing Y north/upward. X increases east/right.
+// These functions affect display and hit-testing, NEVER the saved game coordinates.
+export function mapToPixel(x,y,{x:cx,y:cy,width,height,scale}){
+ return {x:(x-cx)*scale+width/2,y:(cy-y)*scale+height/2};
+}
+export function pixelToMap(px,py,{x:cx,y:cy,width,height,scale}){
+ return {x:cx+(px-width/2)/scale,y:cy-(py-height/2)/scale};
+}
+export function screenFootprint(r,view){
+ const nw=mapToPixel(r.left-0.5,r.bottom+0.5,view);
+ return [nw.x,nw.y,(r.right-r.left+1)*view.scale,(r.bottom-r.top+1)*view.scale];
+}
 export const int=n=>Number.isSafeInteger(Number(n))?Number(n):null;
 export function rect(x,y,w,h,calibration={}){
  const biasX=w%2===0&&calibration.evenX==='positive'?1:0;
