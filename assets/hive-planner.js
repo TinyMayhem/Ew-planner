@@ -132,11 +132,13 @@ function renderReports(){
  $('reports').innerHTML=state.alliances.map(a=>{
   const bs=state.bases.filter(b=>b.allianceId===a.id),out=occupiedBounds(state,a.id);
   const ts=state.territories.filter(t=>t.allianceId===a.id);
+  const counts=new Map(ts.map(t=>[t.id,0]));
+  for(const b of bs){const section=sectionFor(b,state);if(section)counts.set(section.id,(counts.get(section.id)||0)+1);}
   const off=bs.filter(b=>{const relevant=b.sectionOverride?ts.filter(t=>t.id===b.sectionOverride):ts;if(!relevant.length)return ts.length>0;return !relevant.some(t=>{const r=footprint(b,state);return r.left>=t.x1&&r.right<=t.x2&&r.top>=t.y1&&r.bottom<=t.y2;});}).length;
   return '<div class="report-alliance" style="--team:'+esc(a.color)+'"><strong>'+esc(a.name)+'</strong> · '+bs.length+' bases'+
   '<br>Occupied: '+(out?'X '+out.left+'–'+out.right+', Y '+out.top+'–'+out.bottom:'No bases')+
   '<br>Sections: '+ts.length+(off?' · ⚠ '+off+' outside/crossing':'')+
-  ts.map(t=>'<br>↳ '+esc(t.name)+': X '+t.x1+'–'+t.x2+', Y '+t.y1+'–'+t.y2).join('')+'</div>';
+  ts.map(t=>'<br>↳ '+esc(t.name)+': X '+t.x1+'–'+t.x2+', Y '+t.y1+'–'+t.y2+' · '+(counts.get(t.id)||0)+' bases · gap '+t.gap).join('')+'</div>';
  }).join('');
 }
 function movePriority(id,dir){
