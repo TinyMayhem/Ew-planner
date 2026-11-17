@@ -237,6 +237,7 @@ function startEditingTerritoryOnMap(id){
  const territory=state.territories.find(t=>t.id===id);
  if(!territory)return inform('Territory no longer exists',true);
  activeAlliance=territory.allianceId;
+ selected=null;updateDynamic();
  $('alliance').value=activeAlliance;
  $('territory-name').value=territory.name;
  $('territory-gap').value=String(territory.gap);
