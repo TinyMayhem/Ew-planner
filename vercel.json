@@ -49,6 +49,10 @@
       "destination": "/api/r4-stats?view=nicknames"
     },
     {
+      "source": "/r4-polls",
+      "destination": "/api/r4-polls?view=page"
+    },
+    {
       "source": "/r4-audit",
       "destination": "/api/r4-stats?view=audit"
     },
