@@ -1,4 +1,4 @@
-import {roleForPair} from './r4-thp-roles.mjs';
+import {roleForPair,latestThpSnapshotDate} from './r4-thp-roles.mjs';
 // Train guest designation only. Does not alter conductor/VIP eligibility.
 (()=>{
 'use strict';
@@ -9,7 +9,8 @@ const fmt=n=>Number(n).toLocaleString('en-CA');
 const el=(tag,value,cls)=>{const result=document.createElement(tag);if(value!=null)result.textContent=String(value);if(cls)result.className=cls;return result};
 const cache=new Map();
 let seq=0;
-async function asOf(date){
+async function latestSnapshot(){
+ const date=latestThpSnapshotDate();
  if(cache.has(date))return cache.get(date);
  const req=fetch('/api/r4-stats?member_thp=1&date='+encodeURIComponent(date),{credentials:'same-origin',cache:'no-store'})
   .then(async r=>{const value=await r.json().catch(()=>({}));if(!r.ok)throw Error(value.error||'THP unavailable');return value})
@@ -24,14 +25,14 @@ async function update(){
  if(!date||!/^\d{4}-\d{2}-\d{2}$/.test(date)){show('THP guest designation','Choose a train date.');return}
  if(!driver||!vip){show('THP guest designation','Choose a conductor and VIP to see the THP-based guest role.');return}
  if(driver===vip){show('THP guest designation','Conductor and VIP must be different members.',true);return}
- show('THP guest designation','Checking last recorded THP on or before '+date+'…');
+ show('THP guest designation','Checking each member’s latest saved THP. Daily updates are not required…');
  try{
-  const values=await asOf(date);if(seq!==current)return;
+  const values=await latestSnapshot();if(seq!==current)return;
   const mapped=new Map((values.mapped||[]).map(r=>[r.member_id,r]));
   const d=mapped.get(driver),v=mapped.get(vip);
   if(!d||!v){
    const missing=[!d?'conductor':'',!v?'VIP':''].filter(Boolean).join(' and ');
-   show('THP guest designation unavailable','No matched THP for '+missing+' on or before '+date+'. Add dated THP or correct player aliases before assigning a guest role.',true);
+   show('THP guest designation unavailable','No saved THP for '+missing+'. Add THP when available or correct player aliases before assigning a guest role.',true);
    return;
   }
   const conductor=$('train-member')?.selectedOptions[0]?.textContent||'Conductor';
