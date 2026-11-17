@@ -133,6 +133,14 @@ function updateDynamic(){
  $('history-select').innerHTML=history.map(h=>'<option value="'+h.revision+'">v'+h.revision+' · '+esc(h.summary)+' · '+esc(h.actor)+'</option>').join('');
  $('history-list').innerHTML=history.slice(0,16).map(h=>'<div class="history-row">v'+h.revision+' · '+esc(h.actor)+' · '+esc(h.summary)+'<br>'+new Date(h.created_at).toLocaleString()+'</div>').join('');
  $('suggest-section').innerHTML='<option value="">Use coordinate rectangle below</option>'+state.territories.filter(t=>t.allianceId===activeAlliance).sort((a,b)=>a.priority-b.priority).map(t=>'<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>').join('');
+ const ownTerritories=state.territories.filter(t=>t.allianceId===activeAlliance).sort((a,b)=>a.priority-b.priority);
+ $('territory-list').innerHTML=ownTerritories.length?ownTerritories.map(t=>
+  '<div class="territory-entry"><div><strong>'+esc(t.name)+'</strong><span>X '+t.x1+'–'+t.x2+' · Y '+t.y1+'–'+t.y2+'</span></div>'+
+  '<button class="btn" data-territory-edit="'+esc(t.id)+'">Edit</button>'+
+  '<button class="btn" data-territory-locate="'+esc(t.id)+'">Locate</button></div>'
+ ).join(''):'<p class="hint">No saved territories for '+esc(nameFor(activeAlliance))+'. Draw one to get started.</p>';
+ document.querySelectorAll('[data-territory-edit]').forEach(b=>b.onclick=()=>openTerritory(b.dataset.territoryEdit));
+ document.querySelectorAll('[data-territory-locate]').forEach(b=>b.onclick=()=>focusTerritory(state.territories.find(t=>t.id===b.dataset.territoryLocate)));
  $('even-x').value=state.calibration.evenX;$('even-y').value=state.calibration.evenY;
  $('calibration-message').textContent=state.calibration.verified?'✓ Calibration marked as tested':'⚠ Even-size edge alignment has NOT been verified against the game.';
  $('base-gap').value=String(state.settings.spacing);
@@ -199,13 +207,58 @@ function createCity(x,y){
  const next=clone(state);next.obstacles.push(city);
  commit(next,'Placed '+cityLabel(city)+' at '+x+','+y);
 }
+function territoryFieldBounds(){
+ const [x1,x2,y1,y2]=['x1','x2','y1','y2'].map(number);
+ if(![x1,x2,y1,y2].every(valid)||x1>x2||y1>y2)return null;
+ return {x1,x2,y1,y2};
+}
+function showTerritoryDraft(){
+ const bar=$('territory-draft-bar');
+ if(!bar)return;
+ bar.hidden=!drawArea;
+ if(drawArea){
+  const t=drawArea;
+  $('territory-draft-summary').textContent='Unsaved territory · '+nameFor(activeAlliance)+
+   ' · X '+t.x1+'–'+t.x2+' · Y '+t.y1+'–'+t.y2+
+   ' · Drag the corners to resize, or the inside to move';
+ }
+}
+function syncTerritoryFields(t){
+ for(const k of ['x1','x2','y1','y2'])$(k).value=String(t[k]);
+ showTerritoryDraft();
+ draw();
+}
+function clearTerritoryDraft(){
+ drawArea=null;areaGesture=null;showTerritoryDraft();draw();
+}
+function focusTerritory(t,scrollToMap=true){
+ if(!t)return;
+ view.x=(t.x1+t.x2)/2;view.y=(t.y1+t.y2)/2;
+ const w=canvas?.clientWidth||800,h=canvas?.clientHeight||450;
+ view.scale=clamp(Math.min(w/(t.x2-t.x1+24),h/(t.y2-t.y1+24)),1.2,70);
+ draw();
+ if(scrollToMap)$('map-canvas').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function openTerritory(id,scroll=true){
+ const t=state.territories.find(x=>x.id===id);if(!t)return;
+ selected={kind:'territory',id:t.id};
+ renderSelection();focusTerritory(t,false);
+ if(scroll)$('selection').scrollIntoView({behavior:'smooth',block:'start'});
+}
 function addTerritory(){
- const a=alliance(),x1=number('x1'),x2=number('x2'),y1=number('y1'),y2=number('y2'),gap=number('territory-gap');
+ const a=alliance(),bounds=territoryFieldBounds(),gap=number('territory-gap');
  const name=$('territory-name').value.trim()||a.name+' section '+(state.territories.filter(t=>t.allianceId===a.id).length+1);
- if(![x1,x2,y1,y2].every(valid)||x1>x2||y1>y2){inform('Enter valid min/max territory coordinates.',true);return;}
+ if(!bounds)return inform('Please use valid minimum and maximum X/Y coordinates.',true);
  const next=clone(state),pri=next.territories.filter(t=>t.allianceId===a.id).length;
- next.territories.push({id:uid(),allianceId:a.id,name:name.slice(0,65),x1,x2,y1,y2,gap,priority:pri});
- commit(next,'Added '+a.name+' territory '+name);
+ const saved={id:uid(),allianceId:a.id,name:name.slice(0,65),...bounds,gap,priority:pri};
+ next.territories.push(saved);
+ commit(next,'Added '+a.name+' territory '+name).then(ok=>{
+  if(ok){
+   drawArea=null;areaGesture=null;showTerritoryDraft();
+   selected={kind:'territory',id:saved.id};
+   renderSelection();focusTerritory(saved,false);
+  }
+ });
 }
 function bulkAdd(){
  const lines=$('bulk').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
@@ -272,10 +325,12 @@ function renderSelection(){
  }else{
   box.innerHTML='<h2>'+esc(nameFor(o.allianceId))+' · '+esc(o.name)+'</h2><div class="fields"><div class="field wide"><label>Section name</label><input id="edit-name" value="'+esc(o.name)+'"></div>'+
   ['x1','x2','y1','y2'].map(k=>'<div class="field"><label>'+k.toUpperCase()+'</label><input id="edit-'+k+'" type="number" value="'+o[k]+'"></div>').join('')+
-  '</div><p class="muted">Priority '+(o.priority+1)+' · gap '+o.gap+'</p>'+
-  '<div class="actions"><button id="save-selected" class="btn primary">Update section</button><button id="delete-selected" class="btn danger">Delete section</button></div>';
+  '<div class="field wide"><label>Gap between bases</label><select id="edit-territory-gap">'+[0,1,2].map(n=>'<option value="'+n+'" '+(n===o.gap?'selected':'')+'>'+n+' cell'+(n===1?'':'s')+'</option>').join('')+'</select></div></div>'+
+  '<p class="muted">Priority '+(o.priority+1)+' · Existing bases will not move when you edit this territory.</p>'+
+  '<div class="actions"><button id="save-selected" class="btn primary">Save territory changes</button><button id="focus-selected-territory" class="btn">Locate on map</button><button id="delete-selected" class="btn danger">Delete section</button></div>';
  }
  $('save-selected').onclick=saveSelected;$('delete-selected').onclick=deleteSelected;
+ if(selected.kind==='territory')$('focus-selected-territory').onclick=()=>focusTerritory(o);
 }
 function saveSelected(){
  if(!selected)return;
@@ -303,7 +358,8 @@ function saveSelected(){
   const block=obstacleCollision(item,next,item.id);if(block)return inform('Blocked: overlaps '+block,true);
  }else{
   item.name=$('edit-name').value.trim().slice(0,65);for(const k of ['x1','x2','y1','y2'])item[k]=number('edit-'+k);
-  if(!item.name||!['x1','x2','y1','y2'].every(k=>valid(item[k]))||item.x1>item.x2||item.y1>item.y2)return inform('Invalid territory bounds',true);
+  item.gap=number('edit-territory-gap');
+  if(!item.name||!['x1','x2','y1','y2'].every(k=>valid(item[k]))||item.x1>item.x2||item.y1>item.y2||![0,1,2].includes(item.gap))return inform('Invalid territory bounds',true);
  }
  commit(next,'Updated '+selected.kind+' '+selected.id.slice(0,8));
 }
