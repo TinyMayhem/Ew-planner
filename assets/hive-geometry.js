@@ -194,12 +194,43 @@ function edgeDistance(x,y,z){
  const dy=y<z.top?z.top-y:y>z.bottom?y-z.bottom:Math.min(y-z.top,z.bottom-y);
  return Math.min(dx,dy);
 }
+// Anchor suggested rows to existing base centers instead of restarting at
+// the selection rectangle's minimum X/Y. Otherwise the same 2-cell gap choice
+// can appear as 3 empty cells against an existing row.
+export function packingGrid(state,{allianceId,region,gap=1}){
+ const stride=3+gap;
+ const minX=Math.max(0,Math.floor(region.x1)),maxX=Math.min(1999,Math.floor(region.x2));
+ const minY=Math.max(0,Math.floor(region.y1)),maxY=Math.min(1999,Math.floor(region.y2));
+ const offset=(value)=>((value%stride)+stride)%stride;
+ const outside=(v,min,max)=>v<min?min-v:v>max?v-max:0;
+ const nearby=(state.bases||[]).map(b=>({
+  base:b,dx:outside(b.x,minX,maxX),dy:outside(b.y,minY,maxY)
+ })).filter(p=>p.dx<=2*stride&&p.dy<=2*stride);
+ // The selected alliance takes precedence when its existing grid is nearby.
+ // Otherwise use the neighboring alliance's row as the reference.
+ const same=nearby.filter(p=>p.base.allianceId===allianceId);
+ const anchors=same.length?same:nearby;
+ const phase=(axis,minimum)=>{
+  if(!anchors.length)return offset(minimum+1);
+  const totals=Array(stride).fill(0);
+  for(const p of anchors){
+   const score=1/(1+(p.dx+p.dy)/stride);
+   totals[offset(p.base[axis])]+=score;
+  }
+  const preferred=offset(minimum+1);
+  return totals.reduce((best,value,index)=>value>totals[best]+1e-9?index:best,preferred);
+ };
+ const phaseX=phase('x',minX),phaseY=phase('y',minY);
+ const first=(min,preferred)=>min+1+offset(preferred-offset(min+1));
+ return {stride,startX:first(minX,phaseX),startY:first(minY,phaseY),phaseX,phaseY,alignedToExisting:anchors.length>0};
+}
 export function proposeBases(state,{allianceId,region,count=20,gap=1,strategy='boundary',packing='rows'}){
  const temp=[],seen=new Set(),zone=zoneRects(state);
  const minX=Math.max(0,Math.floor(region.x1)),maxX=Math.min(1999,Math.floor(region.x2));
  const minY=Math.max(0,Math.floor(region.y1)),maxY=Math.min(1999,Math.floor(region.y2));
  if(maxX-minX>320||maxY-minY>320)throw Error('Choose an area at most 320×320 cells for suggestions.');
- const stride=3+gap;
+ const grid=packingGrid(state,{allianceId,region,gap});
+ const stride=grid.stride;
  const candidates=[];
  const add=(x,y)=>{
   const key=x+','+y;if(seen.has(key))return;seen.add(key);
@@ -208,15 +239,15 @@ export function proposeBases(state,{allianceId,region,count=20,gap=1,strategy='b
   const check=inspectPlacement(b,state,{spacing:gap});if(check.hard.length||check.mud>3)return;
   if(check.warnings.some(w=>w.startsWith('Closer')))return;
   const near=zone.length?Math.min(...zone.map(z=>edgeDistance(x,y,z))):0;
-  candidates.push({b,near});
+  candidates.push({b,near,aligned:x%stride===grid.phaseX&&y%stride===grid.phaseY});
  };
  if(packing==='rows'){
-  for(let y=minY+1;y<=maxY-1;y+=stride)for(let x=minX+1;x<=maxX-1;x+=stride)add(x,y);
+  for(let y=grid.startY;y<=maxY-1;y+=stride)for(let x=grid.startX;x<=maxX-1;x+=stride)add(x,y);
  }else{
   for(let y=minY+1;y<=maxY-1;y++)for(let x=minX+1;x<=maxX-1;x++)add(x,y);
  }
  if(strategy==='boundary'){
-  candidates.sort((a,b)=>a.near-b.near||a.b.y-b.b.y||a.b.x-b.b.x);
+  candidates.sort((a,b)=>Number(b.aligned)-Number(a.aligned)||a.near-b.near||a.b.y-b.b.y||a.b.x-b.b.x);
   for(const {b} of candidates){
    if(temp.length>=Math.min(250,count))break;
    if(temp.some(p=>Math.abs(p.x-b.x)<3+gap&&Math.abs(p.y-b.y)<3+gap))continue;
@@ -233,9 +264,13 @@ export function proposeBases(state,{allianceId,region,count=20,gap=1,strategy='b
    for(let i=0;i<available.length;i++){
     const p=available[i];
     if(temp.some(b=>Math.abs(p.x-b.x)<3+gap&&Math.abs(p.y-b.y)<3+gap))continue;
-    const score=temp.length
+    const spread=temp.length
      ?Math.min(...temp.map(b=>(p.x-b.x)**2+(p.y-b.y)**2))
      :((p.x-minX)**2+(p.y-minY)**2)*-1;
+    // Keep any still-available positions on the reference grid ahead of
+    // off-grid fill-ins. A 2-cell gap is a target, not only a minimum.
+    const onGrid=p.x%stride===grid.phaseX&&p.y%stride===grid.phaseY;
+    const score=spread+(onGrid?1e9:0);
     if(score>bestScore){best=i;bestScore=score;}
    }
    if(best<0)break;
