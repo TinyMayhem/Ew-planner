@@ -1,4 +1,4 @@
-import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera} from './hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds} from './hive-geometry.js';
 
 const API='/r4-hive',app=document.getElementById('hive-app');
 const $=id=>document.getElementById(id);
@@ -9,7 +9,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
 let state=null,revision=0,history=[],members=[],aliases=[],user=null,busy=false;
 let activeAlliance='utw',tool='select',selected=null,preview=[],showNames='auto',displayMud=true,displayBuff=true,displayGrid=true;
-let view={x:499,y:499,scale:10},pointer=null,dragMove=null,hoverCell=null,drawArea=null,canvas,ctx,width=900,height=600,polling=false;
+let view={x:499,y:499,scale:10},pointer=null,dragMove=null,hoverCell=null,drawArea=null,areaGesture=null,editingTerritoryId=null,canvas,ctx,width=900,height=600,polling=false;
 const touchPoints=new Map();let pinchGesture=null,ignoreTouchUntilRelease=false;
 const LONG_PRESS_MS=450, LONG_PRESS_SLOP_PX=9;
 const typeChoices=Object.entries(OBJECTS).filter(([k])=>!['base','capitol','city'].includes(k));
@@ -46,8 +46,9 @@ const html=[
  '<div class="field"><label>Min X</label><input id="x1" type="number" value="450"></div><div class="field"><label>Max X</label><input id="x2" type="number" value="550"></div>',
  '<div class="field"><label>Min Y</label><input id="y1" type="number" value="450"></div><div class="field"><label>Max Y</label><input id="y2" type="number" value="550"></div>',
  '<div class="field wide"><label>Section spacing</label><select id="territory-gap"><option value="0">No gap</option><option value="1">1-cell gap</option><option value="2">2-cell gap</option></select></div></div>',
- '<div class="actions"><button id="add-territory" class="btn primary">Add section</button></div>',
- '<p class="hint">Or choose Draw territory on the map, drag across an area, then save its name here. Solid boundary = assigned; dashed = actual occupied.</p>',
+ '<div class="actions"><button id="add-territory" class="btn primary">Save territory</button><button id="clear-territory-draft" class="btn">Clear draft</button></div>',
+ '<p class="hint">Draw a rectangle on the map. Your draft stays visible until you save or clear it. Adjust its corners on the map, or edit the X/Y fields above. Saved sections can be edited below.</p>',
+ '<h3>Saved territories</h3><div id="territory-list" class="territory-list"></div>',
  '<div id="territory-priority"></div></section>',
  '<section class="panel"><h2>✨ Smart suggestions</h2><div class="fields"><div class="field wide"><label>Fill section</label><select id="suggest-section"></select></div>',
  '<div class="field"><label>Number of bases</label><input id="suggest-count" type="number" min="1" max="250" value="20"></div>',
@@ -66,6 +67,7 @@ const html=[
  '<button class="btn active" data-tool="select">Select / Pan</button><button class="btn" data-tool="base">Tap: Base</button><button class="btn" data-tool="city">Tap: City</button><button class="btn" data-tool="obstacle">Tap: Obstacle</button><button class="btn" data-tool="territory">Draw territory</button>',
  '</div><div class="zoomset"><button class="btn" id="zoom-out">−</button><button class="btn" id="zoom-in">+</button><button class="btn" id="fit">Fit active area</button></div></div>',
  '<div class="map-wrap"><canvas id="map-canvas" aria-label="Interactive UTW map coordinate grid"></canvas><div class="map-overlay" id="map-coordinate">X: 499 · Y: 499</div></div>',
+ '<div id="territory-draft-bar" class="draft-bar" hidden><span id="territory-draft-summary"></span><div class="actions"><button id="draft-save" class="btn primary">Save territory</button><button id="draft-edit" class="btn">Edit coordinates</button><button id="draft-clear" class="btn">Clear</button></div></div>',
  '<div class="map-legend"><span><i class="swatch" style="background:#b16b4b"></i>Contaminated</span><span><i class="swatch" style="background:#b69a58"></i>Physical obstacle</span><span><i class="swatch" style="background:#b1eb8a"></i>3×3 green preview = placeable</span><span><i class="swatch" style="background:#e5b37e"></i>City label = level and name</span>',
  '<span>Solid = assigned territory</span><span>Dashed = occupied territory</span><span>↑ Y increases north · → X increases east</span>',
  '<label style="display:inline"><input id="mud-toggle" type="checkbox" checked style="width:auto"> Mud</label>',
@@ -131,6 +133,14 @@ function updateDynamic(){
  $('history-select').innerHTML=history.map(h=>'<option value="'+h.revision+'">v'+h.revision+' · '+esc(h.summary)+' · '+esc(h.actor)+'</option>').join('');
  $('history-list').innerHTML=history.slice(0,16).map(h=>'<div class="history-row">v'+h.revision+' · '+esc(h.actor)+' · '+esc(h.summary)+'<br>'+new Date(h.created_at).toLocaleString()+'</div>').join('');
  $('suggest-section').innerHTML='<option value="">Use coordinate rectangle below</option>'+state.territories.filter(t=>t.allianceId===activeAlliance).sort((a,b)=>a.priority-b.priority).map(t=>'<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>').join('');
+ const ownTerritories=state.territories.filter(t=>t.allianceId===activeAlliance).sort((a,b)=>a.priority-b.priority);
+ $('territory-list').innerHTML=ownTerritories.length?ownTerritories.map(t=>
+  '<div class="territory-entry"><div><strong>'+esc(t.name)+'</strong><span>X '+t.x1+'–'+t.x2+' · Y '+t.y1+'–'+t.y2+'</span></div>'+
+  '<button class="btn" data-territory-edit="'+esc(t.id)+'">Edit</button>'+
+  '<button class="btn" data-territory-locate="'+esc(t.id)+'">Locate</button></div>'
+ ).join(''):'<p class="hint">No saved territories for '+esc(nameFor(activeAlliance))+'. Draw one to get started.</p>';
+ document.querySelectorAll('[data-territory-edit]').forEach(b=>b.onclick=()=>openTerritory(b.dataset.territoryEdit));
+ document.querySelectorAll('[data-territory-locate]').forEach(b=>b.onclick=()=>focusTerritory(state.territories.find(t=>t.id===b.dataset.territoryLocate)));
  $('even-x').value=state.calibration.evenX;$('even-y').value=state.calibration.evenY;
  $('calibration-message').textContent=state.calibration.verified?'✓ Calibration marked as tested':'⚠ Even-size edge alignment has NOT been verified against the game.';
  $('base-gap').value=String(state.settings.spacing);
@@ -197,13 +207,81 @@ function createCity(x,y){
  const next=clone(state);next.obstacles.push(city);
  commit(next,'Placed '+cityLabel(city)+' at '+x+','+y);
 }
+function territoryFieldBounds(){
+ const [x1,x2,y1,y2]=['x1','x2','y1','y2'].map(number);
+ if(![x1,x2,y1,y2].every(valid)||x1>x2||y1>y2)return null;
+ return {x1,x2,y1,y2};
+}
+function showTerritoryDraft(){
+ const bar=$('territory-draft-bar');
+ if(!bar)return;
+ bar.hidden=!drawArea;
+ if(drawArea){
+  const t=drawArea;
+  $('territory-draft-summary').textContent=(editingTerritoryId?'Editing saved territory':'Unsaved territory')+' · '+nameFor(activeAlliance)+
+   ' · X '+t.x1+'–'+t.x2+' · Y '+t.y1+'–'+t.y2+
+   ' · Drag corners to resize or the inside to move';
+  $('draft-save').textContent=editingTerritoryId?'Save changes':'Save territory';
+  $('draft-clear').textContent=editingTerritoryId?'Cancel edit':'Clear';
+ }
+}
+function syncTerritoryFields(t){
+ for(const k of ['x1','x2','y1','y2'])$(k).value=String(t[k]);
+ showTerritoryDraft();
+ draw();
+}
+function clearTerritoryDraft(){
+ drawArea=null;areaGesture=null;editingTerritoryId=null;showTerritoryDraft();draw();
+}
+function startEditingTerritoryOnMap(id){
+ const territory=state.territories.find(t=>t.id===id);
+ if(!territory)return inform('Territory no longer exists',true);
+ activeAlliance=territory.allianceId;
+ selected=null;updateDynamic();
+ $('alliance').value=activeAlliance;
+ $('territory-name').value=territory.name;
+ $('territory-gap').value=String(territory.gap);
+ editingTerritoryId=id;
+ drawArea={x1:territory.x1,x2:territory.x2,y1:territory.y1,y2:territory.y2};
+ syncTerritoryFields(drawArea);
+ tool='territory';hoverCell=null;
+ document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool));
+ focusTerritory(territory);
+ inform('Editing '+territory.name+'. Move or resize the highlighted rectangle, then Save changes. Cancel leaves the saved territory untouched.');
+}
+function focusTerritory(t,scrollToMap=true){
+ if(!t)return;
+ view.x=(t.x1+t.x2)/2;view.y=(t.y1+t.y2)/2;
+ const w=canvas?.clientWidth||800,h=canvas?.clientHeight||450;
+ view.scale=clamp(Math.min(w/(t.x2-t.x1+24),h/(t.y2-t.y1+24)),1.2,70);
+ draw();
+ if(scrollToMap)$('map-canvas').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function openTerritory(id,scroll=true){
+ const t=state.territories.find(x=>x.id===id);if(!t)return;
+ selected={kind:'territory',id:t.id};
+ renderSelection();focusTerritory(t,false);
+ if(scroll)$('selection').scrollIntoView({behavior:'smooth',block:'start'});
+}
 function addTerritory(){
- const a=alliance(),x1=number('x1'),x2=number('x2'),y1=number('y1'),y2=number('y2'),gap=number('territory-gap');
- const name=$('territory-name').value.trim()||a.name+' section '+(state.territories.filter(t=>t.allianceId===a.id).length+1);
- if(![x1,x2,y1,y2].every(valid)||x1>x2||y1>y2){inform('Enter valid min/max territory coordinates.',true);return;}
- const next=clone(state),pri=next.territories.filter(t=>t.allianceId===a.id).length;
- next.territories.push({id:uid(),allianceId:a.id,name:name.slice(0,65),x1,x2,y1,y2,gap,priority:pri});
- commit(next,'Added '+a.name+' territory '+name);
+ const a=alliance(),bounds=territoryFieldBounds(),gap=number('territory-gap');
+ const current=editingTerritoryId?state.territories.find(t=>t.id===editingTerritoryId):null;
+ if(editingTerritoryId&&!current)return inform('This saved territory is no longer available. Cancel editing before creating a new one.',true);
+ const name=$('territory-name').value.trim()||
+  (current?.name||a.name+' section '+(state.territories.filter(t=>t.allianceId===a.id).length+1));
+ if(!bounds||![0,1,2].includes(gap))return inform('Please use valid X/Y bounds and base spacing.',true);
+ const next=clone(state),saved=current?next.territories.find(t=>t.id===current.id):{
+  id:uid(),allianceId:a.id,priority:next.territories.filter(t=>t.allianceId===a.id).length
+ };
+ Object.assign(saved,{name:name.slice(0,65),...bounds,gap});
+ if(!current)next.territories.push(saved);
+ commit(next,(current?'Updated':'Added')+' '+nameFor(saved.allianceId)+' territory '+name).then(ok=>{
+  if(ok){
+   drawArea=null;areaGesture=null;editingTerritoryId=null;showTerritoryDraft();
+   selected={kind:'territory',id:saved.id};
+   renderSelection();focusTerritory(saved,false);
+  }
+ });
 }
 function bulkAdd(){
  const lines=$('bulk').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
@@ -270,10 +348,15 @@ function renderSelection(){
  }else{
   box.innerHTML='<h2>'+esc(nameFor(o.allianceId))+' · '+esc(o.name)+'</h2><div class="fields"><div class="field wide"><label>Section name</label><input id="edit-name" value="'+esc(o.name)+'"></div>'+
   ['x1','x2','y1','y2'].map(k=>'<div class="field"><label>'+k.toUpperCase()+'</label><input id="edit-'+k+'" type="number" value="'+o[k]+'"></div>').join('')+
-  '</div><p class="muted">Priority '+(o.priority+1)+' · gap '+o.gap+'</p>'+
-  '<div class="actions"><button id="save-selected" class="btn primary">Update section</button><button id="delete-selected" class="btn danger">Delete section</button></div>';
+  '<div class="field wide"><label>Gap between bases</label><select id="edit-territory-gap">'+[0,1,2].map(n=>'<option value="'+n+'" '+(n===o.gap?'selected':'')+'>'+n+' cell'+(n===1?'':'s')+'</option>').join('')+'</select></div></div>'+
+  '<p class="muted">Priority '+(o.priority+1)+' · Existing bases will not move when you edit this territory.</p>'+
+  '<div class="actions"><button id="save-selected" class="btn primary">Save territory changes</button><button id="edit-territory-map" class="btn">Resize on map</button><button id="focus-selected-territory" class="btn">Locate on map</button><button id="delete-selected" class="btn danger">Delete section</button></div>';
  }
  $('save-selected').onclick=saveSelected;$('delete-selected').onclick=deleteSelected;
+ if(selected.kind==='territory'){
+  $('focus-selected-territory').onclick=()=>focusTerritory(o);
+  $('edit-territory-map').onclick=()=>startEditingTerritoryOnMap(o.id);
+ }
 }
 function saveSelected(){
  if(!selected)return;
@@ -301,7 +384,8 @@ function saveSelected(){
   const block=obstacleCollision(item,next,item.id);if(block)return inform('Blocked: overlaps '+block,true);
  }else{
   item.name=$('edit-name').value.trim().slice(0,65);for(const k of ['x1','x2','y1','y2'])item[k]=number('edit-'+k);
-  if(!item.name||!['x1','x2','y1','y2'].every(k=>valid(item[k]))||item.x1>item.x2||item.y1>item.y2)return inform('Invalid territory bounds',true);
+  item.gap=number('edit-territory-gap');
+  if(!item.name||!['x1','x2','y1','y2'].every(k=>valid(item[k]))||item.x1>item.x2||item.y1>item.y2||![0,1,2].includes(item.gap))return inform('Invalid territory bounds',true);
  }
  commit(next,'Updated '+selected.kind+' '+selected.id.slice(0,8));
 }
@@ -437,7 +521,23 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
   }
   ctx.strokeStyle=line;ctx.lineWidth=2.5;ctx.strokeRect(...p);
  }
- if(drawArea){const r={left:Math.min(drawArea.x1,drawArea.x2),right:Math.max(drawArea.x1,drawArea.x2),top:Math.min(drawArea.y1,drawArea.y2),bottom:Math.max(drawArea.y1,drawArea.y2)};const p=rxy(r);ctx.fillStyle='#d8c26824';ctx.fillRect(...p);ctx.strokeStyle='#fff2b5';ctx.lineWidth=2;ctx.strokeRect(...p);}
+ if(exportKind==='screen'&&drawArea){
+  const r={left:drawArea.x1,right:drawArea.x2,top:drawArea.y1,bottom:drawArea.y2};
+  const p=rxy(r);
+  ctx.fillStyle='rgba(255,217,107,.23)';ctx.fillRect(...p);
+  ctx.strokeStyle='#ffed93';ctx.lineWidth=3;ctx.setLineDash([10,4]);ctx.strokeRect(...p);ctx.setLineDash([]);
+  const corners=[['nw',r.left,r.bottom],['ne',r.right,r.bottom],['sw',r.left,r.top],['se',r.right,r.top]];
+  for(const [,x,y] of corners){
+   const q=mapToPixel(x,y,projection);
+   ctx.beginPath();ctx.arc(q.x,q.y,8,0,Math.PI*2);
+   ctx.fillStyle='#fff3ba';ctx.fill();ctx.strokeStyle='#78520a';ctx.lineWidth=2;ctx.stroke();
+  }
+  const label='UNSAVED TERRITORY · '+nameFor(activeAlliance);
+  ctx.font='bold 12px system-ui';const textW=Math.min(w-14,Math.max(96,ctx.measureText(label).width+16));
+  const labelX=clamp(p[0],6,Math.max(6,w-textW-6)),labelY=clamp(p[1]-25,4,Math.max(4,h-24));
+  ctx.fillStyle='rgba(79,54,16,.96)';ctx.fillRect(labelX,labelY,textW,24);
+  ctx.fillStyle='#fff3bd';ctx.fillText(label,labelX+7,labelY+16,textW-10);
+ }
  if(selected&&!dragMove){
   const o=(selected.kind==='base'?state.bases:selected.kind==='obstacle'?state.obstacles:state.territories).find(x=>x.id===selected.id);
   if(o){const r=selected.kind==='territory'?{left:o.x1,right:o.x2,top:o.y1,bottom:o.y2}:footprint(o,state);ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.strokeRect(...rxy(r));}
@@ -488,7 +588,13 @@ function gesturePair(){
 }
 function beginPinchGesture(){
  clearPressTimer();
- pointer=null;dragMove=null;drawArea=null;hoverCell=null;
+ if(areaGesture){
+  drawArea=areaGesture.previous;
+  editingTerritoryId=areaGesture.previousEditingId;
+  areaGesture=null;
+  showTerritoryDraft();
+ }
+ pointer=null;dragMove=null;hoverCell=null;
  ignoreTouchUntilRelease=true;
  const ids=Array.from(touchPoints.keys()).slice(0,2);
  pinchGesture={ids,initial:null,startView:{...view}};
@@ -515,6 +621,40 @@ function pick(x,y){
  if(o)return {kind:'obstacle',id:o.id};
  const t=[...state.territories].reverse().find(o=>x>=o.x1&&x<=o.x2&&y>=o.y1&&y<=o.y2);
  return t?{kind:'territory',id:t.id}:null;
+}
+function chooseTerritoryAction(point,isTouch=false){
+ if(!drawArea)return {mode:'new'};
+ const projection={...view,width,height},t=drawArea;
+ const corners=[
+  {mode:'nw',x:t.x1,y:t.y2},{mode:'ne',x:t.x2,y:t.y2},
+  {mode:'sw',x:t.x1,y:t.y1},{mode:'se',x:t.x2,y:t.y1}
+ ];
+ const local=mapToPixel(point.x,point.y,projection);
+ const tolerancePx=isTouch?23:13;
+ let best=null,min=Infinity;
+ for(const c of corners){
+  const dist=Math.hypot(local.x-mapToPixel(c.x,c.y,projection).x,local.y-mapToPixel(c.x,c.y,projection).y);
+  if(dist<min){min=dist;best=c;}
+ }
+ if(min<=tolerancePx)return {mode:best.mode};
+ if(point.x>=t.x1&&point.x<=t.x2&&point.y>=t.y1&&point.y<=t.y2)return {mode:'move'};
+ return {mode:'new'};
+}
+function updateAreaGesture(point){
+ if(!areaGesture)return;
+ const {mode,initial,original}=areaGesture;
+ if(mode==='new')drawArea=territoryBoundsFromCorners(initial,point);
+ else if(mode==='move')drawArea=moveTerritoryBounds(original,point.x-initial.x,point.y-initial.y);
+ else drawArea=resizeTerritoryBounds(original,mode,point.x,point.y);
+ showTerritoryDraft();draw();
+}
+function cancelAreaGesture(){
+ if(areaGesture){
+  drawArea=areaGesture.previous;
+  editingTerritoryId=areaGesture.previousEditingId;
+  areaGesture=null;
+  showTerritoryDraft();
+ }
 }
 function handleMapTap(x,y){
  if(!valid(x)||!valid(y))return;
@@ -589,7 +729,15 @@ function attachCanvas(){
     },LONG_PRESS_MS);
    }
   }
-  if(tool==='territory')drawArea={x1:initial.x,y1:initial.y,x2:initial.x,y2:initial.y};
+  if(tool==='territory'){
+   const action=chooseTerritoryAction(initial,e.pointerType==='touch');
+   areaGesture={mode:action.mode,initial,original:drawArea?{...drawArea}:null,previous:drawArea?{...drawArea}:null,previousEditingId:editingTerritoryId};
+   if(action.mode==='new'){
+    drawArea=territoryBoundsFromCorners(initial,initial);
+    editingTerritoryId=null;
+   }
+   showTerritoryDraft();
+  }
   draw();
  });
  canvas.addEventListener('pointermove',e=>{
@@ -620,8 +768,8 @@ function attachCanvas(){
     dragMove.check=inspectBaseMove(state,dragMove.id,x,y);
     draw();
    }
-  }else if(tool==='territory'&&drawArea){
-   const cell=eventCell(e);drawArea.x2=cell.x;drawArea.y2=cell.y;draw();
+  }else if(tool==='territory'&&areaGesture){
+   updateAreaGesture(eventCell(e));
   }else if(pointer.moved){
    hoverCell=null;
    view.x=pointer.originX-dx/view.scale;view.y=pointer.originY+dy/view.scale;draw();
@@ -647,10 +795,13 @@ function attachCanvas(){
    pointer=null;dragMove=null;hoverCell=null;
    draw();releaseHeldBase(wasMoving);return;
   }
-  if(tool==='territory'&&drawArea){
-   const b=drawArea;
-   for(const [id,n] of [['x1',Math.min(b.x1,b.x2)],['x2',Math.max(b.x1,b.x2)],['y1',Math.min(b.y1,b.y2)],['y2',Math.max(b.y1,b.y2)]])$(id).value=n;
-   drawArea=null;inform('Territory rectangle selected. Enter a section name and tap Add section.');
+  if(tool==='territory'&&areaGesture){
+   updateAreaGesture(eventCell(e));
+   areaGesture=null;
+   if(drawArea){
+    syncTerritoryFields(drawArea);
+    inform('Territory draft is still visible. Drag its corners or edit coordinates, then tap Save territory.');
+   }
   }else if(!hadMoved){
    const cell=eventCell(e);handleMapTap(cell.x,cell.y);
   }
@@ -665,7 +816,7 @@ function attachCanvas(){
     draw();return;
    }
   }
-  clearPressTimer();pointer=null;dragMove=null;hoverCell=null;drawArea=null;draw();
+  clearPressTimer();cancelAreaGesture();pointer=null;dragMove=null;hoverCell=null;draw();
  });
  canvas.addEventListener('lostpointercapture',e=>{
   // Browser/OS interruption: abandon any pending single-finger placement.
@@ -675,7 +826,7 @@ function attachCanvas(){
    ignoreTouchUntilRelease=touchPoints.size>0;
   }
   if(pointer?.id===e.pointerId){
-   clearPressTimer();pointer=null;dragMove=null;drawArea=null;hoverCell=null;draw();
+   clearPressTimer();cancelAreaGesture();pointer=null;dragMove=null;hoverCell=null;draw();
   }
  });
  canvas.addEventListener('pointerleave',()=>{if(!pointer&&!pinchGesture){hoverCell=null;draw();}});
@@ -780,12 +931,26 @@ function bind(){
  $('obstacle-type').onchange=e=>{$('obstacle-type').dataset.chosen=e.target.value;};
  $('bulk-preview').onclick=bulkAdd;
  $('add-territory').onclick=addTerritory;
+ $('draft-save').onclick=addTerritory;
+ $('draft-edit').onclick=()=>{$('territory-name').scrollIntoView({behavior:'smooth',block:'center'});$('territory-name').focus();};
+ $('draft-clear').onclick=clearTerritoryDraft;
+ $('clear-territory-draft').onclick=clearTerritoryDraft;
+ for(const field of ['x1','x2','y1','y2']){
+  $(field).addEventListener('input',()=>{
+   if(!drawArea||areaGesture)return;
+   const bounds=territoryFieldBounds();
+   if(bounds){drawArea=bounds;showTerritoryDraft();draw();}
+  });
+ }
  $('suggest').onclick=generateSuggestions;$('approve').onclick=approveSuggestions;
  $('discard').onclick=()=>{preview=[];$('approve').disabled=true;$('preview-info').textContent='Preview cleared.';draw();};
  for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>{
   tool=b.dataset.tool;hoverCell=null;
   document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
-  inform('Tool: '+b.textContent+'. Drag to pan unless drawing a territory.');draw();
+  inform(tool==='territory'
+  ?'Draw or edit a highlighted territory. Drag corners to resize, drag inside to move, or draw outside for a new section.'
+  :'Tool: '+b.textContent+'. Drag to pan unless drawing a territory.');
+  draw();
  };
  $('zoom-in').onclick=()=>{view.scale=clamp(view.scale*1.3,1,70);draw();};
  $('zoom-out').onclick=()=>{view.scale=clamp(view.scale/1.3,1,70);draw();};

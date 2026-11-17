@@ -117,6 +117,24 @@ export function inspectBaseMove(state,baseId,x,y){
  const candidate={...base,x,y};
  return {...inspectPlacement(candidate,state,{ignoreId:baseId}),candidate};
 }
+// Draft territory editing uses world cell coordinates and never modifies saved rows.
+export function territoryBoundsFromCorners(a,b){
+ return {x1:Math.min(a.x,b.x),x2:Math.max(a.x,b.x),y1:Math.min(a.y,b.y),y2:Math.max(a.y,b.y)};
+}
+export function moveTerritoryBounds(r,dx,dy){
+ const x=Math.min(1999-r.x2,Math.max(-r.x1,Math.round(dx)));
+ const y=Math.min(1999-r.y2,Math.max(-r.y1,Math.round(dy)));
+ return {x1:r.x1+x,x2:r.x2+x,y1:r.y1+y,y2:r.y2+y};
+}
+export function resizeTerritoryBounds(r,corner,x,y){
+ const opposite={
+  nw:{x:r.x2,y:r.y1},ne:{x:r.x1,y:r.y1},
+  sw:{x:r.x2,y:r.y2},se:{x:r.x1,y:r.y2}
+ }[corner];
+ if(!opposite)return {...r};
+ const moving={x:Math.min(1999,Math.max(0,Math.round(x))),y:Math.min(1999,Math.max(0,Math.round(y)))};
+ return territoryBoundsFromCorners(opposite,moving);
+}
 export function boundsOfState(state,{zones=true,territories=true}={}){
  const rs=[];
  if(state.capitolPlaced){rs.push(rect(state.center.x,state.center.y,21,21,state.calibration));if(zones)rs.push(...zoneRects(state));}
