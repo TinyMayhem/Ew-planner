@@ -306,7 +306,14 @@ async function drawReport(){
   for(const [kind,data] of Object.entries(summary.byType)){
    const row=node('div',null,'poll-report-row');row.append(node('strong',types[kind]||kind),node('span',data.polls+' polls · '+data.yes+' Yes · '+data.no+' No · '+data.maybe+' Maybe · '+data.missing+' no response'));trend.append(row);
   }
-  $('poll-report-summary').after(trend);
+  const months=node('div',null,'poll-trends');months.id='poll-month-trends';months.append(node('h3','Month-by-month voting trends'));
+  for(const [month,data] of Object.entries(summary.byMonth||{}).sort((a,b)=>a[0].localeCompare(b[0]))){
+   const total=data.yes+data.no+data.maybe+data.missing;
+   const row=node('div',null,'poll-report-row');
+   row.append(node('strong',month+' · '+data.polls+' polls'),node('span','Yes '+(total?Math.round(data.yes/total*100):0)+'% · No '+(total?Math.round(data.no/total*100):0)+'% · Maybe '+(total?Math.round(data.maybe/total*100):0)+'% · No response '+(total?Math.round(data.missing/total*100):0)+'%'));
+   months.append(row);
+  }
+  $('poll-report-summary').after(trend,months);
   $('poll-report-status').textContent=summary.polls+' finalized polls analyzed. Only eligible roster members were counted.';
  }catch(e){$('poll-report-status').textContent=e.message}
 }
