@@ -8,7 +8,8 @@ import {GET as reportsPage} from '../lib/r4-reports-page.mjs';
 import {GET as nicknamesPage} from '../lib/r4-nicknames-page.mjs';
 import {buildMemberPerformance} from '../lib/member-performance.mjs';
 import {stageRange,stageForDate,weekStart} from '../assets/r4-train-rules.mjs';
-import {buildTrainAdvice,resolveNames,isTopDonationTrain,resolveR4RoleMembers} from '../lib/train-advice.mjs';
+import {buildTrainAdvice,resolveNames,isTopDonationTrain} from '../lib/train-advice.mjs';
+import {activeR4MemberOptions} from '../lib/r4-eligible-members.mjs';
 import {utwConfigured,utwScoreboard,utwWeeklyOverview} from '../lib/utw-scores.mjs';
 import {GET as runDuelBackupCron} from '../lib/r4-duel-backup.mjs';
 
@@ -33,15 +34,15 @@ async function db(path,options={}){
 const urlParams=(obj)=>new URLSearchParams(obj).toString();
 async function list(table,params){return db(table+'?'+urlParams(params))}
 async function insert(table,data){const rows=await db(table,{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(data)});return rows}
-// Re-read the private UTW R4 department roles for every donation recommendation/save.
-// Do not silently assume an unknown or unlinked R4 is an eligible donor.
+// Always consult the full active UTW R4 account roster, including unassigned R4s.
+// No department assignment is required for Top Donation disqualification.
 async function utwR4Membership(members,aliases){
- const roles=await list('utw_r4_roles',{select:'leader,backup,additional_backups',alliance:'eq.utw',limit:'50'});
- if(!Array.isArray(roles))throw Error('UTW R4 roles list is unavailable');
- const mapped=resolveR4RoleMembers(roles,members,aliases);
- if(!mapped.nameCount)throw Error('UTW R4 Roles list has no saved members. Add R4 leaders and backups before using Top Donation trains.');
- if(mapped.unmatched.length)throw Error('Link these UTW R4 role names in Train Desk Nicknames before using Top Donation trains: '+mapped.unmatched.slice(0,8).join(', ')+(mapped.unmatched.length>8?' and others':''));
- return mapped.ids;
+ const accounts=await list('utw_r4_accounts',{select:'username,display_name,role,active',role:'in.(r4,admin)',active:'eq.true',limit:'100'});
+ if(!Array.isArray(accounts))throw Error('UTW R4 account roster is unavailable');
+ const roster=activeR4MemberOptions(accounts,members,aliases);
+ if(!roster.members.length)throw Error('No active UTW R4 accounts could be matched to Train Desk members. Check member aliases.');
+ if(roster.unmatched.length)throw Error('Link these active UTW R4 accounts to Train Desk nicknames before Top Donation selections: '+roster.unmatched.join(', '));
+ return new Set(roster.members.map(m=>m.memberId));
 }
 async function donationR4Conflict(source,slot,conductorId,vipId){
  if(!isTopDonationTrain(source,slot))return '';

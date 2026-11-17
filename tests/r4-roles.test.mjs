@@ -27,8 +27,12 @@ async function fixture(fn){
   const u=new URL(url);
   if(u.pathname.endsWith('/utw_r4_accounts')){
    if(u.searchParams.has('id'))return Response.json(Object.values(users).filter(a=>'eq.'+a.id===u.searchParams.get('id')));
-   return Response.json([users.admin]);
+   return Response.json([users.admin,users.utw]);
   }
+  if(u.pathname.endsWith('/utw_stat_members'))
+   return Response.json([{id:'m-tiny',display_name:'TinyMayhem'},{id:'m-utw',display_name:'UTW R4'}]);
+  if(u.pathname.endsWith('/utw_stat_aliases'))
+   return Response.json([{member_id:'m-tiny',alias:'Tiny',alias_key:'tiny'}]);
   if(u.pathname.endsWith('/utw_r4_roles')){
    const body=options.body?JSON.parse(options.body):null;
    queries.push({url:u.toString(),method:options.method||'GET',body});
@@ -65,7 +69,9 @@ test('Alliances only see their own role assignments, owner can see both',()=>fix
  assert.equal((await GET(request('von',url('von')))).status,200);
  assert.equal((await GET(request('utw',url('utw')))).status,200);
  assert.equal((await GET(request('admin',url('von')))).status,200);
- assert.equal((await GET(request('admin',url('utw')))).status,200);
+ const utwResponse=await GET(request('admin',url('utw')));
+ assert.equal(utwResponse.status,200);
+ assert.deepEqual((await utwResponse.json()).r4Members.map(m=>m.name),['TinyMayhem','UTW R4']);
  assert.deepEqual(queries.map(q=>new URL(q.url).searchParams.get('alliance')),['eq.von','eq.utw','eq.von','eq.utw']);
 }));
 test('Saves one leader, backup and multiple additional backups per department',()=>fixture(async queries=>{
@@ -74,11 +80,14 @@ test('Saves one leader, backup and multiple additional backups per department',(
  const saved=await POST(post('von','von',{additional_backups:['Reserve 1','Reserve 2']}));
  assert.equal(saved.status,200);
  assert.deepEqual((await saved.json()).role.additional_backups,['Reserve 1','Reserve 2']);
- assert.equal((await POST(post('admin','utw',{department_key:'trade-posts'}))).status,200);
+ assert.equal((await POST(post('admin','utw',{department_key:'trade-posts',leader:'TinyMayhem',backup:'UTW R4',additional_backups:[]}))).status,200);
  assert.deepEqual(queries.filter(q=>q.method==='POST').map(q=>q.body.alliance),['von','utw']);
  assert.deepEqual(queries.filter(q=>q.method==='POST').map(q=>q.body.department_key),['land-war','trade-posts']);
- assert.equal((await POST(post('utw','utw',{department_key:'war-merit',leader:'Merit Lead',backup:'Backup',additional_backups:['Extra 1','Extra 2']}))).status,200);
+ assert.equal((await POST(post('utw','utw',{department_key:'war-merit',leader:'TinyMayhem',backup:'UTW R4',additional_backups:[]}))).status,200);
  assert.equal(queries.at(-1).body.department_key,'war-merit');
+ const illegal=await POST(post('admin','utw',{department_key:'research',leader:'Random non-R4',backup:'TinyMayhem',additional_backups:[]}));
+ assert.equal(illegal.status,400);
+ assert.match((await illegal.json()).error,/active UTW R4 member dropdown/);
 }));
 test('Rejects malformed names, duplicate assignments and cross-site writes',()=>fixture(async()=>{
  assert.equal(cleanAssignment({department_key:'unknown',leader:'Lead',backup:'Back',additional_backups:[]}),null);
@@ -106,4 +115,13 @@ test('all ten R4 departments have collapsible, detailed role explanations',()=>{
  assert.match(descriptions['land-war'].join(' '),/battle|war|tactical/i);
  assert.match(descriptions['trade-posts'].join(' '),/separate from land management/i);
  assert.match(descriptions['war-merit'].join(' '),/daily targets/i);
+});
+
+test('UTW roles page uses a dropdown populated from active R4 member records',()=>{
+ const ui=readFileSync('assets/r4-roles.js','utf8');
+ const api=readFileSync('lib/r4-roles.mjs','utf8');
+ assert.match(ui,/input=el\('select','r4-member-select'\)/);
+ assert.match(ui,/new Option\(member.name,member.name\)/);
+ assert.match(ui,/Non-R4 members cannot be assigned/);
+ assert.match(api,/validR4RoleNames\(fields,roster.members\)/);
 });
