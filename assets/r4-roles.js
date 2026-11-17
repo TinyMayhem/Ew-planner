@@ -100,10 +100,25 @@
   const next=document.getElementById('next-week');
   const progress=document.getElementById('complete-count');
   const bar=document.querySelector('.r4-bar');
-  let records={},busy=false;
+  let records={},busy=false,r4Members=[],unmatchedR4Accounts=[];
   const el=(tag,className,content)=>{const node=document.createElement(tag);if(className)node.className=className;if(content!==undefined)node.textContent=content;return node};
   function field(parent,label,value){
     const wrap=el('label','r4-role-label',label);
+    if(alliance==='utw'){
+      const input=el('select','r4-member-select');
+      input.append(new Option('Unassigned',''));
+      for(const member of r4Members)input.append(new Option(member.name,member.name));
+      if(value){
+        const match=r4Members.find(m=>m.name===value);
+        if(match)input.value=match.name;
+        else{
+          const previous=new Option('Review previous name: '+value,value);
+          previous.disabled=true;
+          input.append(previous);input.value=value;
+        }
+      }
+      wrap.append(input);parent.append(wrap);return input;
+    }
     const input=el('input');input.type='text';input.maxLength=50;input.placeholder='In-game R4 name';input.value=value||'';
     wrap.append(input);parent.append(wrap);return input;
   }
@@ -148,6 +163,13 @@
       card.addEventListener('submit',async event=>{
         event.preventDefault();if(busy)return;
         const payload={alliance,department_key:key,leader:leader.value.trim(),backup:backup.value.trim(),additional_backups:extraInputs.map(i=>i.value.trim()).filter(Boolean)};
+        if(alliance==='utw'){
+          const allowed=new Set(r4Members.map(m=>m.name));
+          if([payload.leader,payload.backup,...payload.additional_backups].some(n=>n&&!allowed.has(n))){
+            message.textContent='Choose names from the active UTW R4 list before saving. Previously saved unverified names need to be reselected.';
+            return;
+          }
+        }
         busy=true;save.disabled=true;message.textContent='Saving…';
         try{
           const res=await fetch('/api/r4-comments?roles=1',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
@@ -171,8 +193,14 @@
       const data=await res.json().catch(()=>({}));
       if(!res.ok)throw Error(data.error||'Unable to load roles');
       records=Object.fromEntries((data.roles||[]).map(row=>[row.department_key,row]));
+      r4Members=Array.isArray(data.r4Members)?data.r4Members:[];
+      unmatchedR4Accounts=Array.isArray(data.unmatchedR4Accounts)?data.unmatchedR4Accounts:[];
       draw();
-      status.textContent='Assignments saved on the site for authorized '+alliance.toUpperCase()+' leadership.';
+      if(alliance==='utw'){
+        status.textContent='Choose from '+r4Members.length+' active UTW R4 members (including owner). Names follow the latest Train Desk nicknames. Non-R4 members cannot be assigned.'+
+          (unmatchedR4Accounts.length?' Not linked to Train Desk yet: '+unmatchedR4Accounts.join(', ')+'.':'')+
+          (r4Members.length?'':' No matched active R4 members found. Check R4 accounts and member aliases.');
+      }else status.textContent='Assignments saved on the site for authorized '+alliance.toUpperCase()+' leadership.';
     }catch(error){
       status.textContent='Roles unavailable: '+error.message;
       list.replaceChildren();
