@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds,allianceBaseClusters,allianceUsage} from '../assets/hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds,allianceBaseClusters,allianceUsage,packingGrid} from '../assets/hive-geometry.js';
 import {GET as hiveGet,POST as hivePost,validateState} from '../lib/r4-hive-handler.mjs';
 const make=()=>({center:{x:499,y:499},capitolPlaced:true,calibration:{evenX:'negative',evenY:'negative',verified:false},alliances:[{id:'utw',name:'UTW',color:'#3478c0'}],territories:[],obstacles:[],bases:[],settings:{spacing:1,showNames:'auto'}});
 const base=(id,x,y)=>({id,type:'base',x,y,allianceId:'utw',memberName:'',locked:false,sectionOverride:null});
@@ -285,4 +285,63 @@ test('An unused extra alliance can be removed without affecting primary UTW map'
  state.alliances=state.alliances.filter(a=>a.id!=='oops');
  assert.equal(validateState(state),'');
  assert.deepEqual(state.alliances.map(a=>a.id),['utw']);
+});
+
+test('2-cell gap rows extend existing PPLE positions instead of using territory-edge offset',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.alliances.push({id:'pple',name:'PPLE',color:'#00dcca'});
+ const region={x1:420,x2:450,y1:484,y2:542};
+ for(const y of [485,490])for(const x of [437,442,447]){
+  state.bases.push({...base('existing-'+x+'-'+y,x,y),allianceId:'pple'});
+ }
+ const grid=packingGrid(state,{allianceId:'pple',region,gap:2});
+ assert.equal(grid.stride,5);
+ assert.equal(grid.startX,422);
+ assert.equal(grid.startY,485);
+ assert.equal(grid.alignedToExisting,true);
+ const generated=proposeBases(state,{allianceId:'pple',region,count:12,gap:2,strategy:'boundary',packing:'rows'});
+ assert.ok(generated.some(b=>b.x===432&&b.y===485),'new row should continue immediately left of an existing base');
+ assert.equal(437-432-3,2,'visible empty cells between 3x3 bases');
+ assert.equal(generated.every(b=>b.x%5===437%5&&b.y%5===485%5),true);
+ assert.ok(generated.every(b=>!inspectPlacement(b,state,{spacing:2}).warnings.some(w=>w.includes('gap'))));
+});
+test('Flexible packing prioritizes existing 2-cell grid, even with boundary-first and coverage strategies',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.bases=[{...base('anchor',437,490),allianceId:'utw'}];
+ const region={x1:420,x2:450,y1:484,y2:510};
+ for(const strategy of ['boundary','coverage']){
+  const out=proposeBases(state,{allianceId:'utw',region,count:10,gap:2,strategy,packing:'flex'});
+  assert.equal(out.length,10);
+  assert.ok(out.every(b=>b.x%5===2&&b.y%5===0),strategy+' should not add a 3-cell gap off the reference grid');
+ }
+});
+test('Another alliance nearby can provide the packing grid if selected alliance has no existing bases',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.bases=[base('blue',437,490)];
+ const region={x1:420,x2:450,y1:484,y2:510};
+ const grid=packingGrid(state,{allianceId:'pple',region,gap:2});
+ assert.equal(grid.startX,422);
+ assert.equal(grid.startY,485);
+ assert.equal(grid.alignedToExisting,true);
+});
+test('No nearby bases retains simple territory-edge packing',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.bases=[base('far',700,700)];
+ const region={x1:420,x2:450,y1:484,y2:510};
+ const grid=packingGrid(state,{allianceId:'utw',region,gap:2});
+ assert.equal(grid.startX,421);
+ assert.equal(grid.startY,485);
+ assert.equal(grid.alignedToExisting,false);
+});
+test('Suggested 2-cell rows do not move existing bases or overlap obstacles',()=>{
+ const state=make();state.capitolPlaced=false;
+ const original=base('old',437,490);state.bases=[original];
+ state.obstacles=[{id:'mine',type:'mine',x:422,y:485}];
+ const out=proposeBases(state,{allianceId:'utw',region:{x1:420,x2:450,y1:484,y2:510},count:16,gap:2,packing:'flex',strategy:'boundary'});
+ assert.equal(original.x,437);
+ assert.equal(original.y,490);
+ for(const b of out){
+  assert.equal(inspectPlacement(b,state,{spacing:2}).hard.length,0);
+  assert.equal(inspectPlacement(b,state,{spacing:2}).warnings.some(w=>w.includes('gap')),false);
+ }
 });
