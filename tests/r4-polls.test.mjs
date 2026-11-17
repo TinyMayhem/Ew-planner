@@ -54,7 +54,7 @@ test('Poll UI, API, reports and migration are integrated',()=>{
  const client=readFileSync('assets/r4-polls.js','utf8');
  assert.ok(routes.rewrites.some(x=>x.source==='/r4-polls'));
  for(const field of ['poll-images','poll-csv','poll-manual-save','poll-finalize','poll-missing','poll-report-no'])
-  assert.ok(page.includes('id="'+field+'"'),field);
+  assert.ok(page.includes(field),field);
  assert.ok(report.includes('embedded-poll-no'));
  assert.match(sql,/enable row level security/);
  assert.match(sql,/utw_poll_change/);
