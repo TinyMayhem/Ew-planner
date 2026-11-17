@@ -344,6 +344,15 @@ function init(){
  };
  $('poll-finalize').onclick=()=>safeChange('finalize',{},'Poll finalized. Missing responders are now verified.');
  $('poll-copy-missing').onclick=copyMissing;
+ $('poll-copy-reminder').onclick=async()=>{
+  if(!store.current)return;
+  const p=store.current.poll,voted=new Set(store.current.votes.map(v=>v.member_id));
+  const names=p.roster.filter(m=>!voted.has(m.id)).map(m=>nameOf(m.id));
+  const message='🐔 UTW '+p.title+' poll reminder! We are still missing responses from:\n'+names.join(', ')+
+   '\nPlease vote Yes, No or Maybe. If the poll is closed, reply in AC or comments so an R4 can record your answer. Thank you!';
+  try{await navigator.clipboard.writeText(message);msg('Follow-up reminder copied for '+names.length+' members.')}catch{msg('Clipboard unavailable. Try copying the missing names instead.',true)}
+ };
+
  $('poll-export').onclick=()=>store.current&&openExport('poll',store.current.poll.id);
  $('poll-export-history').onclick=()=>store.current&&openExport('history',store.current.poll.id);
  $('poll-export-backup').onclick=()=>openExport('backup');
