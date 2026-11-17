@@ -1,5 +1,5 @@
 import {sessionUser,r4Db} from '../lib/r4-auth.mjs';
-import {OBJECTS,inspectPlacement} from '../assets/hive-geometry.js';
+import {OBJECTS,inspectPlacement,footprint,rect,intersects} from '../assets/hive-geometry.js';
 
 const HEAD={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
 const json=(obj,status=200)=>Response.json(obj,{status,headers:HEAD});
@@ -24,6 +24,11 @@ function validateState(s){
  if(s.territories.some(t=>!uuidLike(t.id)||!allianceSet.has(t.allianceId)||!safeText(t.name,65)||![0,1,2].includes(t.gap)||!Number.isInteger(t.priority)||Math.abs(t.priority)>1000||[t.x1,t.x2,t.y1,t.y2].some(x=>!validInt(x))||t.x1>t.x2||t.y1>t.y2))return 'Invalid territory';
  if(s.obstacles.some(o=>!uuidLike(o.id)||!OBJECTS[o.type]||o.type==='capitol'||o.type==='base'||!validInt(o.x)||!validInt(o.y)))return 'Invalid obstacle';
  if(s.bases.some(b=>!uuidLike(b.id)||!allianceSet.has(b.allianceId)||!validInt(b.x)||!validInt(b.y)||typeof b.locked!=='boolean'||(b.memberName!==undefined&&typeof b.memberName!=='string')||(b.memberName||'').length>80||(b.sectionOverride!==null&&b.sectionOverride!==undefined&&!uuidLike(b.sectionOverride))))return 'Invalid commander base';
+ for(const [index,o] of s.obstacles.entries()){
+  const r=footprint(o,s);
+  if(s.capitolPlaced&&intersects(r,rect(s.center.x,s.center.y,21,21,s.calibration)))return 'A physical obstacle intersects the Capitol';
+  if(s.obstacles.slice(0,index).some(p=>intersects(r,footprint(p,s))))return 'Two physical obstacles intersect';
+ }
  for(const b of s.bases){const rest=s.bases.filter(x=>x.id!==b.id);const check=inspectPlacement(b,{...s,bases:rest});if(check.hard.length)return 'A commander base intersects another base or blocking object';}
  return '';
 }
@@ -67,12 +72,23 @@ export async function POST(request){
  const bad=validateState(body.state);if(bad)return json({error:bad},400);
  const summary=safeText(body.summary,160)||'Updated hive map';
  try{
-  const result=await r4Db('rpc/utw_hive_commit',{method:'POST',body:JSON.stringify({
-   p_expected_revision:body.expectedRevision,
-   p_next_state:body.state,
-   p_actor:user.display_name||user.username,
-   p_summary:summary
-  })});
+  const url=process.env.SUPABASE_URL?.replace(/\/$/,'');
+  const key=process.env.SUPABASE_SECRET_KEY;
+  if(!url||!key)throw Error('Database configuration is unavailable');
+  const response=await fetch(url+'/rest/v1/rpc/utw_hive_commit',{
+   method:'POST',headers:{apikey:key,'Content-Type':'application/json'},
+   body:JSON.stringify({
+    p_expected_revision:body.expectedRevision,
+    p_next_state:body.state,
+    p_actor:user.display_name||user.username,
+    p_summary:summary
+   }),signal:AbortSignal.timeout(15000)
+  });
+  const result=await response.json();
+  if(!response.ok){
+   if(result?.code==='40001'||String(result?.message).includes('revision_conflict'))return json({error:'Another R4 updated the map first. Reload the latest map before trying again.'},409);
+   throw Error('Save rejected by database');
+  }
   const saved=result?.[0];
   if(!saved)return json({error:'Could not save map'},503);
   return json({revision:Number(saved.new_revision),updatedAt:saved.saved_at,actor:user.display_name||user.username});
