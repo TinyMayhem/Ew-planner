@@ -66,7 +66,7 @@ async function reportData(q){
  let events=(await loadEvents()).filter(x=>x.status==='finalized'&&(!from||x.event_date>=from)&&(!to||x.event_date<=to)&&(!type||type==='all'||x.event_type===type));
  const members=await all('utw_stat_members',{select:'id,display_name,archived_at',order:'display_name.asc'},1000);
  const history=new Map(members.map(m=>[m.id,{id:m.id,name:m.display_name,archived:!!m.archived_at,eligible:0,yes:0,no:0,maybe:0,missing:0,late:0,events:[],byType:{}}]));
- const byPoll={};const summary={polls:events.length,eligibleResponses:0,yes:0,no:0,maybe:0,missing:0,byType:{}};
+ const byPoll={};const summary={polls:events.length,eligibleResponses:0,yes:0,no:0,maybe:0,missing:0,byType:{},byMonth:{}};
  // Chunk by poll count to keep requests within PostgREST's 1000-row limit.
  for(let i=0;i<events.length;i+=7){
   const group=events.slice(i,i+7);
@@ -77,7 +77,7 @@ async function reportData(q){
    const allEligible=new Set();
    const c=counts(p,by.get(p.id)||[]);byPoll[p.id]=c;
    const bucket=summary.byType[p.event_type]??={polls:0,yes:0,no:0,maybe:0,missing:0};
-   bucket.polls++;for(const label of ['yes','no','maybe','missing']){summary[label]+=c[label];bucket[label]+=c[label]}
+   bucket.polls++;const month=summary.byMonth[p.event_date.slice(0,7)]??={polls:0,yes:0,no:0,maybe:0,missing:0};month.polls++;for(const label of ['yes','no','maybe','missing']){summary[label]+=c[label];bucket[label]+=c[label];month[label]+=c[label]}
    for(const person of p.roster){
     if(allEligible.has(person.id))continue;allEligible.add(person.id);
     const h=history.get(person.id);if(!h)continue;
