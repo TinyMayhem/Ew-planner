@@ -3,11 +3,12 @@ import {archivedWeeks,vsWeekSlots,vsLeaderboard,vsMissingDaily,weekOf,scoreFlag}
 import {stageForDate,stageRange,trainWarnings,isR4Train,addDays as trainAddDays} from './r4-train-rules.mjs';
 import {trainLabelForDate} from './r4-train-schedule.mjs';
 import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=auto90-v1-20261106';
+import {initConductorSearch} from './r4-conductor-search.mjs';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
 const state={data:null,week:'',season:'post-s5',trainStage:15,archiveImports:[],csvQueue:[],candidates:[]};
-let csvBusy=false,nextCsvId=0;
+let csvBusy=false,nextCsvId=0,conductorSearch=null;
 const text=(tag,content,cls)=>{const el=document.createElement(tag);if(content!==undefined&&content!==null)el.textContent=String(content);if(cls)el.className=cls;return el};
 const dateAdd=(s,days)=>new Date(Date.parse(s+'T00:00:00Z')+days*86400000).toISOString().slice(0,10);
 const serverToday=()=>{const d=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Noronha',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const v=Object.fromEntries(d.map(x=>[x.type,x.value]));return v.year+'-'+v.month+'-'+v.day};
@@ -18,6 +19,7 @@ const members=()=>state.data?.members||[];
 const aliases=()=>state.data?.aliases||[];
 const byId=id=>members().find(m=>m.id===id);
 const memberName=id=>byId(id)?.display_name||'Unknown member';
+const setConductorSelection=id=>{$('train-member').value=id;conductorSearch?.sync()};
 const departedOn=(id,date)=>!!id&&!!date&&(state.data?.exceptions||[]).some(x=>x.member_id===id&&x.active&&x.scope==='all'&&/^No longer in UTW\b/i.test(x.reason||'')&&x.starts_on<=date&&x.ends_on>=date);
 const displayTrainName=raw=>{const alias=aliases().find(a=>normalize(a.alias)===normalize(raw));const canonical=byId(alias?.member_id)?.display_name;return canonical&&normalize(canonical)!==normalize(raw)?canonical+' (formerly '+raw+')':raw;};
 const elEmpty=msg=>text('p',msg,'stat-empty');
@@ -25,7 +27,7 @@ const setContent=(id,...nodes)=>$(id).replaceChildren(...nodes);
 const notice=(message,error=false)=>{const n=$('notice');n.hidden=!message;n.className='stat-notice'+(error?' error':'');n.textContent=message||'';if(message)n.scrollIntoView({block:'nearest'})};
 async function post(body,multipart=false){notice('');const r=await fetch('/api/r4-stats',{method:'POST',credentials:'same-origin',headers:multipart?{}:{'Content-Type':'application/json'},body:multipart?body:JSON.stringify(body)});const data=await r.json().catch(()=>({}));if(r.status===401){location.href='/r4-planner';throw Error('R4 sign-in expired')}if(!r.ok)throw Error(data.error||'Could not save the change');return data}
 async function action(fn,success){try{await fn();await load();notice(success)}catch(e){notice(e.message,true)}}
-const opt=(id,includeBlank=false)=>{const select=$(id),old=select.value;select.replaceChildren();if(includeBlank){const o=new Option(id==='train-member'?'Choose conductor':id==='train-vip'?'Choose VIP':'Not recorded','');select.append(o)}for(const m of members()){if((id==='train-member'||id==='train-vip')&&departedOn(m.id,$('train-date')?.value||serverToday()))continue;select.append(new Option(m.display_name,m.id))}if([...select.options].some(o=>o.value===old))select.value=old};
+const opt=(id,includeBlank=false)=>{const select=$(id),old=select.value;select.replaceChildren();if(includeBlank){const o=new Option(id==='train-member'?'Choose conductor':id==='train-vip'?'Choose VIP':'Not recorded','');select.append(o)}for(const m of members()){if((id==='train-member'||id==='train-vip')&&departedOn(m.id,$('train-date')?.value||serverToday()))continue;select.append(new Option(m.display_name,m.id))}if([...select.options].some(o=>o.value===old))select.value=old;if(id==='train-member')conductorSearch?.sync()};
 function ranking(metric,period){
  const imp=state.data.imports.find(x=>x.metric===metric&&x.period===period);
  if(!imp)return [];
@@ -380,7 +382,7 @@ async function candidates(){
    for(const note of v.notes||[])info.append(text('div',note,'stat-muted'));
    const button=text('button',v.r4DonationBlocked?'R4 not eligible':v.eligible?'Choose':'Override','stat-button');button.type='button';button.disabled=!!v.r4DonationBlocked;
    button.addEventListener('click',()=>{
-    $('train-member').value=v.id;
+    setConductorSelection(v.id);
     if(!v.eligible&&v.reasons?.length)$('train-reason').value=('Manual override: '+v.reasons.join('; ')).slice(0,480);
     else if(advice.recommended?.id===v.id&&advice.substitution&&!$('train-reason').value.trim())$('train-reason').value=advice.substitution.slice(0,480);
     showVipAdvice(advice,{autoSelect:advice.scoreRanked});eligibilityWarnings();
@@ -389,8 +391,8 @@ async function candidates(){
   }
   root.append(text('p',advice.limitations,'stat-muted'));
   if(advice.recommended&&!advice.sameDate?.length){
-   if(mode==='r4')$('train-member').value=advice.recommended.id;
-   if(advice.scoreRanked)$('train-member').value=advice.recommended.id;
+   if(mode==='r4')setConductorSelection(advice.recommended.id);
+   if(advice.scoreRanked)setConductorSelection(advice.recommended.id);
   }
   showVipAdvice(advice,{autoSelect:!!advice.scoreRanked&&!advice.sameDate?.length});eligibilityWarnings();
  }catch(e){
@@ -704,6 +706,7 @@ async function uploadCsvQueue(){
  notice(saved+' CSV'+(saved===1?'':'s')+' imported to '+season+'.'+(failed?' '+failed+' failed, with reasons shown beside the files.':'')+(left?' '+left+' need corrections.':'')+(stopped?' Sign in again before retrying.':''),!!failed||!!left);
 }
 function wire(){
+ conductorSearch=initConductorSearch({select:$('train-member'),input:$('train-member-search'),list:$('train-member-suggestions'),getAliases:aliases});
  const today=serverToday(),week=monday(today);
  state.trainStage=stageForDate(today);for(let stage=7;stage<=30;stage++){const range=stageRange(stage);$('train-stage').append(new Option('Stage '+stage+' · '+range.start+' to '+range.end,stage))}$('train-stage').value=String(state.trainStage);
  $('week').value=week;$('ds-date').value=today;$('train-date').value=today;$('exception-start').value=today;$('exception-end').value=today;
@@ -731,7 +734,7 @@ function wire(){
   if(mode==='never'&&!/no train|vote|roulette/i.test(slot.value))slot.value='Never had a train / participation';
   if(mode==='vs'&&validDate(date)&&new Date(date+'T00:00:00Z').getUTCDay()===6&&/^R4(?:\s|$)/i.test(slot.value))slot.value='Saturday VS top scores';
   if(mode==='r4'&&slot.value==='Saturday VS top scores')slot.value=trainLabelForDate(stageForDate(date),date)||'R4 train';
-  if(mode==='vs'||mode==='donations'){$('train-member').value='';$('train-vip').value=''}
+  if(mode==='vs'||mode==='donations'){setConductorSelection('');$('train-vip').value=''}
   candidates();eligibilityWarnings();
  });
  $('train-date').addEventListener('change',()=>{const date=$('train-date').value;if(!validDate(date))return;const stage=stageForDate(date);const label=trainLabelForDate(stage,date);if(label){$('train-slot').value=label;$('train-source').value=inferTrainMode(label)}if(stage!==state.trainStage){state.trainStage=stage;$('train-stage').value=String(stage);load()}else{opt('train-member',true);opt('train-vip',true);candidates();eligibilityWarnings()}});

@@ -18,7 +18,7 @@ test('selecting weekly VS or donations shows and auto-fills a ranked conductor/V
  const client=readFileSync('assets/r4-stats.js','utf8');
  const helper=readFileSync('lib/train-advice.mjs','utf8');
  assert.match(page,/id="train-pair-suggestion"/);
- assert.match(client,/if\(advice\.scoreRanked\)\$\('train-member'\)\.value=advice\.recommended\.id/);
+ assert.match(client,/if\(advice\.scoreRanked\)setConductorSelection\(advice\.recommended\.id\)/);
  assert.match(client,/showVipAdvice\(advice,\{autoSelect:!!advice\.scoreRanked/);
  assert.match(client,/\$\('train-vip'\)\.value=suggestedVip\?\.id\|\|''/);
  assert.match(helper,/scoreRanked=mode==='vs'\|\|mode==='donations'/);
