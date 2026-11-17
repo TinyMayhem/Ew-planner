@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds} from '../assets/hive-geometry.js';
-import {GET as hiveGet,POST as hivePost} from '../api/r4-hive.mjs';
+import {GET as hiveGet,POST as hivePost} from '../lib/r4-hive-handler.mjs';
 const make=()=>({center:{x:499,y:499},capitolPlaced:true,calibration:{evenX:'negative',evenY:'negative',verified:false},alliances:[{id:'utw',name:'UTW',color:'#3478c0'}],territories:[],obstacles:[],bases:[],settings:{spacing:1,showNames:'auto'}});
 const base=(id,x,y)=>({id,type:'base',x,y,allianceId:'utw',memberName:'',locked:false,sectionOverride:null});
 test('Odd footprints center on the provided coordinate',()=>{
