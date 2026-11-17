@@ -619,6 +619,33 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
   ctx.fillStyle='rgba(79,54,16,.96)';ctx.fillRect(labelX,labelY,textW,24);
   ctx.fillStyle='#fff3bd';ctx.fillText(label,labelX+7,labelY+16,textW-10);
  }
+ if(exportKind==='screen'&&tool==='group'){
+  // A group has no stored shape. Highlight every selected base and draw a
+  // translated ghost only while dragging. Image exports are unaffected.
+  for(const base of state.bases){
+   if(!groupSelection.has(base.id))continue;
+   const p=rxy(footprint(base,state));
+   ctx.fillStyle='rgba(255,228,137,.15)';ctx.fillRect(...p);
+   ctx.lineWidth=Math.max(2,Math.min(3,scale*.45));
+   ctx.strokeStyle=base.locked?'#fa6565':'#ffe59d';
+   ctx.setLineDash([5,3]);ctx.strokeRect(...p);ctx.setLineDash([]);
+  }
+  if(groupDrag){
+   const blocked=groupDrag.check.hard.length>0,warning=groupDrag.check.warnings.length>0;
+   const color=blocked?'#ff6e65':warning?'#ffcc65':'#85f58a';
+   for(const moved of groupDrag.check.moves){
+    const p=rxy(footprint(moved,state));
+    ctx.fillStyle=blocked?'rgba(245,83,70,.58)':warning?'rgba(236,168,53,.5)':'rgba(94,230,104,.52)';
+    ctx.fillRect(...p);
+    ctx.strokeStyle=color;ctx.lineWidth=2;ctx.strokeRect(...p);
+   }
+  }
+  if(groupBox){
+   const p=rxy({left:groupBox.x1,right:groupBox.x2,top:groupBox.y1,bottom:groupBox.y2});
+   ctx.fillStyle='rgba(138,219,255,.18)';ctx.fillRect(...p);
+   ctx.strokeStyle='#c4edff';ctx.lineWidth=2.5;ctx.setLineDash([6,4]);ctx.strokeRect(...p);ctx.setLineDash([]);
+  }
+ }
  if(selected&&!dragMove){
   const o=(selected.kind==='base'?state.bases:selected.kind==='obstacle'?state.obstacles:state.territories).find(x=>x.id===selected.id);
   if(o){const r=selected.kind==='territory'?{left:o.x1,right:o.x2,top:o.y1,bottom:o.y2}:footprint(o,state);ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.strokeRect(...rxy(r));}
@@ -633,8 +660,11 @@ function draw(){
  }
  ctx.setTransform(dpr,0,0,dpr,0,0);
  scene(ctx,width,height,view.x,view.y,view.scale,{showMud:displayMud,showBuff:displayBuff,showGrid:displayGrid});
- $('overview-mode-note').hidden=!(view.scale<4.5&&!dragMove);
- $('map-coordinate').textContent=dragMove
+ $('overview-mode-note').hidden=!(view.scale<4.5&&!dragMove&&!groupDrag);
+ $('map-coordinate').textContent=groupDrag
+  ?'Moving '+groupDrag.ids.length+' bases · ΔX '+groupDrag.dx+' · ΔY '+groupDrag.dy+
+   (groupDrag.check.hard.length?' · BLOCKED':groupDrag.check.warnings.length?' · WARNING':' · Valid')
+  :dragMove
   ?'Moving base to X '+dragMove.x+' · Y '+dragMove.y+
    (dragMove.check.hard.length?' · BLOCKED':dragMove.check.warnings.length?' · WARNING':' · Valid')
   :hoverCell&&['base','city','obstacle'].includes(tool)
