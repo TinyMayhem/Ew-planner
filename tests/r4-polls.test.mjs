@@ -53,6 +53,8 @@ test('Screenshot OCR decorations are dropped when known nicknames confirm the cl
  assert.equal(resolvePollOcrName('✗ Circuit ✗',roster,aliases).name,'✗ Circuit ✗');
  // Unrecognized CJK names must not be silently reduced or romanized.
  assert.equal(resolvePollOcrName('蝠 ヅ 新玩家',roster,aliases).name,'蝠 ヅ 新玩家');
+ // "Mr" is part of a name, not a badge that can be discarded.
+ assert.equal(resolvePollOcrName('Mr BabaSan',[{id:'short',display_name:'BabaSan'}],[]).name,'Mr BabaSan');
 });
 test('A noisy OCR name without a perfect match keeps the cleanest fuzzy nickname and requires confirmation',()=>{
  const roster=[...members,{id:'7',display_name:'Ghøstlyy'}];
