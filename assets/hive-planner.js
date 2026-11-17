@@ -459,13 +459,23 @@ function attachCanvas(){
   if(!state)return;
   canvas.setPointerCapture(e.pointerId);
   pointer={id:e.pointerId,x:e.clientX,y:e.clientY,originX:view.x,originY:view.y,cell:eventCell(e),moved:false};
-  if(tool==='territory'){drawArea={x1:pointer.cell.x,y1:pointer.cell.y,x2:pointer.cell.x,y2:pointer.cell.y};draw();}
+  hoverCell=['base','city','obstacle'].includes(tool)?pointer.cell:null;
+  if(tool==='territory')drawArea={x1:pointer.cell.x,y1:pointer.cell.y,x2:pointer.cell.x,y2:pointer.cell.y};
+  draw();
  });
  canvas.addEventListener('pointermove',e=>{
-  if(!pointer||e.pointerId!==pointer.id)return;
-  const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;if(Math.hypot(dx,dy)>6)pointer.moved=true;
+  if(!pointer||e.pointerId!==pointer.id){
+   if(!pointer&&['base','city','obstacle'].includes(tool)){
+    const cell=eventCell(e);
+    if(!hoverCell||cell.x!==hoverCell.x||cell.y!==hoverCell.y){hoverCell=cell;draw();}
+   }
+   return;
+  }
+  const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
+  if(Math.hypot(dx,dy)>6)pointer.moved=true;
   if(tool==='territory'&&drawArea){const c=eventCell(e);drawArea.x2=c.x;drawArea.y2=c.y;draw();}
-  else if(pointer.moved){view.x=pointer.originX-dx/view.scale;view.y=pointer.originY-dy/view.scale;draw();}
+  else if(pointer.moved){hoverCell=null;view.x=pointer.originX-dx/view.scale;view.y=pointer.originY-dy/view.scale;draw();}
+  else if(hoverCell){hoverCell=eventCell(e);draw();}
  });
  canvas.addEventListener('pointerup',e=>{
   if(!pointer||e.pointerId!==pointer.id)return;
@@ -473,9 +483,10 @@ function attachCanvas(){
    const b=drawArea;for(const [id,n] of [['x1',Math.min(b.x1,b.x2)],['x2',Math.max(b.x1,b.x2)],['y1',Math.min(b.y1,b.y2)],['y2',Math.max(b.y1,b.y2)]])$(id).value=n;
    drawArea=null;inform('Territory rectangle selected. Enter a section name and tap Add section.');
   }else if(!pointer.moved){const c=eventCell(e);handleMapTap(c.x,c.y);}
-  pointer=null;draw();
+  pointer=null;hoverCell=null;draw();
  });
- canvas.addEventListener('pointercancel',()=>{pointer=null;drawArea=null;draw();});
+ canvas.addEventListener('pointercancel',()=>{pointer=null;hoverCell=null;drawArea=null;draw();});
+ canvas.addEventListener('pointerleave',()=>{if(!pointer){hoverCell=null;draw();}});
  canvas.addEventListener('wheel',e=>{e.preventDefault();view.scale=clamp(view.scale*(e.deltaY<0?1.15:1/1.15),1,70);draw();},{passive:false});
 }
 function downloadCanvas(c,name){
@@ -580,8 +591,9 @@ function bind(){
  $('suggest').onclick=generateSuggestions;$('approve').onclick=approveSuggestions;
  $('discard').onclick=()=>{preview=[];$('approve').disabled=true;$('preview-info').textContent='Preview cleared.';draw();};
  for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>{
-  tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
-  inform('Tool: '+b.textContent+'. Drag to pan unless drawing a territory.');
+  tool=b.dataset.tool;hoverCell=null;
+  document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
+  inform('Tool: '+b.textContent+'. Drag to pan unless drawing a territory.');draw();
  };
  $('zoom-in').onclick=()=>{view.scale=clamp(view.scale*1.3,1,70);draw();};
  $('zoom-out').onclick=()=>{view.scale=clamp(view.scale/1.3,1,70);draw();};
