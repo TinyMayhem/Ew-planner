@@ -40,3 +40,27 @@
 .nickname-collision .stat-button:disabled{opacity:.55;cursor:not-allowed}
 .nickname-collision p{line-height:1.5}
 @media(max-width:700px){.nickname-actions{display:grid;gap:8px}.nickname-new-row{display:grid;gap:10px}.nickname-new-row label{min-width:0}}
+
+/* Weekly nickname changes and reversible soft archive */
+.nickname-weekly{border:2px solid #8db99c!important;background:linear-gradient(160deg,#f4faeb,#fffdf7)!important}
+.nickname-weekly-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.nickname-weekly .eyebrow{color:#317654}
+.nickname-week-count{border-radius:999px;background:#dcedd6;color:#23583d;padding:6px 11px;font-weight:800;font-size:12px;white-space:nowrap}
+.nickname-weekly-list{display:grid;gap:8px}
+.nickname-week-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;align-items:center;gap:15px;padding:13px 15px;background:#fffdf7;border:1px solid #d8e4d1;border-radius:12px;color:#234d38}
+.nickname-week-person,.nickname-week-new{display:flex;gap:4px;flex-direction:column;min-width:0;overflow-wrap:anywhere}
+.nickname-week-person strong,.nickname-week-new strong{font-size:14px}
+.nickname-week-new{flex-direction:row;align-items:center;gap:10px}
+.nickname-week-arrow{color:#397656;font-size:18px;font-weight:800}
+.nickname-week-row>small{white-space:nowrap}
+.nickname-member-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:18px;padding-top:15px;border-top:1px solid #e4d8c0}
+.nickname-member-tools p{flex:1 1 290px;margin:0;line-height:1.5}
+#nickname-archive-toggle{border-color:#b78972;color:#7c4232}
+#nickname-archive-toggle.nickname-restore{background:#e2f3e5;color:#205c3e;border-color:#83b08c}
+#archived-members{scroll-margin-top:16px}
+#archived-members .nickname-person{background:#f7f3eb}
+@media(max-width:700px){
+ .nickname-week-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;padding:12px}
+ .nickname-week-row>small{grid-column:1/-1}
+ .nickname-weekly-head h2{font-size:19px}
+}
