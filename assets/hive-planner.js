@@ -1,4 +1,4 @@
-import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove} from './hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera} from './hive-geometry.js';
 
 const API='/r4-hive',app=document.getElementById('hive-app');
 const $=id=>document.getElementById(id);
@@ -10,6 +10,7 @@ const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
 let state=null,revision=0,history=[],members=[],aliases=[],user=null,busy=false;
 let activeAlliance='utw',tool='select',selected=null,preview=[],showNames='auto',displayMud=true,displayBuff=true,displayGrid=true;
 let view={x:499,y:499,scale:10},pointer=null,dragMove=null,hoverCell=null,drawArea=null,canvas,ctx,width=900,height=600,polling=false;
+const touchPoints=new Map();let pinchGesture=null,ignoreTouchUntilRelease=false;
 const LONG_PRESS_MS=450, LONG_PRESS_SLOP_PX=9;
 const typeChoices=Object.entries(OBJECTS).filter(([k])=>!['base','capitol','city'].includes(k));
 const html=[
@@ -70,7 +71,7 @@ const html=[
  '<label style="display:inline"><input id="mud-toggle" type="checkbox" checked style="width:auto"> Mud</label>',
  '<label style="display:inline"><input id="buff-toggle" type="checkbox" checked style="width:auto"> Influence</label>',
  '<label style="display:inline"><input id="grid-toggle" type="checkbox" checked style="width:auto"> Grid</label></div>',
- '<div class="mobile-caption">Faint 1×1 cells and gentle 3-cell guides match base-sized placement. Guides do not force snapping. Select / Pan: tap a base to edit, or hold it for about half a second and drag to move. Locked bases cannot be dragged. Drag empty space to pan. Use + / − to zoom.</div></section>',
+ '<div class="mobile-caption">Faint 1×1 cells and gentle 3-cell guides match base-sized placement. Guides do not force snapping. One finger: tap to select, long-hold a base to move, or drag to pan. Two fingers: slide together to pan, or pinch apart/together to zoom. Buttons still work.</div></section>',
  '<section id="selection" class="details"><h2>Selected item</h2><p class="muted">Tap a base, obstacle or territory to edit it.</p></section>',
  '<section class="report"><h2>Alliance ranges & base counts</h2><div class="report-grid" id="reports"></div></section>',
  '<div id="message" class="status" aria-live="polite"></div></div></div>'
@@ -466,10 +467,46 @@ function fitMap(all=false){
  view.scale=clamp(Math.min(w/(b.right-b.left+24),h/(b.bottom-b.top+24)),1.2,45);
  draw();
 }
-function eventCell(e){
+function localPoint(clientX,clientY){
  const r=canvas.getBoundingClientRect();
- const point=pixelToMap(e.clientX-r.left,e.clientY-r.top,{...view,width,height});
+ return {
+  x:(clientX-r.left)*(width/(r.width||width)),
+  y:(clientY-r.top)*(height/(r.height||height))
+ };
+}
+function eventCell(e){
+ const p=localPoint(e.clientX,e.clientY);
+ const point=pixelToMap(p.x,p.y,{...view,width,height});
  return {x:Math.round(point.x),y:Math.round(point.y)};
+}
+function gesturePair(){
+ if(!pinchGesture)return null;
+ const a=touchPoints.get(pinchGesture.ids[0]),b=touchPoints.get(pinchGesture.ids[1]);
+ if(!a||!b)return null;
+ const one=localPoint(a.x,a.y),two=localPoint(b.x,b.y);
+ return {mid:{x:(one.x+two.x)/2,y:(one.y+two.y)/2},dist:Math.hypot(one.x-two.x,one.y-two.y)};
+}
+function beginPinchGesture(){
+ clearPressTimer();
+ pointer=null;dragMove=null;drawArea=null;hoverCell=null;
+ ignoreTouchUntilRelease=true;
+ const ids=Array.from(touchPoints.keys()).slice(0,2);
+ pinchGesture={ids,initial:null,startView:{...view}};
+ const pair=gesturePair();
+ if(!pair){pinchGesture=null;return;}
+ pinchGesture.initial=pair;
+ inform('Two fingers: slide to move the map, pinch to zoom.');
+ draw();
+}
+function updatePinchGesture(){
+ if(!pinchGesture)return false;
+ const pair=gesturePair();
+ if(!pair)return false;
+ const start=pinchGesture.initial;
+ view=pinchCamera(pinchGesture.startView,start.mid,pair.mid,
+  start.dist>1?pair.dist/start.dist:1,width,height);
+ draw();
+ return true;
 }
 function pick(x,y){
  const b=[...state.bases].reverse().find(o=>contains(footprint(o,state),x,y));
@@ -514,8 +551,18 @@ function clearPressTimer(){
 function attachCanvas(){
  canvas.addEventListener('contextmenu',e=>e.preventDefault());
  canvas.addEventListener('pointerdown',e=>{
-  if(!state||busy||pointer||e.isPrimary===false||e.button!==0)return;
-  canvas.setPointerCapture(e.pointerId);
+  if(!state||busy)return;
+  if(e.pointerType==='touch'){
+   touchPoints.set(e.pointerId,{x:e.clientX,y:e.clientY});
+   try{canvas.setPointerCapture(e.pointerId);}catch{}
+   if(touchPoints.size>=2){
+    if(!pinchGesture)beginPinchGesture();
+    return;
+   }
+   if(ignoreTouchUntilRelease)return;
+  }
+  if(pointer||e.isPrimary===false||e.button!==0)return;
+  if(e.pointerType!=='touch')canvas.setPointerCapture(e.pointerId);
   const initial=eventCell(e);
   pointer={id:e.pointerId,x:e.clientX,y:e.clientY,originX:view.x,originY:view.y,cell:initial,moved:false,holdTimer:null};
   hoverCell=['base','city','obstacle'].includes(tool)?initial:null;
@@ -525,7 +572,7 @@ function attachCanvas(){
     pointer.holdBaseId=hit.id;
     const pressId=e.pointerId;
     pointer.holdTimer=setTimeout(()=>{
-     if(!pointer||pointer.id!==pressId||pointer.moved||busy)return;
+     if(!pointer||pointer.id!==pressId||pointer.moved||busy||touchPoints.size>1)return;
      pointer.holdTimer=null;
      const original=state.bases.find(b=>b.id===hit.id);
      if(!original)return;
@@ -546,8 +593,13 @@ function attachCanvas(){
   draw();
  });
  canvas.addEventListener('pointermove',e=>{
+  if(e.pointerType==='touch'&&touchPoints.has(e.pointerId)){
+   touchPoints.set(e.pointerId,{x:e.clientX,y:e.clientY});
+   if(pinchGesture){updatePinchGesture();return;}
+   if(ignoreTouchUntilRelease)return;
+  }
   if(!pointer||e.pointerId!==pointer.id){
-   if(!pointer&&['base','city','obstacle'].includes(tool)){
+   if(!pointer&&e.pointerType!=='touch'&&['base','city','obstacle'].includes(tool)){
     const cell=eventCell(e);
     if(!hoverCell||cell.x!==hoverCell.x||cell.y!==hoverCell.y){hoverCell=cell;draw();}
    }
@@ -559,8 +611,7 @@ function attachCanvas(){
    if(!dragMove)clearPressTimer();
   }
   if(dragMove){
-   // Preserve where inside the 3×3 footprint the player initially touched,
-   // rather than jumping the base center beneath their finger.
+   // Finger maintains the same offset inside the base while it moves.
    const cell=eventCell(e);
    const x=dragMove.initialX+cell.x-pointer.cell.x;
    const y=dragMove.initialY+cell.y-pointer.cell.y;
@@ -577,11 +628,19 @@ function attachCanvas(){
   }else if(hoverCell){hoverCell=eventCell(e);draw();}
  });
  canvas.addEventListener('pointerup',e=>{
+  if(e.pointerType==='touch'){
+   touchPoints.delete(e.pointerId);
+   if(pinchGesture||ignoreTouchUntilRelease){
+    pinchGesture=null;
+    if(touchPoints.size===0)ignoreTouchUntilRelease=false;
+    hoverCell=null;draw();
+    return;
+   }
+  }
   if(!pointer||e.pointerId!==pointer.id)return;
   clearPressTimer();
   const wasMoving=dragMove,hadMoved=pointer.moved;
   if(wasMoving){
-   // Include the final pointer coordinate, even if no last move event fired.
    const c=eventCell(e);
    wasMoving.x=wasMoving.initialX+c.x-pointer.cell.x;
    wasMoving.y=wasMoving.initialY+c.y-pointer.cell.y;
@@ -597,10 +656,29 @@ function attachCanvas(){
   }
   pointer=null;hoverCell=null;draw();
  });
- canvas.addEventListener('pointercancel',()=>{
+ canvas.addEventListener('pointercancel',e=>{
+  if(e.pointerType==='touch'){
+   touchPoints.delete(e.pointerId);
+   if(pinchGesture||ignoreTouchUntilRelease){
+    pinchGesture=null;
+    if(touchPoints.size===0)ignoreTouchUntilRelease=false;
+    draw();return;
+   }
+  }
   clearPressTimer();pointer=null;dragMove=null;hoverCell=null;drawArea=null;draw();
  });
- canvas.addEventListener('pointerleave',()=>{if(!pointer){hoverCell=null;draw();}});
+ canvas.addEventListener('lostpointercapture',e=>{
+  // Browser/OS interruption: abandon any pending single-finger placement.
+  if(e.pointerType==='touch'&&touchPoints.has(e.pointerId)){
+   touchPoints.delete(e.pointerId);
+   pinchGesture=null;
+   ignoreTouchUntilRelease=touchPoints.size>0;
+  }
+  if(pointer?.id===e.pointerId){
+   clearPressTimer();pointer=null;dragMove=null;drawArea=null;hoverCell=null;draw();
+  }
+ });
+ canvas.addEventListener('pointerleave',()=>{if(!pointer&&!pinchGesture){hoverCell=null;draw();}});
  canvas.addEventListener('wheel',e=>{e.preventDefault();view.scale=clamp(view.scale*(e.deltaY<0?1.15:1/1.15),1,70);draw();},{passive:false});
 }
 function downloadCanvas(c,name){
@@ -727,6 +805,6 @@ async function start(){
  app.innerHTML=html;bind();sync('Loading…');
  try{await fetchData(true,true);showNames=state.settings.showNames;view.x=state.center.x;view.y=state.center.y;fitMap(false);draw();inform('Ready. Set a Capitol center, then place bases or tap a tool. Coordinate alignment is unverified until game testing.');}
  catch(e){sync('Connection error');inform(e.message,true);}
- setInterval(async()=>{if(busy||polling||pointer?.holdBaseId||dragMove||document.visibilityState==='hidden')return;polling=true;try{const was=revision;const changed=await fetchData(false,false);if(changed&&was!==revision)inform('Shared map updated by another R4. Revision '+revision);}catch(e){sync('Offline · retrying');}finally{polling=false;}},5000);
+ setInterval(async()=>{if(busy||polling||pointer?.holdBaseId||dragMove||pinchGesture||touchPoints.size>0||document.visibilityState==='hidden')return;polling=true;try{const was=revision;const changed=await fetchData(false,false);if(changed&&was!==revision)inform('Shared map updated by another R4. Revision '+revision);}catch(e){sync('Offline · retrying');}finally{polling=false;}},5000);
 }
 start();
