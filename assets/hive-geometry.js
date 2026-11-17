@@ -63,6 +63,45 @@ export function rect(x,y,w,h,calibration={}){
  const left=x-Math.floor(w/2)+biasX,top=y-Math.floor(h/2)+biasY;
  return {left,top,right:left+w-1,bottom:top+h-1};
 }
+// At overview zoom, connected 3x3 bases form one readable alliance block.
+// Bases separated by up to two empty cells are treated as one group.
+export function allianceBaseClusters(state,bases=state.bases||[],maxGap=2){
+ const result=[];
+ const byAlliance=new Map();
+ for(const base of bases){
+  if(!byAlliance.has(base.allianceId))byAlliance.set(base.allianceId,[]);
+  byAlliance.get(base.allianceId).push(base);
+ }
+ for(const [allianceId,group] of byAlliance){
+  const parent=group.map((_,i)=>i);
+  const root=i=>{while(parent[i]!==i){parent[i]=parent[parent[i]];i=parent[i];}return i;};
+  const union=(i,j)=>{const a=root(i),b=root(j);if(a!==b)parent[b]=a;};
+  const allowed=3+maxGap;
+  for(let i=0;i<group.length;i++)for(let j=i+1;j<group.length;j++){
+   if(Math.abs(group[i].x-group[j].x)<=allowed&&Math.abs(group[i].y-group[j].y)<=allowed)union(i,j);
+  }
+  const chunks=new Map();
+  for(let i=0;i<group.length;i++){
+   const key=root(i),r=footprint(group[i],state);
+   if(!chunks.has(key))chunks.set(key,{allianceId,count:0,bounds:{...r}});
+   const c=chunks.get(key);
+   c.count++;
+   c.bounds.left=Math.min(c.bounds.left,r.left);
+   c.bounds.right=Math.max(c.bounds.right,r.right);
+   c.bounds.top=Math.min(c.bounds.top,r.top);
+   c.bounds.bottom=Math.max(c.bounds.bottom,r.bottom);
+  }
+  result.push(...chunks.values());
+ }
+ return result;
+}
+export function allianceUsage(state,allianceId){
+ return {
+  bases:(state.bases||[]).filter(b=>b.allianceId===allianceId).length,
+  territories:(state.territories||[]).filter(t=>t.allianceId===allianceId).length,
+  cities:(state.obstacles||[]).filter(o=>o.type==='city'&&o.ownerAllianceId===allianceId).length
+ };
+}
 export function footprint(o,state){
  const t=OBJECTS[o.type||'base']||OBJECTS.base;
  return rect(Number(o.x),Number(o.y),t.w,t.h,state.calibration);
