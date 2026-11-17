@@ -1,4 +1,4 @@
-import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains} from './hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel} from './hive-geometry.js';
 
 const API='/r4-hive',app=document.getElementById('hive-app');
 const $=id=>document.getElementById(id);
@@ -9,8 +9,8 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
 let state=null,revision=0,history=[],members=[],aliases=[],user=null,busy=false;
 let activeAlliance='utw',tool='select',selected=null,preview=[],showNames='auto',displayMud=true,displayBuff=true,displayGrid=true;
-let view={x:499,y:499,scale:10},pointer=null,drawArea=null,canvas,ctx,width=900,height=600,polling=false;
-const typeChoices=Object.entries(OBJECTS).filter(([k])=>k!=='base'&&k!=='capitol');
+let view={x:499,y:499,scale:10},pointer=null,hoverCell=null,drawArea=null,canvas,ctx,width=900,height=600,polling=false;
+const typeChoices=Object.entries(OBJECTS).filter(([k])=>!['base','capitol','city'].includes(k));
 const html=[
  '<header class="topbar"><div class="brand">✦ UTW Hive & Territory Planner<small>R4 Command Center · Server 1395 · shared map</small></div>',
  '<div class="top-actions"><span class="pill" id="sync-state">Connecting…</span><a href="/r4-planner" class="btn">← Command Center</a></div></header>',
@@ -30,6 +30,12 @@ const html=[
  '<div class="field"><label>Gap between bases</label><select id="base-gap"><option value="0">No gap</option><option value="1">1-cell gap</option><option value="2">2-cell gap</option></select></div>',
  '<div class="field"><label>View member names</label><select id="show-names"><option value="auto">Auto by zoom</option><option value="on">Show</option><option value="off">Hide</option></select></div></div>',
  '<div class="actions"><button id="place-base" class="btn primary">Place at X/Y</button></div><p class="hint">To tap positions instead, choose the Base tool above the map. Names are optional, with no missing-member tracking.</p></section>',
+ '<section class="panel"><h2>🏙 Place City</h2><p class="hint">Cities occupy 7×7 cells, with a separate 15×15 contaminated zone. The city label always shows its level and name on the map.</p>',
+ '<div class="fields"><div class="field wide"><label>City name</label><input id="city-name" maxlength="70" placeholder="Lawless Road"></div>',
+ '<div class="field"><label>City level</label><select id="city-level">'+Array.from({length:10},(_,i)=>'<option value="'+(i+1)+'">Level '+(i+1)+'</option>').join('')+'</select></div>',
+ '<div class="field"><label>Owning alliance (optional)</label><select id="city-owner"></select></div></div>',
+ '<div class="actions"><button id="place-city" class="btn primary">Place city at X/Y</button></div>',
+ '<p class="hint">Or select Tap: City above the map and touch the center cell. Select a city later to edit its name, level, ownership or coordinates.</p></section>',
  '<section class="panel"><h2>⛏ Obstacles</h2><div class="field"><label>Object type</label><select id="obstacle-type"></select></div>',
  '<div class="actions"><button id="place-obstacle" class="btn">Place at X/Y</button></div><h3>Paste multiple mines / objects</h3>',
  '<textarea id="bulk" placeholder="550,540&#10;555,540&#10;truck55,560,540"></textarea>',
@@ -55,7 +61,7 @@ const html=[
  '<div class="actions"><button id="undo" class="btn">Undo last edit</button><button id="restore" class="btn">Restore selected revision</button><button id="snapshot" class="btn">Mark snapshot</button></div>',
  '<div id="history-list" class="history"></div></section></aside>',
  '<div class="map-column"><section class="map-card"><div class="map-tools"><div class="toolset">',
- '<button class="btn active" data-tool="select">Select / Pan</button><button class="btn" data-tool="base">Tap: Base</button><button class="btn" data-tool="obstacle">Tap: Obstacle</button><button class="btn" data-tool="territory">Draw territory</button>',
+ '<button class="btn active" data-tool="select">Select / Pan</button><button class="btn" data-tool="base">Tap: Base</button><button class="btn" data-tool="city">Tap: City</button><button class="btn" data-tool="obstacle">Tap: Obstacle</button><button class="btn" data-tool="territory">Draw territory</button>',
  '</div><div class="zoomset"><button class="btn" id="zoom-out">−</button><button class="btn" id="zoom-in">+</button><button class="btn" id="fit">Fit active area</button></div></div>',
  '<div class="map-wrap"><canvas id="map-canvas" aria-label="Interactive UTW map coordinate grid"></canvas><div class="map-overlay" id="map-coordinate">X: 499 · Y: 499</div></div>',
  '<div class="map-legend"><span><i class="swatch" style="background:#b16b4b"></i>Contaminated</span><span><i class="swatch" style="background:#b69a58"></i>Physical obstacle</span>',
@@ -114,6 +120,10 @@ function updateDynamic(){
  $('alliance').value=activeAlliance;
  $('obstacle-type').innerHTML=typeChoices.map(([key,t])=>'<option value="'+key+'">'+esc(t.label)+' ('+t.w+'×'+t.h+')</option>').join('');
  const old=$('obstacle-type').dataset.chosen;if(old)$('obstacle-type').value=old;
+ const currentCityOwner=$('city-owner').value;
+ $('city-owner').innerHTML='<option value="">Unassigned</option>'+state.alliances.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>').join('');
+ if(currentCityOwner&&state.alliances.some(a=>a.id===currentCityOwner))$('city-owner').value=currentCityOwner;
+ if(!$('city-level').dataset.initialized){$('city-level').value='3';$('city-level').dataset.initialized='yes';}
  $('member-options').innerHTML=members.map(m=>'<option value="'+esc(m.display_name)+'"></option>').join('')+
  aliases.slice(0,500).map(a=>'<option value="'+esc(a.alias)+'"></option>').join('');
  $('history-select').innerHTML=history.map(h=>'<option value="'+h.revision+'">v'+h.revision+' · '+esc(h.summary)+' · '+esc(h.actor)+'</option>').join('');
@@ -172,6 +182,18 @@ function createObstacle(x,y,type){
  const block=obstacleCollision(obj);
  if(block){inform('Cannot place object: overlaps '+block,true);return;}
  const next=clone(state);next.obstacles.push(obj);commit(next,'Placed '+OBJECTS[type].label+' at '+x+','+y);
+}
+function createCity(x,y){
+ if(!valid(x)||!valid(y))return inform('Enter a valid city center coordinate',true);
+ const name=$('city-name').value.trim().slice(0,70)||'City';
+ const level=number('city-level');
+ const ownerAllianceId=$('city-owner').value||null;
+ if(!Number.isInteger(level)||level<1||level>10)return inform('Choose a city level from 1 to 10',true);
+ const city={id:uid(),type:'city',name,level,ownerAllianceId,x,y};
+ const block=obstacleCollision(city);
+ if(block)return inform('City location blocked by '+block,true);
+ const next=clone(state);next.obstacles.push(city);
+ commit(next,'Placed '+cityLabel(city)+' at '+x+','+y);
 }
 function addTerritory(){
  const a=alliance(),x1=number('x1'),x2=number('x2'),y1=number('y1'),y2=number('y2'),gap=number('territory-gap');
@@ -235,8 +257,13 @@ function renderSelection(){
    '<label><input id="edit-locked" type="checkbox" '+(o.locked?'checked':'')+' style="width:auto"> Lock this position</label>'+
    '<div class="actions"><button id="save-selected" class="btn primary">Save base</button><button id="delete-selected" class="btn danger">Remove base</button></div>';
  }else if(selected.kind==='obstacle'){
-  const t=OBJECTS[o.type];box.innerHTML='<h2>'+esc(t.label)+' · '+t.w+'×'+t.h+'</h2><div class="fields">'+
-  '<div class="field"><label>Center X</label><input id="edit-x" type="number" value="'+o.x+'"></div><div class="field"><label>Center Y</label><input id="edit-y" type="number" value="'+o.y+'"></div></div>'+
+  const t=OBJECTS[o.type],isCity=o.type==='city';
+  box.innerHTML='<h2>'+esc(isCity?cityLabel(o):t.label)+' · '+t.w+'×'+t.h+'</h2><div class="fields">'+
+  '<div class="field"><label>Center X</label><input id="edit-x" type="number" value="'+o.x+'"></div><div class="field"><label>Center Y</label><input id="edit-y" type="number" value="'+o.y+'"></div>'+
+  (isCity?'<div class="field wide"><label>City name</label><input id="edit-city-name" maxlength="70" value="'+esc(o.name||'City')+'"></div>'+
+   '<div class="field"><label>City level</label><select id="edit-city-level">'+Array.from({length:10},(_,i)=>'<option value="'+(i+1)+'" '+((i+1)===(o.level||1)?'selected':'')+'>L'+(i+1)+'</option>').join('')+'</select></div>'+
+   '<div class="field"><label>Owning alliance</label><select id="edit-city-owner"><option value="">Unassigned</option>'+state.alliances.map(a=>'<option value="'+esc(a.id)+'" '+(a.id===o.ownerAllianceId?'selected':'')+'>'+esc(a.name)+'</option>').join('')+'</select></div>':'')+
+  '</div>'+
   '<div class="actions"><button id="save-selected" class="btn primary">Move object</button><button id="delete-selected" class="btn danger">Remove object</button></div>';
  }else{
   box.innerHTML='<h2>'+esc(nameFor(o.allianceId))+' · '+esc(o.name)+'</h2><div class="fields"><div class="field wide"><label>Section name</label><input id="edit-name" value="'+esc(o.name)+'"></div>'+
@@ -263,6 +290,12 @@ function saveSelected(){
  }else if(selected.kind==='obstacle'){
   item.x=number('edit-x');item.y=number('edit-y');
   if(!valid(item.x)||!valid(item.y))return inform('Invalid coordinates',true);
+  if(item.type==='city'){
+   item.name=$('edit-city-name').value.trim().slice(0,70)||'City';
+   item.level=number('edit-city-level');
+   item.ownerAllianceId=$('edit-city-owner').value||null;
+   if(!Number.isInteger(item.level)||item.level<1||item.level>10)return inform('Invalid city level',true);
+  }
   const block=obstacleCollision(item,next,item.id);if(block)return inform('Blocked: overlaps '+block,true);
  }else{
   item.name=$('edit-name').value.trim().slice(0,65);for(const k of ['x1','x2','y1','y2'])item[k]=number('edit-'+k);
@@ -365,6 +398,7 @@ function handleMapTap(x,y){
  $('coord-x').value=x;$('coord-y').value=y;
  if(tool==='base')createBase(x,y);
  else if(tool==='obstacle')createObstacle(x,y,$('obstacle-type').value);
+ else if(tool==='city')createCity(x,y);
  else {selected=pick(x,y);renderSelection();draw();}
 }
 function attachCanvas(){
@@ -486,6 +520,7 @@ function bind(){
  $('show-names').onchange=e=>{showNames=e.target.value;draw();};
  $('place-base').onclick=()=>{try{const c=coord();createBase(c.x,c.y);}catch(e){inform(e.message,true)}};
  $('place-obstacle').onclick=()=>{try{const c=coord();createObstacle(c.x,c.y,$('obstacle-type').value);}catch(e){inform(e.message,true)}};
+ $('place-city').onclick=()=>{try{const c=coord();createCity(c.x,c.y);}catch(e){inform(e.message,true)}};
  $('obstacle-type').onchange=e=>{$('obstacle-type').dataset.chosen=e.target.value;};
  $('bulk-preview').onclick=bulkAdd;
  $('add-territory').onclick=addTerritory;
