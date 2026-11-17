@@ -308,3 +308,35 @@ test('historical train dates still allow members who left later',()=>{
  assert.ok(advice.vipCandidates.some(x=>x.id==='old'));
  assert.equal(advice.excludedDepartedCount,0);
 });
+
+test('UTW role leaders and backups resolve aliases and block Top Donation conductor and VIP',async()=>{
+ const {resolveR4RoleMembers,isTopDonationTrain}=await import('../lib/train-advice.mjs');
+ const roles=[{leader:'Tiny',backup:'Crüm',additional_backups:['Ɖevi','Tiny']}];
+ const resolved=resolveR4RoleMembers(roles,members,aliases);
+ assert.equal(resolved.nameCount,3);
+ assert.deepEqual([...resolved.ids].sort(),['crum','devi','tiny']);
+ assert.deepEqual(resolved.unmatched,[]);
+ assert.equal(isTopDonationTrain('manual','Top donation'),true);
+ const ranked=buildTrainAdvice({...args,date:'2026-11-24',mode:'donations',slot:'Top donation',
+  r4MemberIds:[...resolved.ids],scoreboard:[
+   {member_id:'tiny',points:5000},{member_id:'crum',points:4000},
+   {member_id:'mo',points:3000},{member_id:'devi',points:2000},
+   {member_id:'new',points:1000}
+  ]});
+ assert.equal(ranked.recommended.id,'mo');
+ assert.equal(ranked.recommendedVip.id,'new');
+ for(const id of ['tiny','crum','devi']){
+  assert.equal(ranked.candidates.find(x=>x.id===id).eligible,false);
+  assert.equal(ranked.vipCandidates.find(x=>x.id===id).eligible,false);
+  assert.match(ranked.candidates.find(x=>x.id===id).reasons.join(' '),/R4 on UTW roles list/);
+ }
+});
+test('R4 eligibility exclusion is scoped only to Top Donation trains',async()=>{
+ const {resolveR4RoleMembers}=await import('../lib/train-advice.mjs');
+ const mapped=resolveR4RoleMembers([{leader:'Tiny',backup:'MissingName',additional_backups:[]}],members,aliases);
+ assert.deepEqual(mapped.unmatched,['MissingName']);
+ const data=buildTrainAdvice({...args,date:'2026-11-24',mode:'vs',r4MemberIds:['tiny'],
+  scoreboard:[{member_id:'tiny',points:100},{member_id:'mo',points:90}]});
+ assert.equal(data.recommended.id,'tiny');
+ assert.equal(data.vipCandidates.find(x=>x.id==='tiny').eligible,true);
+});

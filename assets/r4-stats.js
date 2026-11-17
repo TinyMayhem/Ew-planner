@@ -335,8 +335,8 @@ function showVipAdvice(advice,{autoSelect=false}={}){
   for(const note of v.notes||[])info.append(text('div',note,'stat-muted'));
   for(const reason of v.reasons||[])info.append(text('div','Skipped: '+reason,'stat-flag blocked'));
   if(samePerson)info.append(text('div','Already selected as conductor','stat-flag blocked'));
-  const button=text('button',v.eligible?'Choose VIP':'Override VIP','stat-button');
-  button.type='button';button.disabled=samePerson;
+  const button=text('button',v.r4DonationBlocked?'R4 not eligible':v.eligible?'Choose VIP':'Override VIP','stat-button');
+  button.type='button';button.disabled=samePerson||!!v.r4DonationBlocked;
   button.addEventListener('click',()=>{
    $('train-vip').value=v.id;
    if(!v.eligible&&v.reasons?.length)$('train-reason').value=('VIP override: '+v.reasons.join('; ')).slice(0,480);
@@ -366,6 +366,7 @@ async function candidates(){
   state.advice=advice;root.replaceChildren();
   root.append(text('p',advice.context,'stat-muted'));
    if(advice.excludedDepartedCount)root.append(text('p','Former UTW members are excluded from new recommendations. Their historical train entries are still kept.','stat-muted'));
+   if(mode==='donations')root.append(text('p','R4 department leaders and backups are excluded from Top Donation conductor and VIP choices, using the saved UTW roles list.','stat-muted'));
   if(advice.sameDate?.length)root.append(text('p','Already saved for this date: '+advice.sameDate.map(x=>x.driver+' (VIP: '+x.vip+')').join(' / ')+'. Use Edit above to change an existing assignment.','stat-flag'));
   if(advice.substitution)root.append(text('p',advice.substitution,'train-advice-substitution'));
   if(advice.hostProposed)root.append(text('p','Stage 16 R4 rotation proposal, not a confirmed assignment. Verify with the R4 team.','stat-muted'));
@@ -377,7 +378,7 @@ async function candidates(){
    if(v.eligible&&advice.recommended?.id===v.id)info.append(text('div','Recommended pending R4 checks','train-advice-recommended'));
    for(const reason of v.reasons||[])info.append(text('div','Skipped: '+reason,'stat-flag blocked'));
    for(const note of v.notes||[])info.append(text('div',note,'stat-muted'));
-   const button=text('button',v.eligible?'Choose':'Override','stat-button');button.type='button';
+   const button=text('button',v.r4DonationBlocked?'R4 not eligible':v.eligible?'Choose':'Override','stat-button');button.type='button';button.disabled=!!v.r4DonationBlocked;
    button.addEventListener('click',()=>{
     $('train-member').value=v.id;
     if(!v.eligible&&v.reasons?.length)$('train-reason').value=('Manual override: '+v.reasons.join('; ')).slice(0,480);
@@ -465,6 +466,15 @@ function eligibilityWarnings(){
  const root=$('train-eligibility-warnings');root.replaceChildren();
  if(!state.data)return;
  const issues=currentTrainWarnings();
+ const isDonation=$('train-source').value==='donations'||/\btop\s+(?:donat(?:ion|ions)?|donor)\b/i.test($('train-slot').value);
+ if(isDonation){
+  const saved=state.advice;
+  if(!saved||saved.date!==$('train-date').value||!Array.isArray(saved.r4MemberIds))issues.push('UTW R4 Roles list must load before assigning a Top Donation train.');
+  else{
+   const r4s=new Set(saved.r4MemberIds);
+   for(const id of [$('train-member').value,$('train-vip').value])if(id&&r4s.has(id))issues.push(memberName(id)+' is R4 and cannot take a Top Donation train (conductor or VIP).');
+  }
+ }
  if(issues.length){root.append(text('strong','⚠ '+issues.length+' train rule warning'+(issues.length===1?'':'s'),'train-warning-title'));issues.forEach(s=>root.append(text('p',s,'train-rule-warning')))}
  root.append(text('p','Conductor: once per five-week Stage, except R4 conductor trains on Thursday and Saturday. VIP: once per Monday-to-Sunday week across all trains. Optional VIP Stage mode prioritizes people who have not been VIP this Stage.','stat-muted'));
  root.append(text('p','R4 must also verify hive position, member rank, Wednesday first-timer preference and approved exceptions.','stat-muted'));
@@ -730,6 +740,12 @@ function wire(){
   if(!id||!vipId||!date||id===vipId){notice('Select a date and two different members: conductor and VIP.',true);return}
    if(departedOn(id,date)||departedOn(vipId,date)){notice('A selected player is no longer in UTW. Choose an active member for this date.',true);return}
   const advice=state.advice?.date===date&&state.advice?.mode===mode&&state.advice?.vipMode===$('train-vip-mode').value?state.advice:null;
+   const donationTrain=source==='donations'||/\btop\s+(?:donat(?:ion|ions)?|donor)\b/i.test($('train-slot').value);
+   if(donationTrain){
+    if(!Array.isArray(advice?.r4MemberIds)){notice('Load the UTW R4 Roles list before selecting a Top Donation train.',true);return}
+    const r4s=new Set(advice.r4MemberIds);
+    if(r4s.has(id)||r4s.has(vipId)){notice('R4 members cannot be conductor or VIP for Top Donation trains. Choose two eligible members.',true);return}
+   }
    const selected=advice?.candidates?.find(c=>c.id===id);
    if(selected&&!selected.eligible&&(!reason||!confirm('Saved train records flag this conductor:\\n'+selected.reasons.join('\\n')+'\\nSave override anyway?'))){notice('Add an override reason and confirm the eligibility warning.',true);return}
     const vipChoice=advice?.vipCandidates?.find(v=>v.id===vipId);
