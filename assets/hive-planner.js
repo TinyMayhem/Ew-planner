@@ -890,6 +890,25 @@ function attachCanvas(){
     },LONG_PRESS_MS);
    }
   }
+  if(tool==='group'){
+   groupBox=territoryBoundsFromCorners(initial,initial);
+   const hit=groupHit(initial.x,initial.y);
+   if(hit&&groupSelection.has(hit.id)){
+    pointer.holdBaseId=hit.id;
+    const holdId=e.pointerId;
+    pointer.holdTimer=setTimeout(()=>{
+     if(!pointer||pointer.id!==holdId||pointer.moved||busy||touchPoints.size>1)return;
+     clearPressTimer();
+     const ids=[...groupSelection];
+     const check=inspectGroupMove(state,ids,0,0);
+     if(check.hard.length){groupBox=null;inform(check.hard[0],true);draw();return;}
+     groupDrag={ids,dx:0,dy:0,check};
+     groupBox=null;hoverCell=null;
+     inform('Moving '+ids.length+' bases together. Drag and release to preview safety checks.');
+     draw();
+    },LONG_PRESS_MS);
+   }
+  }
   if(tool==='territory'){
    const action=chooseTerritoryAction(initial,e.pointerType==='touch');
    areaGesture={mode:action.mode,initial,original:drawArea?{...drawArea}:null,previous:drawArea?{...drawArea}:null,previousEditingId:editingTerritoryId};
@@ -917,9 +936,17 @@ function attachCanvas(){
   const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
   if(Math.hypot(dx,dy)>LONG_PRESS_SLOP_PX){
    pointer.moved=true;
-   if(!dragMove)clearPressTimer();
+   if(!dragMove&&!groupDrag)clearPressTimer();
   }
-  if(dragMove){
+  if(groupDrag){
+   const cell=eventCell(e),mx=cell.x-pointer.cell.x,my=cell.y-pointer.cell.y;
+   if(mx!==groupDrag.dx||my!==groupDrag.dy){
+    groupDrag.dx=mx;groupDrag.dy=my;
+    groupDrag.check=inspectGroupMove(state,groupDrag.ids,mx,my);draw();
+   }
+  }else if(tool==='group'&&groupBox){
+   if(pointer.moved){groupBox=territoryBoundsFromCorners(pointer.cell,eventCell(e));draw();}
+  }else if(dragMove){
    // Finger maintains the same offset inside the base while it moves.
    const cell=eventCell(e);
    const x=dragMove.initialX+cell.x-pointer.cell.x;
@@ -949,6 +976,21 @@ function attachCanvas(){
   if(!pointer||e.pointerId!==pointer.id)return;
   clearPressTimer();
   const wasMoving=dragMove,hadMoved=pointer.moved;
+  if(tool==='group'){
+   const moving=groupDrag,cell=eventCell(e);
+   if(moving){
+    const dx=cell.x-pointer.cell.x,dy=cell.y-pointer.cell.y;
+    pointer=null;groupDrag=null;groupBox=null;hoverCell=null;
+    draw();finishGroupMove(moving.ids,dx,dy);return;
+   }
+   groupBox=null;
+   if(hadMoved){
+    selectGroupRectangle(territoryBoundsFromCorners(pointer.cell,cell),e.shiftKey===true);
+   }else{
+    toggleGroupAt(cell.x,cell.y);
+   }
+   pointer=null;hoverCell=null;draw();return;
+  }
   if(wasMoving){
    const c=eventCell(e);
    wasMoving.x=wasMoving.initialX+c.x-pointer.cell.x;
@@ -977,7 +1019,7 @@ function attachCanvas(){
     draw();return;
    }
   }
-  clearPressTimer();cancelAreaGesture();pointer=null;dragMove=null;hoverCell=null;draw();
+  clearPressTimer();cancelAreaGesture();pointer=null;dragMove=null;groupDrag=null;groupBox=null;hoverCell=null;draw();
  });
  canvas.addEventListener('lostpointercapture',e=>{
   // Browser/OS interruption: abandon any pending single-finger placement.
@@ -987,7 +1029,7 @@ function attachCanvas(){
    ignoreTouchUntilRelease=touchPoints.size>0;
   }
   if(pointer?.id===e.pointerId){
-   clearPressTimer();cancelAreaGesture();pointer=null;dragMove=null;hoverCell=null;draw();
+   clearPressTimer();cancelAreaGesture();pointer=null;dragMove=null;groupDrag=null;groupBox=null;hoverCell=null;draw();
   }
  });
  canvas.addEventListener('pointerleave',()=>{if(!pointer&&!pinchGesture){hoverCell=null;draw();}});
