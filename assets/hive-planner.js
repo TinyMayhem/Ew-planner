@@ -65,7 +65,7 @@ const html=[
  '</div><div class="zoomset"><button class="btn" id="zoom-out">−</button><button class="btn" id="zoom-in">+</button><button class="btn" id="fit">Fit active area</button></div></div>',
  '<div class="map-wrap"><canvas id="map-canvas" aria-label="Interactive UTW map coordinate grid"></canvas><div class="map-overlay" id="map-coordinate">X: 499 · Y: 499</div></div>',
  '<div class="map-legend"><span><i class="swatch" style="background:#b16b4b"></i>Contaminated</span><span><i class="swatch" style="background:#b69a58"></i>Physical obstacle</span><span><i class="swatch" style="background:#b1eb8a"></i>3×3 green preview = placeable</span><span><i class="swatch" style="background:#e5b37e"></i>City label = level and name</span>',
- '<span>Solid = assigned territory</span><span>Dashed = occupied territory</span>',
+ '<span>Solid = assigned territory</span><span>Dashed = occupied territory</span><span>↑ Y increases north · → X increases east</span>',
  '<label style="display:inline"><input id="mud-toggle" type="checkbox" checked style="width:auto"> Mud</label>',
  '<label style="display:inline"><input id="buff-toggle" type="checkbox" checked style="width:auto"> Influence</label>',
  '<label style="display:inline"><input id="grid-toggle" type="checkbox" checked style="width:auto"> Grid</label></div>',
@@ -523,7 +523,7 @@ function exportMap(kind){
  const c=document.createElement('canvas');c.width=innerW+112;c.height=innerH+175+legendHeight;
  const context=c.getContext('2d');context.fillStyle='#102b20';context.fillRect(0,0,c.width,c.height);
  context.fillStyle='#f4e3b7';context.font='bold 27px Georgia';context.fillText(kind==='detailed'?'UTW Detailed Hive Map':'Alliance Territory Overview',28,37);
- context.font='14px system-ui';context.fillStyle='#c9d9c2';context.fillText('Warzone 1395 · Center coordinates · Snapshot v'+revision,28,59);
+ context.font='14px system-ui';context.fillStyle='#c9d9c2';context.fillText('Warzone 1395 · X → east · Y ↑ north · Snapshot v'+revision,28,59);
  const left=60,top=85;
  context.save();context.translate(left,top);
  scene(context,innerW,innerH,(b.left+b.right)/2,(b.top+b.bottom)/2,scale,{exportKind:kind,showMud:true,showBuff:true,showGrid:true});
