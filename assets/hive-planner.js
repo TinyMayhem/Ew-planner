@@ -495,7 +495,23 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
   }
   ctx.strokeStyle=line;ctx.lineWidth=2.5;ctx.strokeRect(...p);
  }
- if(drawArea){const r={left:Math.min(drawArea.x1,drawArea.x2),right:Math.max(drawArea.x1,drawArea.x2),top:Math.min(drawArea.y1,drawArea.y2),bottom:Math.max(drawArea.y1,drawArea.y2)};const p=rxy(r);ctx.fillStyle='#d8c26824';ctx.fillRect(...p);ctx.strokeStyle='#fff2b5';ctx.lineWidth=2;ctx.strokeRect(...p);}
+ if(exportKind==='screen'&&drawArea){
+  const r={left:drawArea.x1,right:drawArea.x2,top:drawArea.y1,bottom:drawArea.y2};
+  const p=rxy(r);
+  ctx.fillStyle='rgba(255,217,107,.23)';ctx.fillRect(...p);
+  ctx.strokeStyle='#ffed93';ctx.lineWidth=3;ctx.setLineDash([10,4]);ctx.strokeRect(...p);ctx.setLineDash([]);
+  const corners=[['nw',r.left,r.bottom],['ne',r.right,r.bottom],['sw',r.left,r.top],['se',r.right,r.top]];
+  for(const [,x,y] of corners){
+   const q=mapToPixel(x,y,projection);
+   ctx.beginPath();ctx.arc(q.x,q.y,8,0,Math.PI*2);
+   ctx.fillStyle='#fff3ba';ctx.fill();ctx.strokeStyle='#78520a';ctx.lineWidth=2;ctx.stroke();
+  }
+  const label='UNSAVED TERRITORY · '+nameFor(activeAlliance);
+  ctx.font='bold 12px system-ui';const textW=Math.min(w-14,Math.max(96,ctx.measureText(label).width+16));
+  const labelX=clamp(p[0],6,Math.max(6,w-textW-6)),labelY=clamp(p[1]-25,4,Math.max(4,h-24));
+  ctx.fillStyle='rgba(79,54,16,.96)';ctx.fillRect(labelX,labelY,textW,24);
+  ctx.fillStyle='#fff3bd';ctx.fillText(label,labelX+7,labelY+16,textW-10);
+ }
  if(selected&&!dragMove){
   const o=(selected.kind==='base'?state.bases:selected.kind==='obstacle'?state.obstacles:state.territories).find(x=>x.id===selected.id);
   if(o){const r=selected.kind==='territory'?{left:o.x1,right:o.x2,top:o.y1,bottom:o.y2}:footprint(o,state);ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.strokeRect(...rxy(r));}
@@ -546,7 +562,12 @@ function gesturePair(){
 }
 function beginPinchGesture(){
  clearPressTimer();
- pointer=null;dragMove=null;drawArea=null;hoverCell=null;
+ if(areaGesture){
+  drawArea=areaGesture.previous;
+  areaGesture=null;
+  showTerritoryDraft();
+ }
+ pointer=null;dragMove=null;hoverCell=null;
  ignoreTouchUntilRelease=true;
  const ids=Array.from(touchPoints.keys()).slice(0,2);
  pinchGesture={ids,initial:null,startView:{...view}};
@@ -573,6 +594,39 @@ function pick(x,y){
  if(o)return {kind:'obstacle',id:o.id};
  const t=[...state.territories].reverse().find(o=>x>=o.x1&&x<=o.x2&&y>=o.y1&&y<=o.y2);
  return t?{kind:'territory',id:t.id}:null;
+}
+function chooseTerritoryAction(point,isTouch=false){
+ if(!drawArea)return {mode:'new'};
+ const projection={...view,width,height},t=drawArea;
+ const corners=[
+  {mode:'nw',x:t.x1,y:t.y2},{mode:'ne',x:t.x2,y:t.y2},
+  {mode:'sw',x:t.x1,y:t.y1},{mode:'se',x:t.x2,y:t.y1}
+ ];
+ const local=mapToPixel(point.x,point.y,projection);
+ const tolerance=isTouch?Math.max(2,23/view.scale):Math.max(1,13/view.scale);
+ let best=null,min=Infinity;
+ for(const c of corners){
+  const dist=Math.hypot(local.x-mapToPixel(c.x,c.y,projection).x,local.y-mapToPixel(c.x,c.y,projection).y);
+  if(dist<min){min=dist;best=c;}
+ }
+ if(min<=tolerance*view.scale)return {mode:best.mode};
+ if(point.x>=t.x1&&point.x<=t.x2&&point.y>=t.y1&&point.y<=t.y2)return {mode:'move'};
+ return {mode:'new'};
+}
+function updateAreaGesture(point){
+ if(!areaGesture)return;
+ const {mode,initial,original}=areaGesture;
+ if(mode==='new')drawArea=territoryBoundsFromCorners(initial,point);
+ else if(mode==='move')drawArea=moveTerritoryBounds(original,point.x-initial.x,point.y-initial.y);
+ else drawArea=resizeTerritoryBounds(original,mode,point.x,point.y);
+ showTerritoryDraft();draw();
+}
+function cancelAreaGesture(){
+ if(areaGesture){
+  drawArea=areaGesture.previous;
+  areaGesture=null;
+  showTerritoryDraft();
+ }
 }
 function handleMapTap(x,y){
  if(!valid(x)||!valid(y))return;
@@ -647,7 +701,12 @@ function attachCanvas(){
     },LONG_PRESS_MS);
    }
   }
-  if(tool==='territory')drawArea={x1:initial.x,y1:initial.y,x2:initial.x,y2:initial.y};
+  if(tool==='territory'){
+   const action=chooseTerritoryAction(initial,e.pointerType==='touch');
+   areaGesture={mode:action.mode,initial,original:drawArea?{...drawArea}:null,previous:drawArea?{...drawArea}:null};
+   if(action.mode==='new')drawArea=territoryBoundsFromCorners(initial,initial);
+   showTerritoryDraft();
+  }
   draw();
  });
  canvas.addEventListener('pointermove',e=>{
@@ -678,8 +737,8 @@ function attachCanvas(){
     dragMove.check=inspectBaseMove(state,dragMove.id,x,y);
     draw();
    }
-  }else if(tool==='territory'&&drawArea){
-   const cell=eventCell(e);drawArea.x2=cell.x;drawArea.y2=cell.y;draw();
+  }else if(tool==='territory'&&areaGesture){
+   updateAreaGesture(eventCell(e));
   }else if(pointer.moved){
    hoverCell=null;
    view.x=pointer.originX-dx/view.scale;view.y=pointer.originY+dy/view.scale;draw();
@@ -705,10 +764,13 @@ function attachCanvas(){
    pointer=null;dragMove=null;hoverCell=null;
    draw();releaseHeldBase(wasMoving);return;
   }
-  if(tool==='territory'&&drawArea){
-   const b=drawArea;
-   for(const [id,n] of [['x1',Math.min(b.x1,b.x2)],['x2',Math.max(b.x1,b.x2)],['y1',Math.min(b.y1,b.y2)],['y2',Math.max(b.y1,b.y2)]])$(id).value=n;
-   drawArea=null;inform('Territory rectangle selected. Enter a section name and tap Add section.');
+  if(tool==='territory'&&areaGesture){
+   updateAreaGesture(eventCell(e));
+   areaGesture=null;
+   if(drawArea){
+    syncTerritoryFields(drawArea);
+    inform('Territory draft is still visible. Drag its corners or edit coordinates, then tap Save territory.');
+   }
   }else if(!hadMoved){
    const cell=eventCell(e);handleMapTap(cell.x,cell.y);
   }
@@ -723,7 +785,7 @@ function attachCanvas(){
     draw();return;
    }
   }
-  clearPressTimer();pointer=null;dragMove=null;hoverCell=null;drawArea=null;draw();
+  clearPressTimer();cancelAreaGesture();pointer=null;dragMove=null;hoverCell=null;draw();
  });
  canvas.addEventListener('lostpointercapture',e=>{
   // Browser/OS interruption: abandon any pending single-finger placement.
@@ -733,7 +795,7 @@ function attachCanvas(){
    ignoreTouchUntilRelease=touchPoints.size>0;
   }
   if(pointer?.id===e.pointerId){
-   clearPressTimer();pointer=null;dragMove=null;drawArea=null;hoverCell=null;draw();
+   clearPressTimer();cancelAreaGesture();pointer=null;dragMove=null;hoverCell=null;draw();
   }
  });
  canvas.addEventListener('pointerleave',()=>{if(!pointer&&!pinchGesture){hoverCell=null;draw();}});
