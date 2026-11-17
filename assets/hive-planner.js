@@ -589,6 +589,7 @@ function beginPinchGesture(){
  clearPressTimer();
  if(areaGesture){
   drawArea=areaGesture.previous;
+  editingTerritoryId=areaGesture.previousEditingId;
   areaGesture=null;
   showTerritoryDraft();
  }
@@ -649,6 +650,7 @@ function updateAreaGesture(point){
 function cancelAreaGesture(){
  if(areaGesture){
   drawArea=areaGesture.previous;
+  editingTerritoryId=areaGesture.previousEditingId;
   areaGesture=null;
   showTerritoryDraft();
  }
@@ -728,7 +730,7 @@ function attachCanvas(){
   }
   if(tool==='territory'){
    const action=chooseTerritoryAction(initial,e.pointerType==='touch');
-   areaGesture={mode:action.mode,initial,original:drawArea?{...drawArea}:null,previous:drawArea?{...drawArea}:null};
+   areaGesture={mode:action.mode,initial,original:drawArea?{...drawArea}:null,previous:drawArea?{...drawArea}:null,previousEditingId:editingTerritoryId};
    if(action.mode==='new'){
     drawArea=territoryBoundsFromCorners(initial,initial);
     editingTerritoryId=null;
@@ -928,12 +930,26 @@ function bind(){
  $('obstacle-type').onchange=e=>{$('obstacle-type').dataset.chosen=e.target.value;};
  $('bulk-preview').onclick=bulkAdd;
  $('add-territory').onclick=addTerritory;
+ $('draft-save').onclick=addTerritory;
+ $('draft-edit').onclick=()=>{$('territory-name').scrollIntoView({behavior:'smooth',block:'center'});$('territory-name').focus();};
+ $('draft-clear').onclick=clearTerritoryDraft;
+ $('clear-territory-draft').onclick=clearTerritoryDraft;
+ for(const field of ['x1','x2','y1','y2']){
+  $(field).addEventListener('input',()=>{
+   if(!drawArea||areaGesture)return;
+   const bounds=territoryFieldBounds();
+   if(bounds){drawArea=bounds;showTerritoryDraft();draw();}
+  });
+ }
  $('suggest').onclick=generateSuggestions;$('approve').onclick=approveSuggestions;
  $('discard').onclick=()=>{preview=[];$('approve').disabled=true;$('preview-info').textContent='Preview cleared.';draw();};
  for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>{
   tool=b.dataset.tool;hoverCell=null;
   document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
-  inform('Tool: '+b.textContent+'. Drag to pan unless drawing a territory.');draw();
+  inform(tool==='territory'
+  ?'Draw or edit a highlighted territory. Drag corners to resize, drag inside to move, or draw outside for a new section.'
+  :'Tool: '+b.textContent+'. Drag to pan unless drawing a territory.');
+  draw();
  };
  $('zoom-in').onclick=()=>{view.scale=clamp(view.scale*1.3,1,70);draw();};
  $('zoom-out').onclick=()=>{view.scale=clamp(view.scale/1.3,1,70);draw();};
