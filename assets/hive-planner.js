@@ -515,9 +515,10 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
     if(!labels.some(v=>box.l<v.r+4&&box.r>v.l-4&&box.t<v.b+4&&box.b>v.t-4)){cy=y;break;}
    }
    labels.push({l:cx-bw/2,r:cx+bw/2,t:cy-12,b:cy+12});
-   ctx.fillStyle='rgba(13,31,24,.96)';ctx.fillRect(cx-bw/2,cy-12,bw,24);
-   ctx.strokeStyle=color;ctx.lineWidth=2;ctx.strokeRect(cx-bw/2,cy-12,bw,24);
-   ctx.fillStyle='#fff4d5';ctx.fillText(label,cx,cy,bw-9);
+   ctx.globalAlpha=.94;ctx.fillStyle=color;ctx.fillRect(cx-bw/2,cy-12,bw,24);ctx.globalAlpha=1;
+   ctx.strokeStyle='#f8ebd1';ctx.lineWidth=1.1;ctx.strokeRect(cx-bw/2,cy-12,bw,24);
+   ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,.85)';ctx.shadowBlur=3;
+   ctx.fillText(label,cx,cy,bw-9);ctx.shadowBlur=0;
    ctx.textAlign='left';ctx.textBaseline='alphabetic';
   };
   for(const cluster of allianceBaseClusters(state))renderCluster(cluster);
