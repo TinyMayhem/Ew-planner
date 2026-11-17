@@ -1,4 +1,4 @@
-import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds,allianceBaseClusters,allianceUsage} from './hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds,allianceBaseClusters,allianceUsage,packingGrid} from './hive-geometry.js';
 
 const API='/r4-hive',app=document.getElementById('hive-app');
 const $=id=>document.getElementById(id);
@@ -343,9 +343,13 @@ function generateSuggestions(){
   const id=$('suggest-section').value;
   const region=id?state.territories.find(t=>t.id===id):{x1:number('x1'),x2:number('x2'),y1:number('y1'),y2:number('y2')};
   if(!region||[region.x1,region.x2,region.y1,region.y2].some(v=>!valid(v))||region.x1>region.x2||region.y1>region.y2)throw Error('Select a territory or enter valid region coordinates.');
-  preview=proposeBases(state,{allianceId:activeAlliance,region,count:number('suggest-count'),gap:number('suggest-gap'),strategy:$('suggest-strategy').value,packing:$('suggest-packing').value});
+  const gap=number('suggest-gap');
+  preview=proposeBases(state,{allianceId:activeAlliance,region,count:number('suggest-count'),gap,strategy:$('suggest-strategy').value,packing:$('suggest-packing').value});
   $('approve').disabled=!preview.length;
-  $('preview-info').textContent=preview.length+' suggested shield-safe positions (preview only).';
+  const grid=packingGrid(state,{allianceId:activeAlliance,region,gap});
+  $('preview-info').textContent=preview.length+' suggested shield-safe positions (preview only). '+
+   (grid.alignedToExisting?'Rows aligned with nearby existing bases. ':'No nearby bases to align with. ')+
+   gap+' empty cell'+(gap===1?'':'s')+' is the target between adjacent bases; obstacles or skipped spaces may produce larger gaps.';
   draw();
  }catch(e){inform(e.message,true);}
 }
