@@ -535,7 +535,7 @@ function attachCanvas(){
       inform('This base is locked. Unlock it in the Selected item panel before dragging.',true);
       return;
      }
-     dragMove={id:original.id,x:original.x,y:original.y,check:inspectBaseMove(state,original.id,original.x,original.y)};
+     dragMove={id:original.id,initialX:original.x,initialY:original.y,x:original.x,y:original.y,check:inspectBaseMove(state,original.id,original.x,original.y)};
      hoverCell=null;
      inform('Base picked up. Drag to a new grid location, then release to move. Red is blocked, orange requires approval.');
      draw();
@@ -562,12 +562,8 @@ function attachCanvas(){
    // Preserve where inside the 3×3 footprint the player initially touched,
    // rather than jumping the base center beneath their finger.
    const cell=eventCell(e);
-   const x=dragMove.initialX===undefined
-    ?state.bases.find(b=>b.id===dragMove.id)?.x+cell.x-pointer.cell.x
-    :dragMove.initialX+cell.x-pointer.cell.x;
-   const y=dragMove.initialY===undefined
-    ?state.bases.find(b=>b.id===dragMove.id)?.y+cell.y-pointer.cell.y
-    :dragMove.initialY+cell.y-pointer.cell.y;
+   const x=dragMove.initialX+cell.x-pointer.cell.x;
+   const y=dragMove.initialY+cell.y-pointer.cell.y;
    if(Number.isInteger(x)&&Number.isInteger(y)&&(dragMove.x!==x||dragMove.y!==y)){
     dragMove.x=x;dragMove.y=y;
     dragMove.check=inspectBaseMove(state,dragMove.id,x,y);
@@ -586,8 +582,9 @@ function attachCanvas(){
   const wasMoving=dragMove,hadMoved=pointer.moved;
   if(wasMoving){
    // Include the final pointer coordinate, even if no last move event fired.
-   const c=eventCell(e),base=state.bases.find(b=>b.id===wasMoving.id);
-   if(base){wasMoving.x=base.x+c.x-pointer.cell.x;wasMoving.y=base.y+c.y-pointer.cell.y;}
+   const c=eventCell(e);
+   wasMoving.x=wasMoving.initialX+c.x-pointer.cell.x;
+   wasMoving.y=wasMoving.initialY+c.y-pointer.cell.y;
    pointer=null;dragMove=null;hoverCell=null;
    draw();releaseHeldBase(wasMoving);return;
   }
