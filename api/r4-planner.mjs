@@ -45,7 +45,8 @@ const plannerFor=(alliance,role)=>{
    ['📋','Member Performance Reports','/r4-reports'],
    ['🔄','This Week’s Name Changes','/r4-nicknames#this-week'],
    ['✏️','Nickname Manager','/r4-nicknames'],
-   ['📦','Archived Members','/r4-nicknames#archived-members']
+   ['📦','Archived Members','/r4-nicknames#archived-members'],
+   ['📋','Poll & Participation Tracker','/r4-polls']
   ];
   const seasonTools=[['🗺','Hive & Territory Planner','/r4-hive'],['⚔','Alliance Duel','/r4-planner?duel=1']];
   const menu=isVon?'<nav class="r4-shortcuts" aria-label="VON tools">'+shortcut('⚔','Alliance Duel','/r4-planner?duel=1')+'</nav>':
