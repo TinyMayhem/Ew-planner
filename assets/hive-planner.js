@@ -487,13 +487,62 @@ function handleMapTap(x,y){
  else if(tool==='city')createCity(x,y);
  else {selected=pick(x,y);renderSelection();draw();}
 }
+function releaseHeldBase(move){
+ const base=state.bases.find(b=>b.id===move.id);
+ if(!base)return inform('This base no longer exists. No changes were made.',true);
+ if(base.x===move.x&&base.y===move.y){inform('Base selected. Its position is unchanged.');return;}
+ const check=inspectBaseMove(state,move.id,move.x,move.y);
+ if(check.hard.length)return inform('Cannot move base: '+check.hard.join(', '),true);
+ if(check.warnings.length&&!confirm('Move base to ('+move.x+', '+move.y+')?\n\n'+check.warnings.join('\n')+'\n\nMove anyway?')){
+  inform('Move cancelled. The original position was kept.');
+  return;
+ }
+ const next=clone(state),record=next.bases.find(b=>b.id===move.id);
+ if(!record)return inform('Base record no longer exists',true);
+ const oldX=record.x,oldY=record.y;
+ record.x=move.x;record.y=move.y;
+ // Preserve id, number, member name, alliance and manual section assignment.
+ // Server-side revision checks prevent overwriting another R4's edits.
+ commit(next,'Moved '+nameFor(record.allianceId)+' base #'+(record.number||'?')+
+  ' from ('+oldX+','+oldY+') to ('+record.x+','+record.y+')');
+}
+function clearPressTimer(){
+ if(pointer?.holdTimer!==null&&pointer?.holdTimer!==undefined){
+  clearTimeout(pointer.holdTimer);pointer.holdTimer=null;
+ }
+}
 function attachCanvas(){
+ canvas.addEventListener('contextmenu',e=>e.preventDefault());
  canvas.addEventListener('pointerdown',e=>{
-  if(!state)return;
+  if(!state||busy||pointer||e.isPrimary===false||e.button!==0)return;
   canvas.setPointerCapture(e.pointerId);
-  pointer={id:e.pointerId,x:e.clientX,y:e.clientY,originX:view.x,originY:view.y,cell:eventCell(e),moved:false};
-  hoverCell=['base','city','obstacle'].includes(tool)?pointer.cell:null;
-  if(tool==='territory')drawArea={x1:pointer.cell.x,y1:pointer.cell.y,x2:pointer.cell.x,y2:pointer.cell.y};
+  const initial=eventCell(e);
+  pointer={id:e.pointerId,x:e.clientX,y:e.clientY,originX:view.x,originY:view.y,cell:initial,moved:false,holdTimer:null};
+  hoverCell=['base','city','obstacle'].includes(tool)?initial:null;
+  if(tool==='select'){
+   const hit=pick(initial.x,initial.y);
+   if(hit?.kind==='base'){
+    pointer.holdBaseId=hit.id;
+    const pressId=e.pointerId;
+    pointer.holdTimer=setTimeout(()=>{
+     if(!pointer||pointer.id!==pressId||pointer.moved||busy)return;
+     pointer.holdTimer=null;
+     const original=state.bases.find(b=>b.id===hit.id);
+     if(!original)return;
+     selected={kind:'base',id:original.id};
+     renderSelection();
+     if(original.locked){
+      inform('This base is locked. Unlock it in the Selected item panel before dragging.',true);
+      return;
+     }
+     dragMove={id:original.id,x:original.x,y:original.y,check:inspectBaseMove(state,original.id,original.x,original.y)};
+     hoverCell=null;
+     inform('Base picked up. Drag to a new grid location, then release to move. Red is blocked, orange requires approval.');
+     draw();
+    },LONG_PRESS_MS);
+   }
+  }
+  if(tool==='territory')drawArea={x1:initial.x,y1:initial.y,x2:initial.x,y2:initial.y};
   draw();
  });
  canvas.addEventListener('pointermove',e=>{
@@ -505,20 +554,55 @@ function attachCanvas(){
    return;
   }
   const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
-  if(Math.hypot(dx,dy)>6)pointer.moved=true;
-  if(tool==='territory'&&drawArea){const c=eventCell(e);drawArea.x2=c.x;drawArea.y2=c.y;draw();}
-  else if(pointer.moved){hoverCell=null;view.x=pointer.originX-dx/view.scale;view.y=pointer.originY+dy/view.scale;draw();}
-  else if(hoverCell){hoverCell=eventCell(e);draw();}
+  if(Math.hypot(dx,dy)>LONG_PRESS_SLOP_PX){
+   pointer.moved=true;
+   if(!dragMove)clearPressTimer();
+  }
+  if(dragMove){
+   // Preserve where inside the 3×3 footprint the player initially touched,
+   // rather than jumping the base center beneath their finger.
+   const cell=eventCell(e);
+   const x=dragMove.initialX===undefined
+    ?state.bases.find(b=>b.id===dragMove.id)?.x+cell.x-pointer.cell.x
+    :dragMove.initialX+cell.x-pointer.cell.x;
+   const y=dragMove.initialY===undefined
+    ?state.bases.find(b=>b.id===dragMove.id)?.y+cell.y-pointer.cell.y
+    :dragMove.initialY+cell.y-pointer.cell.y;
+   if(Number.isInteger(x)&&Number.isInteger(y)&&(dragMove.x!==x||dragMove.y!==y)){
+    dragMove.x=x;dragMove.y=y;
+    dragMove.check=inspectBaseMove(state,dragMove.id,x,y);
+    draw();
+   }
+  }else if(tool==='territory'&&drawArea){
+   const cell=eventCell(e);drawArea.x2=cell.x;drawArea.y2=cell.y;draw();
+  }else if(pointer.moved){
+   hoverCell=null;
+   view.x=pointer.originX-dx/view.scale;view.y=pointer.originY+dy/view.scale;draw();
+  }else if(hoverCell){hoverCell=eventCell(e);draw();}
  });
  canvas.addEventListener('pointerup',e=>{
   if(!pointer||e.pointerId!==pointer.id)return;
+  clearPressTimer();
+  const wasMoving=dragMove,hadMoved=pointer.moved;
+  if(wasMoving){
+   // Include the final pointer coordinate, even if no last move event fired.
+   const c=eventCell(e),base=state.bases.find(b=>b.id===wasMoving.id);
+   if(base){wasMoving.x=base.x+c.x-pointer.cell.x;wasMoving.y=base.y+c.y-pointer.cell.y;}
+   pointer=null;dragMove=null;hoverCell=null;
+   draw();releaseHeldBase(wasMoving);return;
+  }
   if(tool==='territory'&&drawArea){
-   const b=drawArea;for(const [id,n] of [['x1',Math.min(b.x1,b.x2)],['x2',Math.max(b.x1,b.x2)],['y1',Math.min(b.y1,b.y2)],['y2',Math.max(b.y1,b.y2)]])$(id).value=n;
+   const b=drawArea;
+   for(const [id,n] of [['x1',Math.min(b.x1,b.x2)],['x2',Math.max(b.x1,b.x2)],['y1',Math.min(b.y1,b.y2)],['y2',Math.max(b.y1,b.y2)]])$(id).value=n;
    drawArea=null;inform('Territory rectangle selected. Enter a section name and tap Add section.');
-  }else if(!pointer.moved){const c=eventCell(e);handleMapTap(c.x,c.y);}
+  }else if(!hadMoved){
+   const cell=eventCell(e);handleMapTap(cell.x,cell.y);
+  }
   pointer=null;hoverCell=null;draw();
  });
- canvas.addEventListener('pointercancel',()=>{pointer=null;hoverCell=null;drawArea=null;draw();});
+ canvas.addEventListener('pointercancel',()=>{
+  clearPressTimer();pointer=null;dragMove=null;hoverCell=null;drawArea=null;draw();
+ });
  canvas.addEventListener('pointerleave',()=>{if(!pointer){hoverCell=null;draw();}});
  canvas.addEventListener('wheel',e=>{e.preventDefault();view.scale=clamp(view.scale*(e.deltaY<0?1.15:1/1.15),1,70);draw();},{passive:false});
 }
@@ -646,6 +730,6 @@ async function start(){
  app.innerHTML=html;bind();sync('Loading…');
  try{await fetchData(true,true);showNames=state.settings.showNames;view.x=state.center.x;view.y=state.center.y;fitMap(false);draw();inform('Ready. Set a Capitol center, then place bases or tap a tool. Coordinate alignment is unverified until game testing.');}
  catch(e){sync('Connection error');inform(e.message,true);}
- setInterval(async()=>{if(busy||polling||document.visibilityState==='hidden')return;polling=true;try{const was=revision;const changed=await fetchData(false,false);if(changed&&was!==revision)inform('Shared map updated by another R4. Revision '+revision);}catch(e){sync('Offline · retrying');}finally{polling=false;}},5000);
+ setInterval(async()=>{if(busy||polling||pointer?.holdBaseId||dragMove||document.visibilityState==='hidden')return;polling=true;try{const was=revision;const changed=await fetchData(false,false);if(changed&&was!==revision)inform('Shared map updated by another R4. Revision '+revision);}catch(e){sync('Offline · retrying');}finally{polling=false;}},5000);
 }
 start();
