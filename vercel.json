@@ -29,6 +29,10 @@
   ],
   "rewrites": [
     {
+      "source": "/r4-hive",
+      "destination": "/api/r4-planner?view=hive"
+    },
+    {
       "source": "/r4-planner",
       "destination": "/api/r4-planner"
     },
