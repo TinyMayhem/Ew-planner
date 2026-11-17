@@ -65,7 +65,6 @@ export function initConductorSearch({select,input,list,getAliases}){
    if(item.aliasMatch){
     const previous=document.createElement('small');previous.textContent='Also known as '+item.aliasMatch;option.append(previous);
    }
-   option.addEventListener('pointerdown',event=>event.preventDefault());
    option.addEventListener('click',()=>choose(item.id));
    list.append(option);
   }
