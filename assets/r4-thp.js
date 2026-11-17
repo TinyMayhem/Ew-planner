@@ -1,4 +1,5 @@
 import {readThpFile,parsedThpRows,isRealDate} from './r4-thp-import.mjs';
+import {orderThpPeople} from './r4-thp-order.mjs';
 
 (()=>{
 'use strict';
@@ -11,7 +12,7 @@ const text=(tag,content,cls)=>{
 const fmt=n=>Number(n).toLocaleString('en-CA');
 const norm=n=>String(n||'').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
 const sourceRoster=new Map();
-const state={date:'',roster:[],records:[],latest:[],source:'',ready:false,files:[]};
+const state={date:'',roster:[],records:[],latest:[],squads:[],source:'',ready:false,files:[]};
 const daily=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Noronha',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
 let requestSequence=0;
 const escapeId=id=>String(id);
@@ -19,8 +20,7 @@ const recordMap=rows=>new Map(rows.map(r=>[String(r.source_member_id),r]));
 const people=()=>{
  const list=state.roster.length?state.roster:[...state.latest,...state.records].map(r=>({id:r.source_member_id,name:r.member_name}));
  const used=new Set();
- return list.filter(r=>{const id=String(r?.id||'');if(!id||!r?.name||used.has(id))return false;used.add(id);return true})
-  .sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base'}));
+ return orderThpPeople(list.filter(r=>{const id=String(r?.id||'');if(!id||!r?.name||used.has(id))return false;used.add(id);return true}),state.latest);
 };
 const parsePower=raw=>{
  const match=String(raw||'').replaceAll(',','').replace(/\s+/g,'').match(/^(\d+(?:\.\d+)?)([kmb])?$/i);
@@ -39,7 +39,7 @@ async function requestJson(url,body){
 function renderMembers(){
  const root=$('thp-list'),summary=$('thp-summary'),status=$('thp-source');
  if(!root||!summary||!status)return;
- const roster=people(),exact=recordMap(state.records),last=recordMap(state.latest);
+ const roster=people(),exact=recordMap(state.records),last=recordMap(state.latest),squads=recordMap(state.squads);
  const searched=norm($('thp-search').value),shown=roster.filter(r=>norm(r.name).includes(searched));
  const available=roster.filter(m=>last.has(String(m.id)));
  const total=available.reduce((n,m)=>n+Number(last.get(String(m.id)).thp),0);
@@ -56,10 +56,14 @@ function renderMembers(){
  root.replaceChildren();
  if(!shown.length){root.append(text('p',searched?'No matching names.':'No VS roster or saved THP records available.','stat-empty'));return}
  for(const member of shown){
-  const id=escapeId(member.id),current=exact.get(id),prior=last.get(id);
+  const id=escapeId(member.id),current=exact.get(id),prior=last.get(id),squad=squads.get(id);
   const row=text('div',null,'stat-thp-row'+(prior?'':' stat-thp-missing'));
   const info=text('div',null,'stat-thp-person');
   info.append(text('strong',member.name));
+  if(prior)info.append(text('span',fmt(prior.thp)+' THP','stat-thp-value'));
+  else info.append(text('span','THP not recorded','stat-thp-unrecorded'));
+  if(squad)info.append(text('small','Main squad: '+(squad.squad_type?({tank:'Tank',air:'Air',missile:'Missile'}[squad.squad_type]):'Unspecified')+(squad.squad_power===null?'':' · '+fmt(squad.squad_power)+' power'),'stat-muted'));
+
   if(current)info.append(text('small','Recorded '+current.recorded_on+' · '+(current.entry_source||'manual')+' · updated '+new Date(current.updated_at).toLocaleString(),'stat-muted'));
   else if(prior)info.append(text('small','Latest saved THP '+fmt(prior.thp)+' from '+prior.recorded_on+'. No new entry required for '+state.date+'.','stat-muted'));
   else info.append(text('small','No THP recorded on or before '+state.date+'.','stat-muted'));
@@ -88,14 +92,45 @@ function renderMembers(){
   save.addEventListener('click',()=>void change('save'));
   clear.addEventListener('click',()=>void change('clear'));
   input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void change('save')}});
-  controls.append(input,save,clear,feedback);row.append(info,controls);root.append(row);
+  controls.append(input,save,clear,feedback);
+  const squadControls=text('div',null,'stat-squad-controls');
+  const typeLabel=text('label','Main squad (optional)'),typeSelect=document.createElement('select');
+  typeSelect.setAttribute('aria-label','Main squad type for '+member.name);
+  for(const [value,label] of [['','Not specified'],['tank','Tank'],['air','Air'],['missile','Missile']])
+   typeSelect.append(new Option(label,value));
+  typeSelect.value=squad?.squad_type||'';
+  typeLabel.append(typeSelect);
+  const powerLabel=text('label','Squad power (optional)'),powerInput=document.createElement('input');
+  powerInput.type='text';powerInput.inputMode='decimal';powerInput.maxLength=35;powerInput.autocomplete='off';
+  powerInput.placeholder='e.g. 35.5M';powerInput.value=squad?.squad_power===null||squad?.squad_power===undefined?'':fmt(squad.squad_power);
+  powerInput.setAttribute('aria-label','Main squad power for '+member.name);
+  powerLabel.append(powerInput);
+  const saveSquad=text('button','Save squad','stat-button'),squadFeedback=text('small','','stat-squad-feedback');
+  saveSquad.type='button';saveSquad.disabled=!state.ready;squadFeedback.setAttribute('role','status');
+  async function saveSquadFields(){
+   const raw=powerInput.value.trim(),power=raw?parsePower(raw):null;
+   if(raw&&power===null){squadFeedback.textContent='Enter a whole number such as 35.5M, or leave blank.';return}
+   saveSquad.disabled=true;squadFeedback.textContent='Saving…';
+   try{
+    await requestJson('/api/r4-stats',{action:'member_squad',
+     source_member_id:id,member_name:String(member.name),
+     squad_type:typeSelect.value||null,squad_power:power});
+    await refreshSnapshot();
+    const notice=$('thp-squad-notice');if(notice)notice.textContent='Saved optional squad details for '+member.name+'.';
+   }catch(e){squadFeedback.textContent=e.message;saveSquad.disabled=false}
+  }
+  saveSquad.addEventListener('click',()=>void saveSquadFields());
+  powerInput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void saveSquadFields()}});
+  squadControls.append(typeLabel,powerLabel,saveSquad,squadFeedback);
+  const editors=text('div',null,'stat-thp-editors');editors.append(controls,squadControls);
+  row.append(info,editors);root.append(row);
  }
 }
 async function refreshSnapshot(){
  const date=state.date,sequence=++requestSequence;
  const data=await requestJson('/api/r4-stats?member_thp=1&date='+encodeURIComponent(date));
  if(sequence!==requestSequence)return;
- state.records=data.records||[];state.latest=data.latest||[];state.ready=true;
+ state.records=data.records||[];state.latest=data.latest||[];state.squads=data.squads||[];state.ready=true;
  renderMembers();
  document.dispatchEvent(new CustomEvent('r4-thp-changed',{detail:{date}}));
 }
