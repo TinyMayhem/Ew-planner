@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds,allianceBaseClusters,allianceUsage,packingGrid} from '../assets/hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds,allianceBaseClusters,allianceUsage,packingGrid,basesInSelection,inspectGroupMove} from '../assets/hive-geometry.js';
 import {GET as hiveGet,POST as hivePost,validateState} from '../lib/r4-hive-handler.mjs';
 const make=()=>({center:{x:499,y:499},capitolPlaced:true,calibration:{evenX:'negative',evenY:'negative',verified:false},alliances:[{id:'utw',name:'UTW',color:'#3478c0'}],territories:[],obstacles:[],bases:[],settings:{spacing:1,showNames:'auto'}});
 const base=(id,x,y)=>({id,type:'base',x,y,allianceId:'utw',memberName:'',locked:false,sectionOverride:null});
@@ -344,4 +344,52 @@ test('Suggested 2-cell rows do not move existing bases or overlap obstacles',()=
   assert.equal(inspectPlacement(b,state,{spacing:2}).hard.length,0);
   assert.equal(inspectPlacement(b,state,{spacing:2}).warnings.some(w=>w.includes('gap')),false);
  }
+});
+
+test('Box select bases by footprint, retaining alliance filter',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.alliances.push({id:'pple',name:'PPLE',color:'#00dddd'});
+ state.bases=[
+  base('a',300,300),base('b',305,300),
+  {...base('c',305,305),allianceId:'pple'}
+ ];
+ const hits=basesInSelection(state,{x1:301,x2:307,y1:299,y2:304},'utw');
+ assert.deepEqual(hits.map(b=>b.id),['a','b']);
+ assert.deepEqual(basesInSelection(state,{x1:301,x2:307,y1:299,y2:307}).map(b=>b.id),['a','b','c']);
+});
+test('Group translation preserves relative spacing and can occupy selected peers old positions',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.bases=[base('a',300,300),base('b',305,300)];
+ const before=structuredClone(state.bases);
+ const check=inspectGroupMove(state,['a','b'],5,0);
+ assert.deepEqual(check.hard,[]);
+ assert.deepEqual(check.moves.map(b=>[b.id,b.x,b.y]),[['a',305,300],['b',310,300]]);
+ assert.equal(check.moves[1].x-check.moves[0].x,5);
+ assert.deepEqual(state.bases,before,'checking a move must not modify the original');
+});
+test('Group move is atomic when another base or obstacle blocks any member',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.bases=[base('a',300,300),base('b',305,300),base('other',320,300)];
+ state.obstacles=[{id:'mine',type:'mine',x:315,y:300}];
+ const check=inspectGroupMove(state,['a','b'],10,0);
+ assert.ok(check.hard.some(x=>x.includes('Resource Mine')));
+ assert.equal(state.bases[0].x,300);
+ assert.equal(state.bases[1].x,305);
+ assert.ok(inspectGroupMove(state,['a','b'],15,0).hard.length>0);
+});
+test('Group move rejects locked, missing and out-of-map bases without altering originals',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.bases=[{...base('locked',300,300),locked:true},base('other',305,300)];
+ assert.ok(inspectGroupMove(state,['locked','other'],5,0).hard.some(x=>x.includes('locked')));
+ assert.ok(inspectGroupMove(state,['missing'],5,0).hard.some(x=>x.includes('missing')));
+ assert.ok(inspectGroupMove(state,['other'],-310,0).hard.some(x=>x.includes('leave the map')));
+ assert.equal(state.bases[0].x,300);
+});
+test('Group move warns on contaminated land without changing base data',()=>{
+ const state=make();
+ state.bases=[base('near-mud',499,551),base('outside-mud',520,551)];
+ const check=inspectGroupMove(state,['near-mud','outside-mud'],0,-3);
+ assert.equal(check.hard.length,0);
+ assert.ok(check.warnings.some(x=>x.includes('6 of 9')));
+ assert.equal(state.bases[0].y,551);
 });
