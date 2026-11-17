@@ -1,4 +1,4 @@
-import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds} from './hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds,allianceBaseClusters,allianceUsage} from './hive-geometry.js';
 
 const API='/r4-hive',app=document.getElementById('hive-app');
 const $=id=>document.getElementById(id);
@@ -28,6 +28,9 @@ const html=[
  '<section class="panel"><h2>🏳 Alliances & Bases</h2><div class="fields"><div class="field wide"><label>Current alliance</label><select id="alliance"></select></div>',
  '<div class="field"><label>New alliance initials</label><input id="new-alliance" maxlength="28" placeholder="VON"></div><div class="field"><label>Colour</label><input id="alliance-color" type="color" value="#be654e"></div></div>',
  '<div class="actions"><button id="add-alliance" class="btn">Add alliance</button></div>',
+ '<h3>Manage selected alliance</h3><div class="field"><label for="alliance-rename">Alliance display name</label><input id="alliance-rename" maxlength="28" placeholder="Alliance name"></div>',
+ '<div class="actions"><button id="rename-alliance" class="btn">Save alliance name</button><button id="delete-alliance" class="btn danger">Delete alliance</button></div>',
+ '<p class="hint" id="alliance-usage"></p>',
  '<h3>Place commander base (3×3)</h3><div class="fields"><div class="field wide"><label>Member name (optional, UTW)</label><input id="member-name" list="member-options" placeholder="Search by current or old nickname"><datalist id="member-options"></datalist></div>',
  '<div class="field"><label>Gap between bases</label><select id="base-gap"><option value="0">No gap</option><option value="1">1-cell gap</option><option value="2">2-cell gap</option></select></div>',
  '<div class="field"><label>View member names</label><select id="show-names"><option value="auto">Auto by zoom</option><option value="on">Show</option><option value="off">Hide</option></select></div></div>',
@@ -69,7 +72,7 @@ const html=[
  '<div class="map-wrap"><canvas id="map-canvas" aria-label="Interactive UTW map coordinate grid"></canvas><div class="map-overlay" id="map-coordinate">X: 499 · Y: 499</div></div>',
  '<div id="territory-draft-bar" class="draft-bar" hidden><span id="territory-draft-summary"></span><div class="actions"><button id="draft-save" class="btn primary">Save territory</button><button id="draft-edit" class="btn">Edit coordinates</button><button id="draft-clear" class="btn">Clear</button></div></div>',
  '<div class="map-legend"><span><i class="swatch" style="background:#b16b4b"></i>Contaminated</span><span><i class="swatch" style="background:#b69a58"></i>Physical obstacle</span><span><i class="swatch" style="background:#b1eb8a"></i>3×3 green preview = placeable</span><span><i class="swatch" style="background:#e5b37e"></i>City label = level and name</span>',
- '<span>Solid = assigned territory</span><span>Dashed = occupied territory</span><span>↑ Y increases north · → X increases east</span>',
+ '<span>Solid = assigned territory</span><span>Dashed = occupied territory</span><span>↑ Y increases north · → X increases east</span><span id="overview-mode-note" hidden>Overview: alliance colours and names. Zoom in for individual bases.</span>',
  '<label style="display:inline"><input id="mud-toggle" type="checkbox" checked style="width:auto"> Mud</label>',
  '<label style="display:inline"><input id="buff-toggle" type="checkbox" checked style="width:auto"> Influence</label>',
  '<label style="display:inline"><input id="grid-toggle" type="checkbox" checked style="width:auto"> Grid</label></div>',
@@ -122,6 +125,12 @@ function updateDynamic(){
  if(!state.alliances.some(a=>a.id===activeAlliance))activeAlliance=state.alliances[0]?.id||'utw';
  $('alliance').innerHTML=state.alliances.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>').join('');
  $('alliance').value=activeAlliance;
+ $('alliance-rename').value=alliance().name;
+ const usage=allianceUsage(state,activeAlliance);
+ $('alliance-usage').textContent=activeAlliance==='utw'
+  ?'UTW is the primary alliance. Its name can be changed, but it cannot be deleted.'
+  :usage.bases+ ' bases, '+usage.territories+' territories, '+usage.cities+' owned cities. To delete this alliance, first reassign or remove its associated records.';
+ $('delete-alliance').disabled=activeAlliance==='utw'||state.alliances.length<=1;
  $('obstacle-type').innerHTML=typeChoices.map(([key,t])=>'<option value="'+key+'">'+esc(t.label)+' ('+t.w+'×'+t.h+')</option>').join('');
  const old=$('obstacle-type').dataset.chosen;if(old)$('obstacle-type').value=old;
  const currentCityOwner=$('city-owner').value;
@@ -148,6 +157,34 @@ function updateDynamic(){
  document.querySelectorAll('[data-priority]').forEach(b=>b.onclick=()=>movePriority(b.dataset.priority,Number(b.dataset.direction)));
  if(!$('coord-x').dataset.initialized){$('coord-x').value=state.center.x;$('coord-y').value=state.center.y;$('coord-x').dataset.initialized='yes';}
  renderSelection();renderReports();
+}
+function renameAlliance(){
+ const current=alliance();
+ if(!current)return inform('Choose an alliance first.',true);
+ const name=$('alliance-rename').value.trim();
+ if(!name||name.length>28)return inform('Alliance name must contain 1 to 28 characters.',true);
+ if(state.alliances.some(a=>a.id!==current.id&&a.name.toLowerCase()===name.toLowerCase()))
+  return inform('That alliance name already exists.',true);
+ if(current.name===name)return inform('Alliance name is unchanged.');
+ const next=clone(state);
+ next.alliances.find(a=>a.id===current.id).name=name;
+ commit(next,'Renamed alliance '+current.name+' to '+name);
+}
+function deleteAlliance(){
+ const current=alliance();
+ if(!current)return inform('Choose an alliance first.',true);
+ if(current.id==='utw')return inform('The primary UTW alliance cannot be deleted.',true);
+ if(state.alliances.length<=1)return inform('At least one alliance must remain.',true);
+ const usage=allianceUsage(state,current.id);
+ if(usage.bases||usage.territories||usage.cities)
+  return inform('Cannot delete '+current.name+': it still has '+usage.bases+' bases, '+
+   usage.territories+' territories, and '+usage.cities+' owned cities. Reassign or remove them first to avoid losing map data.',true);
+ if(!confirm('Delete the unused alliance "'+current.name+'"? This cannot be undone except through map history.'))return;
+ const next=clone(state);
+ next.alliances=next.alliances.filter(a=>a.id!==current.id);
+ commit(next,'Deleted unused alliance '+current.name).then(ok=>{
+  if(ok){activeAlliance=next.alliances.some(a=>a.id==='utw')?'utw':next.alliances[0].id;updateDynamic();draw();}
+ });
 }
 function renderReports(){
  if(!state)return;
@@ -454,6 +491,39 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
    if(scale>=6){ctx.fillStyle='#1e261b';ctx.font='bold '+clamp(Math.min(p[2],p[3])*.22,8,15)+'px system-ui';ctx.textAlign='center';ctx.fillText(t.label.split(' ')[0],p[0]+p[2]/2,p[1]+p[3]/2);ctx.textAlign='left';}
   }
  }
+ const compactAllianceView=exportKind==='screen'&&scale<4.5&&!dragMove;
+ if(compactAllianceView){
+  // At an overview zoom, replace the tiny bases with one coloured occupied
+  // region per connected alliance group. These are not new saved territories.
+  const labels=[];
+  const renderCluster=(cluster,draft=false)=>{
+   const p=rxy(cluster.bounds),color=colorFor(cluster.allianceId);
+   ctx.globalAlpha=draft?.32:.86;ctx.fillStyle=color;ctx.fillRect(...p);ctx.globalAlpha=1;
+   ctx.lineWidth=draft?2.3:2;ctx.strokeStyle=draft?'#fff1c2':color;
+   if(draft)ctx.setLineDash([5,4]);
+   ctx.strokeRect(...p);ctx.setLineDash([]);
+   const label=nameFor(cluster.allianceId)+(draft?' · PREVIEW':'');
+   ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+   const bw=Math.min(Math.max(48,ctx.measureText(label).width+18),w-8);
+   const cx=clamp(p[0]+p[2]/2,bw/2+4,w-bw/2-4);
+   const desired=clamp(p[1]+p[3]/2,14,h-14);
+   let cy=desired;
+   const candidates=[0,-27,27,-54,54,-81,81];
+   for(const delta of candidates){
+    const y=clamp(desired+delta,14,h-14);
+    const box={l:cx-bw/2,r:cx+bw/2,t:y-12,b:y+12};
+    if(!labels.some(v=>box.l<v.r+4&&box.r>v.l-4&&box.t<v.b+4&&box.b>v.t-4)){cy=y;break;}
+   }
+   labels.push({l:cx-bw/2,r:cx+bw/2,t:cy-12,b:cy+12});
+   ctx.globalAlpha=.94;ctx.fillStyle=color;ctx.fillRect(cx-bw/2,cy-12,bw,24);ctx.globalAlpha=1;
+   ctx.strokeStyle='#f8ebd1';ctx.lineWidth=1.1;ctx.strokeRect(cx-bw/2,cy-12,bw,24);
+   ctx.fillStyle='#fff';ctx.shadowColor='rgba(0,0,0,.85)';ctx.shadowBlur=3;
+   ctx.fillText(label,cx,cy,bw-9);ctx.shadowBlur=0;
+   ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  };
+  for(const cluster of allianceBaseClusters(state))renderCluster(cluster);
+  for(const cluster of allianceBaseClusters(state,preview))renderCluster(cluster,true);
+ }else{
  const useNumbers=exportKind==='detailed';
  for(const b of state.bases){
   if(exportKind==='screen'&&dragMove?.id===b.id)continue;
@@ -480,6 +550,7 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
   }
  }
  for(const b of preview){const p=rxy(footprint(b,state));ctx.fillStyle='rgba(166,219,238,.32)';ctx.fillRect(...p);ctx.strokeStyle='#a2edff';ctx.lineWidth=2;ctx.strokeRect(...p);}
+ }
  // Show original footprint and a cell-snapped draft while long-press dragging.
  // Exported images do not include the transient draft.
  if(exportKind==='screen'&&dragMove){
@@ -552,6 +623,7 @@ function draw(){
  }
  ctx.setTransform(dpr,0,0,dpr,0,0);
  scene(ctx,width,height,view.x,view.y,view.scale,{showMud:displayMud,showBuff:displayBuff,showGrid:displayGrid});
+ $('overview-mode-note').hidden=!(view.scale<4.5&&!dragMove);
  $('map-coordinate').textContent=dragMove
   ?'Moving base to X '+dragMove.x+' · Y '+dragMove.y+
    (dragMove.check.hard.length?' · BLOCKED':dragMove.check.warnings.length?' · WARNING':' · Valid')
@@ -919,10 +991,12 @@ function bind(){
  $('alliance').onchange=e=>{activeAlliance=e.target.value;preview=[];updateDynamic();draw();};
  $('add-alliance').onclick=()=>{
   const name=$('new-alliance').value.trim().slice(0,28),id=name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-  if(!id||state.alliances.some(a=>a.id===id))return inform('Enter a unique alliance name',true);
+  if(!id||state.alliances.some(a=>a.id===id||a.name.toLowerCase()===name.toLowerCase()))return inform('Enter a unique alliance name',true);
   const next=clone(state);next.alliances.push({id,name,color:$('alliance-color').value});
   commit(next,'Added alliance '+name).then(ok=>{if(ok){activeAlliance=id;updateDynamic();}});
  };
+ $('rename-alliance').onclick=renameAlliance;
+ $('delete-alliance').onclick=deleteAlliance;
  $('base-gap').onchange=e=>{const next=clone(state);next.settings.spacing=Number(e.target.value);commit(next,'Set preferred base gap to '+e.target.value+' cells');};
  $('show-names').onchange=e=>{showNames=e.target.value;draw();};
  $('place-base').onclick=()=>{try{const c=coord();createBase(c.x,c.y);}catch(e){inform(e.message,true)}};

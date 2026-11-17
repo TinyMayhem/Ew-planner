@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds} from '../assets/hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds,allianceBaseClusters,allianceUsage} from '../assets/hive-geometry.js';
 import {GET as hiveGet,POST as hivePost,validateState} from '../lib/r4-hive-handler.mjs';
 const make=()=>({center:{x:499,y:499},capitolPlaced:true,calibration:{evenX:'negative',evenY:'negative',verified:false},alliances:[{id:'utw',name:'UTW',color:'#3478c0'}],territories:[],obstacles:[],bases:[],settings:{spacing:1,showNames:'auto'}});
 const base=(id,x,y)=>({id,type:'base',x,y,allianceId:'utw',memberName:'',locked:false,sectionOverride:null});
@@ -221,4 +221,68 @@ test('Each draft corner resizes the bounds using the opposite corner as anchor',
 test('Dragging a territory corner across the opposite corner remains valid',()=>{
  const t={x1:450,x2:550,y1:480,y2:540};
  assert.deepEqual(resizeTerritoryBounds(t,'nw',600,400),{x1:550,x2:600,y1:400,y2:480});
+});
+
+test('Far zoom alliance blocks group nearby same-colour bases but not other alliances',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.alliances.push({id:'7vry',name:'7VRY',color:'#c34545'});
+ state.bases=[
+  base('blue1',450,450),base('blue2',454,450),base('blue3',459,450),
+  {...base('red1',470,450),allianceId:'7vry'},
+  {...base('red2',474,450),allianceId:'7vry'}
+ ];
+ const clusters=allianceBaseClusters(state);
+ assert.equal(clusters.length,2);
+ const blue=clusters.find(c=>c.allianceId==='utw');
+ const red=clusters.find(c=>c.allianceId==='7vry');
+ assert.equal(blue.count,3);assert.equal(red.count,2);
+ assert.deepEqual(blue.bounds,{left:449,top:449,right:460,bottom:451});
+ assert.deepEqual(red.bounds,{left:469,top:449,right:475,bottom:451});
+});
+test('Separate clusters of the same alliance are not joined by a huge bounding box',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.bases=[base('a',450,450),base('b',454,450),base('c',700,700)];
+ const groups=allianceBaseClusters(state);
+ assert.equal(groups.length,2);
+ assert.deepEqual(groups.map(g=>g.count).sort(),[1,2]);
+});
+test('Preview clusters can be calculated from unsaved candidate bases',()=>{
+ const state=make();state.capitolPlaced=false;
+ const pending=[base('draft-a',540,540),base('draft-b',544,540)];
+ const groups=allianceBaseClusters(state,pending);
+ assert.equal(groups.length,1);assert.equal(groups[0].count,2);
+ assert.equal(state.bases.length,0);
+});
+test('Alliance usage counts existing bases, territories and owned cities',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.alliances.push({id:'7vry',name:'7VRY',color:'#c34545'});
+ state.bases=[{...base('red1',700,700),allianceId:'7vry'}];
+ state.territories=[{id:'region',allianceId:'7vry',name:'South',x1:690,x2:710,y1:690,y2:710,priority:0,gap:1}];
+ state.obstacles=[{id:'city7',type:'city',x:510,y:510,name:'Road',level:3,ownerAllianceId:'7vry'}];
+ assert.deepEqual(allianceUsage(state,'7vry'),{bases:1,territories:1,cities:1});
+ assert.deepEqual(allianceUsage(state,'utw'),{bases:0,territories:0,cities:0});
+});
+test('Renaming an alliance display name preserves map links through stable alliance ID',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.alliances.push({id:'7vry',name:'7VRY',color:'#c34545'});
+ state.bases=[{...base('red1',700,700),allianceId:'7vry'}];
+ state.alliances[1].name='EVRY';
+ assert.equal(validateState(state),'');
+ assert.equal(state.bases[0].allianceId,'7vry');
+ assert.equal(state.alliances[1].name,'EVRY');
+});
+test('The API refuses orphaned member bases when referenced alliance is deleted',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.alliances.push({id:'7vry',name:'7VRY',color:'#c34545'});
+ state.bases=[{...base('red1',700,700),allianceId:'7vry'}];
+ state.alliances=state.alliances.filter(a=>a.id!=='7vry');
+ assert.equal(validateState(state),'Invalid commander base');
+});
+test('An unused extra alliance can be removed without affecting primary UTW map',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.alliances.push({id:'oops',name:'Oops',color:'#aa1122'});
+ assert.deepEqual(allianceUsage(state,'oops'),{bases:0,territories:0,cities:0});
+ state.alliances=state.alliances.filter(a=>a.id!=='oops');
+ assert.equal(validateState(state),'');
+ assert.deepEqual(state.alliances.map(a=>a.id),['utw']);
 });
