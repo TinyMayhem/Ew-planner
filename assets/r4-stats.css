@@ -303,3 +303,14 @@
 .train-conductor-option small{color:#677c6e;font-size:12px;margin-top:2px;overflow-wrap:anywhere}
 .train-conductor-option:hover,.train-conductor-option[aria-selected="true"]{background:#ecf3e5}
 .train-conductor-empty{margin:0;padding:12px;color:#697d70;font-size:13px}
+
+/* Main squad is a current optional member profile, independent of THP dates. */
+.stat-thp-editors{min-width:0;display:grid;gap:11px}
+.stat-thp-value{display:block;margin-top:5px;font-size:17px;font-weight:800;color:#22583c;font-variant-numeric:tabular-nums}
+.stat-thp-unrecorded{display:block;margin-top:5px;font-size:13px;font-weight:700;color:#987247}
+.stat-squad-controls{display:flex;gap:9px;align-items:end;flex-wrap:wrap;padding-top:10px;border-top:1px solid #e5dcc4}
+.stat-squad-controls label{display:grid;gap:5px;min-width:140px;flex:1 1 130px;font-size:12px;color:#49644e;font-weight:700}
+.stat-squad-controls select,.stat-squad-controls input{width:100%;min-width:0;min-height:40px;box-sizing:border-box;padding:9px 10px;border:1px solid #bdb28d;border-radius:9px;background:#fff;color:#173e2b}
+.stat-squad-controls .stat-button{min-height:40px;white-space:nowrap}
+.stat-squad-feedback{color:#7a4d25;font-size:12px;flex-basis:100%;min-height:0}
+@media(max-width:720px){.stat-thp-controls input{flex:1 1 140px}.stat-squad-controls label{flex:1 1 140px}.stat-squad-controls .stat-button{flex:1 1 100%}}
