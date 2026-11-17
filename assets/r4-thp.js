@@ -41,28 +41,28 @@ function renderMembers(){
  if(!root||!summary||!status)return;
  const roster=people(),exact=recordMap(state.records),last=recordMap(state.latest);
  const searched=norm($('thp-search').value),shown=roster.filter(r=>norm(r.name).includes(searched));
- const recorded=roster.filter(m=>exact.has(String(m.id)));
- const total=recorded.reduce((n,m)=>n+Number(exact.get(String(m.id)).thp),0);
+ const available=roster.filter(m=>last.has(String(m.id)));
+ const total=available.reduce((n,m)=>n+Number(last.get(String(m.id)).thp),0);
  summary.replaceChildren();
  for(const [title,value] of [
   ['Members on VS roster',fmt(roster.length)],
-  ['Recorded for '+state.date,fmt(recorded.length)+' / '+fmt(roster.length)],
-  ['Missing from this date',fmt(roster.length-recorded.length)],
-  ['Measured THP total',fmt(total)]
+  ['Latest THP available as of '+state.date,fmt(available.length)+' / '+fmt(roster.length)],
+  ['No THP recorded yet',fmt(roster.length-available.length)],
+  ['Latest saved THP total',fmt(total)]
  ]){const box=text('div',null,'stat-summary');box.append(text('b',value),text('span',title));summary.append(box)}
  status.textContent=state.roster.length
-  ?'Roster: '+(state.source||'Alliance Duel')+'. THP is recorded by measurement date; earlier THP is shown only as reference.'
+  ?'Roster: '+(state.source||'Alliance Duel')+'. No daily THP updates needed. Train Desk automatically uses the latest saved THP for each member. This date selects the historical snapshot to review or update.'
   :'Live roster not available. Showing saved THP names; try refreshing the Alliance Duel connection.';
  root.replaceChildren();
  if(!shown.length){root.append(text('p',searched?'No matching names.':'No VS roster or saved THP records available.','stat-empty'));return}
  for(const member of shown){
   const id=escapeId(member.id),current=exact.get(id),prior=last.get(id);
-  const row=text('div',null,'stat-thp-row'+(current?'':' stat-thp-missing'));
+  const row=text('div',null,'stat-thp-row'+(prior?'':' stat-thp-missing'));
   const info=text('div',null,'stat-thp-person');
   info.append(text('strong',member.name));
   if(current)info.append(text('small','Recorded '+current.recorded_on+' · '+(current.entry_source||'manual')+' · updated '+new Date(current.updated_at).toLocaleString(),'stat-muted'));
-  else if(prior)info.append(text('small','MISSING on '+state.date+'. Last known '+fmt(prior.thp)+' from '+prior.recorded_on+' (not copied forward)','stat-muted'));
-  else info.append(text('small','MISSING on '+state.date+'. No earlier THP recorded.','stat-muted'));
+  else if(prior)info.append(text('small','Latest saved THP '+fmt(prior.thp)+' from '+prior.recorded_on+'. No new entry required for '+state.date+'.','stat-muted'));
+  else info.append(text('small','No THP recorded on or before '+state.date+'.','stat-muted'));
   const controls=text('div',null,'stat-thp-controls'),input=document.createElement('input');
   input.type='text';input.inputMode='decimal';input.autocomplete='off';input.maxLength=35;
   input.setAttribute('aria-label','THP for '+member.name+' measured on '+state.date);
