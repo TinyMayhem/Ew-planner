@@ -1,4 +1,4 @@
-import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint} from './hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove} from './hive-geometry.js';
 
 const API='/r4-hive',app=document.getElementById('hive-app');
 const $=id=>document.getElementById(id);
@@ -9,7 +9,8 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
 let state=null,revision=0,history=[],members=[],aliases=[],user=null,busy=false;
 let activeAlliance='utw',tool='select',selected=null,preview=[],showNames='auto',displayMud=true,displayBuff=true,displayGrid=true;
-let view={x:499,y:499,scale:10},pointer=null,hoverCell=null,drawArea=null,canvas,ctx,width=900,height=600,polling=false;
+let view={x:499,y:499,scale:10},pointer=null,dragMove=null,hoverCell=null,drawArea=null,canvas,ctx,width=900,height=600,polling=false;
+const LONG_PRESS_MS=450, LONG_PRESS_SLOP_PX=9;
 const typeChoices=Object.entries(OBJECTS).filter(([k])=>!['base','capitol','city'].includes(k));
 const html=[
  '<header class="topbar"><div class="brand">✦ UTW Hive & Territory Planner<small>R4 Command Center · Server 1395 · shared map</small></div>',
@@ -69,7 +70,7 @@ const html=[
  '<label style="display:inline"><input id="mud-toggle" type="checkbox" checked style="width:auto"> Mud</label>',
  '<label style="display:inline"><input id="buff-toggle" type="checkbox" checked style="width:auto"> Influence</label>',
  '<label style="display:inline"><input id="grid-toggle" type="checkbox" checked style="width:auto"> Grid</label></div>',
- '<div class="mobile-caption">Faint 1×1 cells and gentle 3-cell guides match base-sized placement. Guides do not force snapping. Drag to pan; use + / − to zoom. Tap to place when a placement tool is active.</div></section>',
+ '<div class="mobile-caption">Faint 1×1 cells and gentle 3-cell guides match base-sized placement. Guides do not force snapping. Select / Pan: tap a base to edit, or hold it for about half a second and drag to move. Locked bases cannot be dragged. Drag empty space to pan. Use + / − to zoom.</div></section>',
  '<section id="selection" class="details"><h2>Selected item</h2><p class="muted">Tap a base, obstacle or territory to edit it.</p></section>',
  '<section class="report"><h2>Alliance ranges & base counts</h2><div class="report-grid" id="reports"></div></section>',
  '<div id="message" class="status" aria-live="polite"></div></div></div>'
@@ -370,6 +371,7 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
  }
  const useNumbers=exportKind==='detailed';
  for(const b of state.bases){
+  if(exportKind==='screen'&&dragMove?.id===b.id)continue;
   const p=rxy(footprint(b,state)),c=colorFor(b.allianceId);
   ctx.fillStyle=c;ctx.fillRect(...p);ctx.strokeStyle='#e3ead8';ctx.lineWidth=1;ctx.strokeRect(...p);
   // Three subdivided cells in both directions, aligned to the real 3x3 footprint.
@@ -393,6 +395,31 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
   }
  }
  for(const b of preview){const p=rxy(footprint(b,state));ctx.fillStyle='rgba(166,219,238,.32)';ctx.fillRect(...p);ctx.strokeStyle='#a2edff';ctx.lineWidth=2;ctx.strokeRect(...p);}
+ // Show original footprint and a cell-snapped draft while long-press dragging.
+ // Exported images do not include the transient draft.
+ if(exportKind==='screen'&&dragMove){
+  const original=state.bases.find(b=>b.id===dragMove.id);
+  if(original){
+   const oldRect=rxy(footprint(original,state));
+   ctx.fillStyle='rgba(236,238,220,.12)';ctx.fillRect(...oldRect);
+   ctx.setLineDash([5,5]);ctx.lineWidth=1.5;ctx.strokeStyle='rgba(246,249,220,.8)';ctx.strokeRect(...oldRect);ctx.setLineDash([]);
+  }
+  if(dragMove.check.candidate){
+   const rect3=rxy(footprint(dragMove.check.candidate,state));
+   const blocked=dragMove.check.hard.length>0,warning=dragMove.check.warnings.length>0;
+   ctx.fillStyle=blocked?'rgba(246,70,67,.6)':warning?'rgba(241,174,57,.55)':'rgba(116,236,118,.58)';
+   ctx.fillRect(...rect3);
+   ctx.lineWidth=2.5;ctx.strokeStyle=blocked?'#ff8b87':warning?'#ffd47b':'#c7ffbe';ctx.strokeRect(...rect3);
+   if(scale>=7){
+    const cell=rect3[2]/3;
+    ctx.lineWidth=.75;ctx.strokeStyle='rgba(255,255,255,.4)';
+    for(let j=1;j<3;j++){
+     ctx.beginPath();ctx.moveTo(rect3[0]+j*cell,rect3[1]);ctx.lineTo(rect3[0]+j*cell,rect3[1]+rect3[3]);ctx.stroke();
+     ctx.beginPath();ctx.moveTo(rect3[0],rect3[1]+j*cell);ctx.lineTo(rect3[0]+rect3[2],rect3[1]+j*cell);ctx.stroke();
+    }
+   }
+  }
+ }
  if(exportKind==='screen'&&hoverCell&&['base','city','obstacle'].includes(tool)){
   const type=tool==='base'?'base':tool==='city'?'city':$('obstacle-type').value;
   const temp={type,x:hoverCell.x,y:hoverCell.y,allianceId:activeAlliance,id:'hover'};
@@ -410,7 +437,7 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
   ctx.strokeStyle=line;ctx.lineWidth=2.5;ctx.strokeRect(...p);
  }
  if(drawArea){const r={left:Math.min(drawArea.x1,drawArea.x2),right:Math.max(drawArea.x1,drawArea.x2),top:Math.min(drawArea.y1,drawArea.y2),bottom:Math.max(drawArea.y1,drawArea.y2)};const p=rxy(r);ctx.fillStyle='#d8c26824';ctx.fillRect(...p);ctx.strokeStyle='#fff2b5';ctx.lineWidth=2;ctx.strokeRect(...p);}
- if(selected){
+ if(selected&&!dragMove){
   const o=(selected.kind==='base'?state.bases:selected.kind==='obstacle'?state.obstacles:state.territories).find(x=>x.id===selected.id);
   if(o){const r=selected.kind==='territory'?{left:o.x1,right:o.x2,top:o.y1,bottom:o.y2}:footprint(o,state);ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.strokeRect(...rxy(r));}
  }
@@ -424,9 +451,12 @@ function draw(){
  }
  ctx.setTransform(dpr,0,0,dpr,0,0);
  scene(ctx,width,height,view.x,view.y,view.scale,{showMud:displayMud,showBuff:displayBuff,showGrid:displayGrid});
- $('map-coordinate').textContent=hoverCell&&['base','city','obstacle'].includes(tool)
-  ?'Preview '+(tool==='city'?'City':tool==='base'?'3×3 Base':OBJECTS[$('obstacle-type').value]?.label||'Object')+' · X '+hoverCell.x+' · Y '+hoverCell.y
-  :'Center X '+Math.round(view.x)+' · Y '+Math.round(view.y)+' · '+view.scale.toFixed(1)+' px/cell';
+ $('map-coordinate').textContent=dragMove
+  ?'Moving base to X '+dragMove.x+' · Y '+dragMove.y+
+   (dragMove.check.hard.length?' · BLOCKED':dragMove.check.warnings.length?' · WARNING':' · Valid')
+  :hoverCell&&['base','city','obstacle'].includes(tool)
+   ?'Preview '+(tool==='city'?'City':tool==='base'?'3×3 Base':OBJECTS[$('obstacle-type').value]?.label||'Object')+' · X '+hoverCell.x+' · Y '+hoverCell.y
+   :'Center X '+Math.round(view.x)+' · Y '+Math.round(view.y)+' · '+view.scale.toFixed(1)+' px/cell';
 }
 function fitMap(all=false){
  if(!state)return;
