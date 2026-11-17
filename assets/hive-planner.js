@@ -87,9 +87,10 @@ async function fetchData(includeMembers=false,force=false){
  const res=await fetch(API+q,{credentials:'same-origin',cache:'no-store'});
  if(!res.ok)throw Error('Could not load shared map ('+res.status+')');
  const data=await res.json();if(data.unchanged)return false;
+ const firstLoad=!state;
  state=data.state;revision=Number(data.revision);history=data.history||[];user=data.user;
  if(includeMembers){members=data.members||[];aliases=data.aliases||[];}
- updateDynamic();fitMap(false);draw();sync('✓ Saved · v'+revision);return true;
+ updateDynamic();if(firstLoad)fitMap(false);else draw();sync('✓ Saved · v'+revision);return true;
 }
 async function commit(next,summary){
  if(busy){inform('A save is already in progress. Please try again.',true);return false;}
@@ -123,7 +124,7 @@ function updateDynamic(){
  $('base-gap').value=String(state.settings.spacing);
  $('territory-priority').innerHTML='<h3>Section priority (top wins)</h3>'+state.territories.filter(t=>t.allianceId===activeAlliance).sort((a,b)=>a.priority-b.priority).map((t,i)=>'<div class="rank-row"><span>'+ (i+1)+'. '+esc(t.name)+'</span><button class="btn" data-priority="'+esc(t.id)+'" data-direction="-1" aria-label="Move section up">↑</button><button class="btn" data-priority="'+esc(t.id)+'" data-direction="1" aria-label="Move section down">↓</button></div>').join('');
  document.querySelectorAll('[data-priority]').forEach(b=>b.onclick=()=>movePriority(b.dataset.priority,Number(b.dataset.direction)));
- $('coord-x').value=state.center.x;$('coord-y').value=state.center.y;
+ if(!$('coord-x').dataset.initialized){$('coord-x').value=state.center.x;$('coord-y').value=state.center.y;$('coord-x').dataset.initialized='yes';}
  renderSelection();renderReports();
 }
 function renderReports(){
@@ -131,7 +132,7 @@ function renderReports(){
  $('reports').innerHTML=state.alliances.map(a=>{
   const bs=state.bases.filter(b=>b.allianceId===a.id),out=occupiedBounds(state,a.id);
   const ts=state.territories.filter(t=>t.allianceId===a.id);
-  const off=bs.filter(b=>ts.length&&!ts.some(t=>{const r=footprint(b,state);return r.left>=t.x1&&r.right<=t.x2&&r.top>=t.y1&&r.bottom<=t.y2;})).length;
+  const off=bs.filter(b=>{const relevant=b.sectionOverride?ts.filter(t=>t.id===b.sectionOverride):ts;if(!relevant.length)return ts.length>0;return !relevant.some(t=>{const r=footprint(b,state);return r.left>=t.x1&&r.right<=t.x2&&r.top>=t.y1&&r.bottom<=t.y2;});}).length;
   return '<div class="report-alliance" style="--team:'+esc(a.color)+'"><strong>'+esc(a.name)+'</strong> · '+bs.length+' bases'+
   '<br>Occupied: '+(out?'X '+out.left+'–'+out.right+', Y '+out.top+'–'+out.bottom:'No bases')+
   '<br>Sections: '+ts.length+(off?' · ⚠ '+off+' outside/crossing':'')+
