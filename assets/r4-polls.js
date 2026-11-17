@@ -77,7 +77,7 @@ function drawPoll(){
  $('poll-active-title').textContent=poll.title;
  $('poll-active-info').textContent=poll.event_date+' · VS roster '+(poll.roster_date||'not recorded')+' · '+poll.roster.length+' eligible · Last edit: '+(poll.updated_by||'')+' · Revision '+poll.revision;
  const final=changes.find(c=>c.action==='finalize');
- const amended=poll.status==='finalized'&&final&&changes.some(c=>['manual_vote','uploaded_vote','eligibility'].includes(c.action)&&c.id>final.id);
+ const amended=poll.status==='finalized'&&final&&changes.some(c=>['manual_vote','uploaded_vote','eligibility','remove_vote'].includes(c.action)&&c.id>final.id);
  $('poll-status').textContent=amended?'Amended':poll.status==='finalized'?'Finalized':poll.status==='review'?'Reviewing':'Draft';
  $('poll-status').className='poll-status '+(amended?'amended':poll.status);
  for(const t of ['yes','no','maybe'])$('poll-count-'+t).textContent=buckets[t].length;
@@ -95,6 +95,12 @@ function drawPoll(){
   for(const p of buckets[category].sort((a,b)=>a.name.localeCompare(b.name))){
    const row=node('div',null,'poll-vote-row');
    row.append(node('strong',p.name),node('small',p.source+(p.updated_by?' · '+p.updated_by:'')));
+   const remove=node('button','Remove erroneous vote','stat-button');remove.type='button';remove.className='poll-remove-vote';
+   remove.onclick=()=>{
+    if(!confirm('Remove the '+category+' response for '+p.name+'? The old vote remains in R4 edit history.'))return;
+    safeChange('remove_vote',{member_id:p.member_id,reason:'R4 removed erroneous entry'},'Vote removed. Its history was preserved.');
+   };
+   row.append(remove);
    root.append(row);
   }
   if(!buckets[category].length)root.append(node('p','No votes recorded','stat-muted'));
