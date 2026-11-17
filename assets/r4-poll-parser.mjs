@@ -23,9 +23,15 @@ export function pollNameCandidates(raw){
  if(!name)return out;
  push(name);
  const tokens=name.split(/\s+/);
+ const looksLikeIcon=token=>{
+  if(token.length>3)return false;
+  if(/[0-9/\\|*@#%+=<>]/u.test(token))return true;
+  if(/^[a-z]{1,2}$/.test(token))return true;
+  return /^[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Bopomofo}]{1,2}$/u.test(token);
+ };
  for(let i=1;i<=Math.min(3,tokens.length-1);i++){
-  const prefix=tokens.slice(0,i).join(' ');
-  if(prefix.length>11)break;
+  const prefixTokens=tokens.slice(0,i),prefix=prefixTokens.join(' ');
+  if(prefix.length>11||!prefixTokens.every(looksLikeIcon))break;
   push(tokens.slice(i).join(' '),prefix.length+1);
  }
  // A badge can get glued to the first letter: m3Sorree Baba.
