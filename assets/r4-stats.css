@@ -289,3 +289,17 @@
 #tab-thp .stat-fields label{min-width:160px}
 #tab-thp .stat-fields select{width:100%;padding:10px;border:1px solid #bdad86;border-radius:8px;background:#fff}
 #thp-upload-all{margin-top:16px}
+
+/* Searchable Train Desk conductor picker. The member ID stays in the hidden select. */
+.train-conductor-picker{position:relative;min-width:0;align-self:start}
+.stats-main .train-conductor-picker>label{display:block;font-size:13px;font-weight:700;margin-bottom:5px}
+.train-conductor-picker>small{display:block;margin:5px 0 0;font-weight:400}
+.train-conductor-results{position:absolute;z-index:25;left:0;right:0;top:100%;max-height:285px;overflow-y:auto;background:#fffefa;border:1px solid #b7a16f;border-radius:11px;box-shadow:0 12px 22px #0a2d2040}
+.train-conductor-results[hidden]{display:none}
+.train-conductor-option{padding:11px 12px;min-height:44px;cursor:pointer;border-bottom:1px solid #efe5ce;outline:none}
+.train-conductor-option:last-child{border-bottom:0}
+.train-conductor-option strong,.train-conductor-option small{display:block}
+.train-conductor-option strong{color:#25553d;font-size:14px}
+.train-conductor-option small{color:#677c6e;font-size:12px;margin-top:2px;overflow-wrap:anywhere}
+.train-conductor-option:hover,.train-conductor-option[aria-selected="true"]{background:#ecf3e5}
+.train-conductor-empty{margin:0;padding:12px;color:#697d70;font-size:13px}
