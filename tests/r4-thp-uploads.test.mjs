@@ -50,8 +50,8 @@ test('Train Desk uses latest saved THP as of today even for older train dates',(
  assert.equal(latestThpSnapshotDate(new Date('2026-11-17T01:30:00Z')),'2026-11-16');
  assert.equal(latestThpSnapshotDate(new Date('2026-11-17T02:30:00Z')),'2026-11-17');
  const client=readFileSync('assets/r4-train-thp.js','utf8');
- assert.match(client,/latestSnapshot\\(\\)/);
- assert.match(client,/const date=latestThpSnapshotDate\\(\\)/);
- assert.doesNotMatch(client,/asOf\\(date\\)/);
+ assert.match(client,/latestSnapshot\(\)/);
+ assert.match(client,/const date=latestThpSnapshotDate\(\)/);
+ assert.doesNotMatch(client,/asOf\(date\)/);
  assert.match(client,/No saved THP for/);
 });
