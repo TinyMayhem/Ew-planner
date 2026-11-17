@@ -109,8 +109,8 @@
       input.append(new Option('Unassigned',''));
       for(const member of r4Members)input.append(new Option(member.name,member.name));
       if(value){
-        const normalized=String(value).trim().normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();
-        const match=r4Members.find(m=>[m.name,...(m.formerNames||[])].some(n=>String(n).trim().normalize('NFKD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase()===normalized));
+        const normalized=String(value).trim().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+        const match=r4Members.find(m=>[m.name,...(m.formerNames||[])].some(n=>String(n).trim().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()===normalized));
         if(match)input.value=match.name;
         else{
           const previous=new Option('Review previous name: '+value,value);
