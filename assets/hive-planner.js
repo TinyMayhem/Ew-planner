@@ -1,4 +1,4 @@
-import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains} from './hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel} from './hive-geometry.js';
 
 const API='/r4-hive',app=document.getElementById('hive-app');
 const $=id=>document.getElementById(id);
@@ -9,8 +9,8 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
 let state=null,revision=0,history=[],members=[],aliases=[],user=null,busy=false;
 let activeAlliance='utw',tool='select',selected=null,preview=[],showNames='auto',displayMud=true,displayBuff=true,displayGrid=true;
-let view={x:499,y:499,scale:10},pointer=null,drawArea=null,canvas,ctx,width=900,height=600,polling=false;
-const typeChoices=Object.entries(OBJECTS).filter(([k])=>k!=='base'&&k!=='capitol');
+let view={x:499,y:499,scale:10},pointer=null,hoverCell=null,drawArea=null,canvas,ctx,width=900,height=600,polling=false;
+const typeChoices=Object.entries(OBJECTS).filter(([k])=>!['base','capitol','city'].includes(k));
 const html=[
  '<header class="topbar"><div class="brand">✦ UTW Hive & Territory Planner<small>R4 Command Center · Server 1395 · shared map</small></div>',
  '<div class="top-actions"><span class="pill" id="sync-state">Connecting…</span><a href="/r4-planner" class="btn">← Command Center</a></div></header>',
@@ -30,6 +30,12 @@ const html=[
  '<div class="field"><label>Gap between bases</label><select id="base-gap"><option value="0">No gap</option><option value="1">1-cell gap</option><option value="2">2-cell gap</option></select></div>',
  '<div class="field"><label>View member names</label><select id="show-names"><option value="auto">Auto by zoom</option><option value="on">Show</option><option value="off">Hide</option></select></div></div>',
  '<div class="actions"><button id="place-base" class="btn primary">Place at X/Y</button></div><p class="hint">To tap positions instead, choose the Base tool above the map. Names are optional, with no missing-member tracking.</p></section>',
+ '<section class="panel"><h2>🏙 Place City</h2><p class="hint">Cities occupy 7×7 cells, with a separate 15×15 contaminated zone. The city label always shows its level and name on the map.</p>',
+ '<div class="fields"><div class="field wide"><label>City name</label><input id="city-name" maxlength="70" placeholder="Lawless Road"></div>',
+ '<div class="field"><label>City level</label><select id="city-level">'+Array.from({length:10},(_,i)=>'<option value="'+(i+1)+'">Level '+(i+1)+'</option>').join('')+'</select></div>',
+ '<div class="field"><label>Owning alliance (optional)</label><select id="city-owner"></select></div></div>',
+ '<div class="actions"><button id="place-city" class="btn primary">Place city at X/Y</button></div>',
+ '<p class="hint">Or select Tap: City above the map and touch the center cell. Select a city later to edit its name, level, ownership or coordinates.</p></section>',
  '<section class="panel"><h2>⛏ Obstacles</h2><div class="field"><label>Object type</label><select id="obstacle-type"></select></div>',
  '<div class="actions"><button id="place-obstacle" class="btn">Place at X/Y</button></div><h3>Paste multiple mines / objects</h3>',
  '<textarea id="bulk" placeholder="550,540&#10;555,540&#10;truck55,560,540"></textarea>',
@@ -55,15 +61,15 @@ const html=[
  '<div class="actions"><button id="undo" class="btn">Undo last edit</button><button id="restore" class="btn">Restore selected revision</button><button id="snapshot" class="btn">Mark snapshot</button></div>',
  '<div id="history-list" class="history"></div></section></aside>',
  '<div class="map-column"><section class="map-card"><div class="map-tools"><div class="toolset">',
- '<button class="btn active" data-tool="select">Select / Pan</button><button class="btn" data-tool="base">Tap: Base</button><button class="btn" data-tool="obstacle">Tap: Obstacle</button><button class="btn" data-tool="territory">Draw territory</button>',
+ '<button class="btn active" data-tool="select">Select / Pan</button><button class="btn" data-tool="base">Tap: Base</button><button class="btn" data-tool="city">Tap: City</button><button class="btn" data-tool="obstacle">Tap: Obstacle</button><button class="btn" data-tool="territory">Draw territory</button>',
  '</div><div class="zoomset"><button class="btn" id="zoom-out">−</button><button class="btn" id="zoom-in">+</button><button class="btn" id="fit">Fit active area</button></div></div>',
  '<div class="map-wrap"><canvas id="map-canvas" aria-label="Interactive UTW map coordinate grid"></canvas><div class="map-overlay" id="map-coordinate">X: 499 · Y: 499</div></div>',
- '<div class="map-legend"><span><i class="swatch" style="background:#b16b4b"></i>Contaminated</span><span><i class="swatch" style="background:#b69a58"></i>Physical obstacle</span>',
+ '<div class="map-legend"><span><i class="swatch" style="background:#b16b4b"></i>Contaminated</span><span><i class="swatch" style="background:#b69a58"></i>Physical obstacle</span><span><i class="swatch" style="background:#b1eb8a"></i>3×3 green preview = placeable</span><span><i class="swatch" style="background:#e5b37e"></i>City label = level and name</span>',
  '<span>Solid = assigned territory</span><span>Dashed = occupied territory</span>',
  '<label style="display:inline"><input id="mud-toggle" type="checkbox" checked style="width:auto"> Mud</label>',
  '<label style="display:inline"><input id="buff-toggle" type="checkbox" checked style="width:auto"> Influence</label>',
  '<label style="display:inline"><input id="grid-toggle" type="checkbox" checked style="width:auto"> Grid</label></div>',
- '<div class="mobile-caption">Drag to pan. Pinch controls are available through + / −. Tap to place only when a placement tool is selected.</div></section>',
+ '<div class="mobile-caption">Faint 1×1 cells and gentle 3-cell guides match base-sized placement. Guides do not force snapping. Drag to pan; use + / − to zoom. Tap to place when a placement tool is active.</div></section>',
  '<section id="selection" class="details"><h2>Selected item</h2><p class="muted">Tap a base, obstacle or territory to edit it.</p></section>',
  '<section class="report"><h2>Alliance ranges & base counts</h2><div class="report-grid" id="reports"></div></section>',
  '<div id="message" class="status" aria-live="polite"></div></div></div>'
@@ -114,6 +120,10 @@ function updateDynamic(){
  $('alliance').value=activeAlliance;
  $('obstacle-type').innerHTML=typeChoices.map(([key,t])=>'<option value="'+key+'">'+esc(t.label)+' ('+t.w+'×'+t.h+')</option>').join('');
  const old=$('obstacle-type').dataset.chosen;if(old)$('obstacle-type').value=old;
+ const currentCityOwner=$('city-owner').value;
+ $('city-owner').innerHTML='<option value="">Unassigned</option>'+state.alliances.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>').join('');
+ if(currentCityOwner&&state.alliances.some(a=>a.id===currentCityOwner))$('city-owner').value=currentCityOwner;
+ if(!$('city-level').dataset.initialized){$('city-level').value='3';$('city-level').dataset.initialized='yes';}
  $('member-options').innerHTML=members.map(m=>'<option value="'+esc(m.display_name)+'"></option>').join('')+
  aliases.slice(0,500).map(a=>'<option value="'+esc(a.alias)+'"></option>').join('');
  $('history-select').innerHTML=history.map(h=>'<option value="'+h.revision+'">v'+h.revision+' · '+esc(h.summary)+' · '+esc(h.actor)+'</option>').join('');
@@ -172,6 +182,18 @@ function createObstacle(x,y,type){
  const block=obstacleCollision(obj);
  if(block){inform('Cannot place object: overlaps '+block,true);return;}
  const next=clone(state);next.obstacles.push(obj);commit(next,'Placed '+OBJECTS[type].label+' at '+x+','+y);
+}
+function createCity(x,y){
+ if(!valid(x)||!valid(y))return inform('Enter a valid city center coordinate',true);
+ const name=$('city-name').value.trim().slice(0,70)||'City';
+ const level=number('city-level');
+ const ownerAllianceId=$('city-owner').value||null;
+ if(!Number.isInteger(level)||level<1||level>10)return inform('Choose a city level from 1 to 10',true);
+ const city={id:uid(),type:'city',name,level,ownerAllianceId,x,y};
+ const block=obstacleCollision(city);
+ if(block)return inform('City location blocked by '+block,true);
+ const next=clone(state);next.obstacles.push(city);
+ commit(next,'Placed '+cityLabel(city)+' at '+x+','+y);
 }
 function addTerritory(){
  const a=alliance(),x1=number('x1'),x2=number('x2'),y1=number('y1'),y2=number('y2'),gap=number('territory-gap');
@@ -235,8 +257,13 @@ function renderSelection(){
    '<label><input id="edit-locked" type="checkbox" '+(o.locked?'checked':'')+' style="width:auto"> Lock this position</label>'+
    '<div class="actions"><button id="save-selected" class="btn primary">Save base</button><button id="delete-selected" class="btn danger">Remove base</button></div>';
  }else if(selected.kind==='obstacle'){
-  const t=OBJECTS[o.type];box.innerHTML='<h2>'+esc(t.label)+' · '+t.w+'×'+t.h+'</h2><div class="fields">'+
-  '<div class="field"><label>Center X</label><input id="edit-x" type="number" value="'+o.x+'"></div><div class="field"><label>Center Y</label><input id="edit-y" type="number" value="'+o.y+'"></div></div>'+
+  const t=OBJECTS[o.type],isCity=o.type==='city';
+  box.innerHTML='<h2>'+esc(isCity?cityLabel(o):t.label)+' · '+t.w+'×'+t.h+'</h2><div class="fields">'+
+  '<div class="field"><label>Center X</label><input id="edit-x" type="number" value="'+o.x+'"></div><div class="field"><label>Center Y</label><input id="edit-y" type="number" value="'+o.y+'"></div>'+
+  (isCity?'<div class="field wide"><label>City name</label><input id="edit-city-name" maxlength="70" value="'+esc(o.name||'City')+'"></div>'+
+   '<div class="field"><label>City level</label><select id="edit-city-level">'+Array.from({length:10},(_,i)=>'<option value="'+(i+1)+'" '+((i+1)===(o.level||1)?'selected':'')+'>L'+(i+1)+'</option>').join('')+'</select></div>'+
+   '<div class="field"><label>Owning alliance</label><select id="edit-city-owner"><option value="">Unassigned</option>'+state.alliances.map(a=>'<option value="'+esc(a.id)+'" '+(a.id===o.ownerAllianceId?'selected':'')+'>'+esc(a.name)+'</option>').join('')+'</select></div>':'')+
+  '</div>'+
   '<div class="actions"><button id="save-selected" class="btn primary">Move object</button><button id="delete-selected" class="btn danger">Remove object</button></div>';
  }else{
   box.innerHTML='<h2>'+esc(nameFor(o.allianceId))+' · '+esc(o.name)+'</h2><div class="fields"><div class="field wide"><label>Section name</label><input id="edit-name" value="'+esc(o.name)+'"></div>'+
@@ -263,6 +290,12 @@ function saveSelected(){
  }else if(selected.kind==='obstacle'){
   item.x=number('edit-x');item.y=number('edit-y');
   if(!valid(item.x)||!valid(item.y))return inform('Invalid coordinates',true);
+  if(item.type==='city'){
+   item.name=$('edit-city-name').value.trim().slice(0,70)||'City';
+   item.level=number('edit-city-level');
+   item.ownerAllianceId=$('edit-city-owner').value||null;
+   if(!Number.isInteger(item.level)||item.level<1||item.level>10)return inform('Invalid city level',true);
+  }
   const block=obstacleCollision(item,next,item.id);if(block)return inform('Blocked: overlaps '+block,true);
  }else{
   item.name=$('edit-name').value.trim().slice(0,65);for(const k of ['x1','x2','y1','y2'])item[k]=number('edit-'+k);
@@ -280,12 +313,24 @@ function deleteSelected(){
 function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=true,showGrid=true}={}){
  const sx=x=>(x-cx)*scale+w/2,sy=y=>(y-cy)*scale+h/2;
  const rxy=r=>[sx(r.left-.5),sy(r.top-.5),(r.right-r.left+1)*scale,(r.bottom-r.top+1)*scale];
- ctx.fillStyle='#172c21';ctx.fillRect(0,0,w,h);
+ // Game-style olive field. At low zoom, hide tiny cell boundaries to avoid noise.
+ ctx.fillStyle='#4c5a3c';ctx.fillRect(0,0,w,h);
  const xl=Math.floor(cx-w/(2*scale)),xr=Math.ceil(cx+w/(2*scale)),yt=Math.floor(cy-h/(2*scale)),yb=Math.ceil(cy+h/(2*scale));
- if(showGrid&&scale>=4){
-  ctx.lineWidth=.6;ctx.strokeStyle='rgba(206,218,180,.13)';
-  for(let x=Math.max(0,xl);x<=Math.min(2000,xr);x++){let px=sx(x-.5);ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,h);ctx.stroke();}
-  for(let y=Math.max(0,yt);y<=Math.min(2000,yb);y++){let py=sy(y-.5);ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(w,py);ctx.stroke();}
+ if(showGrid&&scale>=4.5){
+  const minor=scale>=9;
+  ctx.lineWidth=.65;
+  for(let x=Math.max(0,xl);x<=Math.min(2000,xr);x++){
+   const major=((x%3)+3)%3===0;
+   if(!major&&!minor)continue;
+   ctx.strokeStyle=major?'rgba(249,232,177,.22)':'rgba(249,232,177,.085)';
+   const px=sx(x-.5);ctx.beginPath();ctx.moveTo(px,0);ctx.lineTo(px,h);ctx.stroke();
+  }
+  for(let y=Math.max(0,yt);y<=Math.min(2000,yb);y++){
+   const major=((y%3)+3)%3===0;
+   if(!major&&!minor)continue;
+   ctx.strokeStyle=major?'rgba(249,232,177,.22)':'rgba(249,232,177,.085)';
+   const py=sy(y-.5);ctx.beginPath();ctx.moveTo(0,py);ctx.lineTo(w,py);ctx.stroke();
+  }
  }
  if(showMud)for(const r of zoneRects(state)){const p=rxy(r);ctx.fillStyle='rgba(176,98,59,.34)';ctx.fillRect(...p);ctx.setLineDash([8,5]);ctx.strokeStyle='#e39e6d';ctx.lineWidth=2;ctx.strokeRect(...p);ctx.setLineDash([]);}
  if(showBuff)for(const r of influenceRects(state)){const p=rxy(r);ctx.fillStyle='rgba(73,167,233,.17)';ctx.fillRect(...p);ctx.strokeStyle='rgba(111,195,255,.8)';ctx.setLineDash([5,6]);ctx.strokeRect(...p);ctx.setLineDash([]);}
@@ -302,14 +347,38 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
  if(state.capitolPlaced){const p=rxy(rect(state.center.x,state.center.y,21,21,state.calibration));ctx.fillStyle='#984738';ctx.fillRect(...p);ctx.strokeStyle='#f4c59d';ctx.lineWidth=2;ctx.strokeRect(...p);ctx.fillStyle='#fff2d3';ctx.font='bold '+clamp(scale*1.15,13,24)+'px system-ui';ctx.textAlign='center';ctx.fillText('CAPITOL',p[0]+p[2]/2,p[1]+p[3]/2);ctx.textAlign='left';}
  for(const o of state.obstacles){
   const p=rxy(footprint(o,state)),t=OBJECTS[o.type];
-  ctx.fillStyle=['siege','charge'].includes(o.type)?'#bba353':'#8d7753';ctx.fillRect(...p);
-  ctx.strokeStyle='#e6c08c';ctx.lineWidth=1.3;ctx.strokeRect(...p);
-  if(scale>=6){ctx.fillStyle='#1e261b';ctx.font='bold '+clamp(Math.min(p[2],p[3])*.22,8,15)+'px system-ui';ctx.textAlign='center';ctx.fillText(t.label.split(' ')[0],p[0]+p[2]/2,p[1]+p[3]/2);ctx.textAlign='left';}
+  if(o.type==='city'){
+   const owner=o.ownerAllianceId?nameFor(o.ownerAllianceId):'';
+   ctx.globalAlpha=.78;ctx.fillStyle=o.ownerAllianceId?colorFor(o.ownerAllianceId):'#bb9255';ctx.fillRect(...p);ctx.globalAlpha=1;
+   ctx.strokeStyle='#ffe2a6';ctx.lineWidth=2;ctx.strokeRect(...p);
+   // Keep names and levels readable even when the actual 7x7 square is small.
+   const title=cityLabel(o),detail=owner?title+' ['+owner+']':title;
+   ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+   const ty=p[1]+Math.max(10,Math.min(p[3]/2,20));
+   const bw=Math.min(w-8,220,Math.max(60,ctx.measureText(detail).width+16));
+   const tx=clamp(p[0]+p[2]/2,bw/2+4,w-bw/2-4);
+   ctx.fillStyle='rgba(18,36,25,.9)';ctx.fillRect(tx-bw/2,ty-11,bw,23);
+   ctx.strokeStyle='rgba(255,229,164,.75)';ctx.lineWidth=1;ctx.strokeRect(tx-bw/2,ty-11,bw,23);
+   ctx.fillStyle='#fff0c9';ctx.fillText(detail,tx,ty,bw-10);
+   ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  }else{
+   ctx.fillStyle=['siege','charge'].includes(o.type)?'#bba353':'#8d7753';ctx.fillRect(...p);
+   ctx.strokeStyle='#e6c08c';ctx.lineWidth=1.3;ctx.strokeRect(...p);
+   if(scale>=6){ctx.fillStyle='#1e261b';ctx.font='bold '+clamp(Math.min(p[2],p[3])*.22,8,15)+'px system-ui';ctx.textAlign='center';ctx.fillText(t.label.split(' ')[0],p[0]+p[2]/2,p[1]+p[3]/2);ctx.textAlign='left';}
+  }
  }
  const useNumbers=exportKind==='detailed';
  for(const b of state.bases){
   const p=rxy(footprint(b,state)),c=colorFor(b.allianceId);
-  ctx.fillStyle=c;ctx.fillRect(...p);ctx.strokeStyle='#e3ead8';ctx.lineWidth=.7;ctx.strokeRect(...p);
+  ctx.fillStyle=c;ctx.fillRect(...p);ctx.strokeStyle='#e3ead8';ctx.lineWidth=1;ctx.strokeRect(...p);
+  // Three subdivided cells in both directions, aligned to the real 3x3 footprint.
+  if(scale>=9){
+   ctx.strokeStyle='rgba(255,255,255,.23)';ctx.lineWidth=.65;
+   for(let k=1;k<3;k++){
+    ctx.beginPath();ctx.moveTo(p[0]+k*scale,p[1]);ctx.lineTo(p[0]+k*scale,p[1]+p[3]);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(p[0],p[1]+k*scale);ctx.lineTo(p[0]+p[2],p[1]+k*scale);ctx.stroke();
+   }
+  }
   const unsafe=inspectPlacement(b,{...state,bases:state.bases.filter(x=>x.id!==b.id)}).mud>3;
   if(unsafe){ctx.strokeStyle='#f76666';ctx.lineWidth=2.8;ctx.strokeRect(...p);}
   const autoName=showNames==='auto'&&scale>=20;
@@ -323,6 +392,22 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
   }
  }
  for(const b of preview){const p=rxy(footprint(b,state));ctx.fillStyle='rgba(166,219,238,.32)';ctx.fillRect(...p);ctx.strokeStyle='#a2edff';ctx.lineWidth=2;ctx.strokeRect(...p);}
+ if(exportKind==='screen'&&hoverCell&&['base','city','obstacle'].includes(tool)){
+  const type=tool==='base'?'base':tool==='city'?'city':$('obstacle-type').value;
+  const temp={type,x:hoverCell.x,y:hoverCell.y,allianceId:activeAlliance,id:'hover'};
+  const r=footprint(temp,state),p=rxy(r);
+  const blocked=tool==='base'?inspectPlacement(temp,state).hard.length>0:!!obstacleCollision(temp,state);
+  const mud=tool==='base'&&!blocked?inspectPlacement(temp,state).mud:0;
+  const fill=blocked?'rgba(249,83,80,.65)':mud>3?'rgba(242,170,59,.62)':'rgba(117,226,89,.58)';
+  const line=blocked?'#ff8680':mud>3?'#ffd16c':'#baff9b';
+  ctx.fillStyle=fill;
+  const cw=p[2]/OBJECTS[type].w,ch=p[3]/OBJECTS[type].h;
+  for(let i=0;i<OBJECTS[type].w;i++)for(let j=0;j<OBJECTS[type].h;j++){
+   const bx=p[0]+i*cw,by=p[1]+j*ch;
+   ctx.fillRect(bx+Math.min(1,cw*.08),by+Math.min(1,ch*.08),Math.max(0,cw-2),Math.max(0,ch-2));
+  }
+  ctx.strokeStyle=line;ctx.lineWidth=2.5;ctx.strokeRect(...p);
+ }
  if(drawArea){const r={left:Math.min(drawArea.x1,drawArea.x2),right:Math.max(drawArea.x1,drawArea.x2),top:Math.min(drawArea.y1,drawArea.y2),bottom:Math.max(drawArea.y1,drawArea.y2)};const p=rxy(r);ctx.fillStyle='#d8c26824';ctx.fillRect(...p);ctx.strokeStyle='#fff2b5';ctx.lineWidth=2;ctx.strokeRect(...p);}
  if(selected){
   const o=(selected.kind==='base'?state.bases:selected.kind==='obstacle'?state.obstacles:state.territories).find(x=>x.id===selected.id);
@@ -338,7 +423,9 @@ function draw(){
  }
  ctx.setTransform(dpr,0,0,dpr,0,0);
  scene(ctx,width,height,view.x,view.y,view.scale,{showMud:displayMud,showBuff:displayBuff,showGrid:displayGrid});
- $('map-coordinate').textContent='Center X '+Math.round(view.x)+' · Y '+Math.round(view.y)+' · '+view.scale.toFixed(1)+' px/cell';
+ $('map-coordinate').textContent=hoverCell&&['base','city','obstacle'].includes(tool)
+  ?'Preview '+(tool==='city'?'City':tool==='base'?'3×3 Base':OBJECTS[$('obstacle-type').value]?.label||'Object')+' · X '+hoverCell.x+' · Y '+hoverCell.y
+  :'Center X '+Math.round(view.x)+' · Y '+Math.round(view.y)+' · '+view.scale.toFixed(1)+' px/cell';
 }
 function fitMap(all=false){
  if(!state)return;
@@ -365,6 +452,7 @@ function handleMapTap(x,y){
  $('coord-x').value=x;$('coord-y').value=y;
  if(tool==='base')createBase(x,y);
  else if(tool==='obstacle')createObstacle(x,y,$('obstacle-type').value);
+ else if(tool==='city')createCity(x,y);
  else {selected=pick(x,y);renderSelection();draw();}
 }
 function attachCanvas(){
@@ -372,13 +460,23 @@ function attachCanvas(){
   if(!state)return;
   canvas.setPointerCapture(e.pointerId);
   pointer={id:e.pointerId,x:e.clientX,y:e.clientY,originX:view.x,originY:view.y,cell:eventCell(e),moved:false};
-  if(tool==='territory'){drawArea={x1:pointer.cell.x,y1:pointer.cell.y,x2:pointer.cell.x,y2:pointer.cell.y};draw();}
+  hoverCell=['base','city','obstacle'].includes(tool)?pointer.cell:null;
+  if(tool==='territory')drawArea={x1:pointer.cell.x,y1:pointer.cell.y,x2:pointer.cell.x,y2:pointer.cell.y};
+  draw();
  });
  canvas.addEventListener('pointermove',e=>{
-  if(!pointer||e.pointerId!==pointer.id)return;
-  const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;if(Math.hypot(dx,dy)>6)pointer.moved=true;
+  if(!pointer||e.pointerId!==pointer.id){
+   if(!pointer&&['base','city','obstacle'].includes(tool)){
+    const cell=eventCell(e);
+    if(!hoverCell||cell.x!==hoverCell.x||cell.y!==hoverCell.y){hoverCell=cell;draw();}
+   }
+   return;
+  }
+  const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
+  if(Math.hypot(dx,dy)>6)pointer.moved=true;
   if(tool==='territory'&&drawArea){const c=eventCell(e);drawArea.x2=c.x;drawArea.y2=c.y;draw();}
-  else if(pointer.moved){view.x=pointer.originX-dx/view.scale;view.y=pointer.originY-dy/view.scale;draw();}
+  else if(pointer.moved){hoverCell=null;view.x=pointer.originX-dx/view.scale;view.y=pointer.originY-dy/view.scale;draw();}
+  else if(hoverCell){hoverCell=eventCell(e);draw();}
  });
  canvas.addEventListener('pointerup',e=>{
   if(!pointer||e.pointerId!==pointer.id)return;
@@ -386,9 +484,10 @@ function attachCanvas(){
    const b=drawArea;for(const [id,n] of [['x1',Math.min(b.x1,b.x2)],['x2',Math.max(b.x1,b.x2)],['y1',Math.min(b.y1,b.y2)],['y2',Math.max(b.y1,b.y2)]])$(id).value=n;
    drawArea=null;inform('Territory rectangle selected. Enter a section name and tap Add section.');
   }else if(!pointer.moved){const c=eventCell(e);handleMapTap(c.x,c.y);}
-  pointer=null;draw();
+  pointer=null;hoverCell=null;draw();
  });
- canvas.addEventListener('pointercancel',()=>{pointer=null;drawArea=null;draw();});
+ canvas.addEventListener('pointercancel',()=>{pointer=null;hoverCell=null;drawArea=null;draw();});
+ canvas.addEventListener('pointerleave',()=>{if(!pointer){hoverCell=null;draw();}});
  canvas.addEventListener('wheel',e=>{e.preventDefault();view.scale=clamp(view.scale*(e.deltaY<0?1.15:1/1.15),1,70);draw();},{passive:false});
 }
 function downloadCanvas(c,name){
@@ -486,14 +585,16 @@ function bind(){
  $('show-names').onchange=e=>{showNames=e.target.value;draw();};
  $('place-base').onclick=()=>{try{const c=coord();createBase(c.x,c.y);}catch(e){inform(e.message,true)}};
  $('place-obstacle').onclick=()=>{try{const c=coord();createObstacle(c.x,c.y,$('obstacle-type').value);}catch(e){inform(e.message,true)}};
+ $('place-city').onclick=()=>{try{const c=coord();createCity(c.x,c.y);}catch(e){inform(e.message,true)}};
  $('obstacle-type').onchange=e=>{$('obstacle-type').dataset.chosen=e.target.value;};
  $('bulk-preview').onclick=bulkAdd;
  $('add-territory').onclick=addTerritory;
  $('suggest').onclick=generateSuggestions;$('approve').onclick=approveSuggestions;
  $('discard').onclick=()=>{preview=[];$('approve').disabled=true;$('preview-info').textContent='Preview cleared.';draw();};
  for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>{
-  tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
-  inform('Tool: '+b.textContent+'. Drag to pan unless drawing a territory.');
+  tool=b.dataset.tool;hoverCell=null;
+  document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x.dataset.tool===tool));
+  inform('Tool: '+b.textContent+'. Drag to pan unless drawing a territory.');draw();
  };
  $('zoom-in').onclick=()=>{view.scale=clamp(view.scale*1.3,1,70);draw();};
  $('zoom-out').onclick=()=>{view.scale=clamp(view.scale/1.3,1,70);draw();};

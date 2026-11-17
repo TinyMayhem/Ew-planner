@@ -27,6 +27,11 @@ export const OBJECTS={
  railh:{label:'Train Tracks Horizontal',w:9,h:3},
  railv:{label:'Train Tracks Vertical',w:3,h:9}
 };
+export function cityLabel(city){
+ const level=Number.isInteger(city.level)&&city.level>=1&&city.level<=10?'L'+city.level:'L?';
+ const name=typeof city.name==='string'&&city.name.trim()?city.name.trim():'City';
+ return level+' · '+name;
+}
 export const int=n=>Number.isSafeInteger(Number(n))?Number(n):null;
 export function rect(x,y,w,h,calibration={}){
  const biasX=w%2===0&&calibration.evenX==='positive'?1:0;
