@@ -18,11 +18,11 @@ const html=[
  '<section class="panel"><h2>📍 Coordinates & Capitol</h2><div class="fields">',
  '<div class="field"><label for="coord-x">Center X</label><input id="coord-x" type="number" min="0" max="1999" value="499"></div>',
  '<div class="field"><label for="coord-y">Center Y</label><input id="coord-y" type="number" min="0" max="1999" value="499"></div></div>',
- '<div class="actions"><button class="btn primary" id="jump">Jump to X/Y</button><button class="btn" id="set-capitol">Set Capitol center</button></div>',
+ '<div class="actions"><button class="btn primary" id="jump">Jump to X/Y</button><button class="btn" id="set-capitol">Set Capitol center</button><button class="btn" id="test-coordinate">Test 3×3 base here</button></div>',
  '<p class="hint">Capitol: 21×21 cells; contaminated zone: 100×100. Even-size alignment is provisional until tested in-game.</p>',
  '<div class="fields"><div class="field"><label>Even-width X side</label><select id="even-x"><option value="negative">Extra west cell</option><option value="positive">Extra east cell</option></select></div>',
  '<div class="field"><label>Even-height Y side</label><select id="even-y"><option value="negative">Extra north cell</option><option value="positive">Extra south cell</option></select></div></div>',
- '<div class="actions"><button id="save-calibration" class="btn">Save calibration</button><button id="verify-calibration" class="btn">Mark tested</button></div><p class="hint" id="calibration-message">Not verified against an in-game mud edge.</p></section>',
+ '<div class="actions"><button id="save-calibration" class="btn">Save calibration</button><button id="verify-calibration" class="btn">Mark tested</button></div><p class="hint" id="calibration-message">Not verified against an in-game mud edge.</p><p id="calibration-result" class="notice">Enter a known game coordinate, then use Test 3×3 base here to compare the predicted footprint with your screenshot.</p></section>',
  '<section class="panel"><h2>🏳 Alliances & Bases</h2><div class="fields"><div class="field wide"><label>Current alliance</label><select id="alliance"></select></div>',
  '<div class="field"><label>New alliance initials</label><input id="new-alliance" maxlength="28" placeholder="VON"></div><div class="field"><label>Colour</label><input id="alliance-color" type="color" value="#be654e"></div></div>',
  '<div class="actions"><button id="add-alliance" class="btn">Add alliance</button></div>',
@@ -461,6 +461,15 @@ async function restoreRevision(rev){
 function bind(){
  canvas=$('map-canvas');ctx=canvas.getContext('2d');attachCanvas();
  $('jump').onclick=()=>{try{const c=coord();view.x=c.x;view.y=c.y;draw();}catch(e){inform(e.message,true)}};
+ $('test-coordinate').onclick=()=>{
+  try{
+   if(!state.capitolPlaced)throw Error('Set the Capitol center before calibrating its mud boundary.');
+   const p=coord(),test={id:'calibration-preview',type:'base',x:p.x,y:p.y,allianceId:activeAlliance,locked:false};
+   const r=footprint(test,state),result=inspectPlacement(test,state);
+   $('calibration-result').textContent='Test base center ('+p.x+', '+p.y+'): X '+r.left+'–'+r.right+', Y '+r.top+'–'+r.bottom+'. Predicted mud overlap: '+result.mud+'/9 cells. '+(result.mud>3?'Over the provisional shielding allowance.':'Within the provisional 3-cell allowance.')+(result.hard.length?' Placement blocked by '+result.hard.join(', ')+'.':'')+' Compare this result with the actual game before marking calibration tested.';
+   view.x=p.x;view.y=p.y;view.scale=clamp(Math.max(view.scale,15),1,70);draw();
+  }catch(e){inform(e.message,true);}
+ };
  $('set-capitol').onclick=()=>{try{const c=coord();const next=clone(state);next.center=c;next.capitolPlaced=true;next.calibration.verified=false;commit(next,'Set Capitol center '+c.x+','+c.y);}catch(e){inform(e.message,true)}};
  $('save-calibration').onclick=()=>{const next=clone(state);next.calibration={evenX:$('even-x').value,evenY:$('even-y').value,verified:false};commit(next,'Adjusted even-sized object anchor convention');};
  $('verify-calibration').onclick=()=>{if(!confirm('Have you compared the planner against real in-game edge coordinates?'))return;const next=clone(state);next.calibration.verified=true;commit(next,'Marked coordinate calibration tested in game');};
