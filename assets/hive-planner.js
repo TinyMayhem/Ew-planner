@@ -802,10 +802,10 @@ function finishGroupMove(ids,dx,dy){
  if(!dx&&!dy)return inform('No group movement entered. The bases stayed in place.');
  const check=inspectGroupMove(state,ids,dx,dy);
  if(check.hard.length)return inform('Group move blocked: '+check.hard.slice(0,4).join('; ')+(check.hard.length>4?' and '+(check.hard.length-4)+' more':''),true);
- if(check.warnings.length&&!confirm('Move '+check.count+' bases by X '+dx+', Y '+dy+'?\n\n'+
-  check.warnings.slice(0,8).join('\n')+
-  (check.warnings.length>8?'\n...and '+(check.warnings.length-8)+' more warnings':'')+
-  '\n\nContinue despite these warnings?')){
+ const detail=check.warnings.length?'\n\nWarnings:\n'+check.warnings.slice(0,8).join('\n')+
+  (check.warnings.length>8?'\n...and '+(check.warnings.length-8)+' more warnings':''):'';
+ if(!confirm('Move '+check.count+' selected bases by X '+dx+', Y '+dy+'?'+detail+
+   '\n\nAll positions will save together as one undoable map revision.')){
   return inform('Group move cancelled. No bases were changed.');
  }
  const moves=new Map(check.moves.map(m=>[m.id,m]));
