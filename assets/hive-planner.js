@@ -354,8 +354,9 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
    // Keep names and levels readable even when the actual 7x7 square is small.
    const title=cityLabel(o),detail=owner?title+' ['+owner+']':title;
    ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
-   const tx=p[0]+p[2]/2,ty=p[1]+Math.max(10,Math.min(p[3]/2,20));
-   const bw=Math.min(220,Math.max(60,ctx.measureText(detail).width+16));
+   const ty=p[1]+Math.max(10,Math.min(p[3]/2,20));
+   const bw=Math.min(w-8,220,Math.max(60,ctx.measureText(detail).width+16));
+   const tx=clamp(p[0]+p[2]/2,bw/2+4,w-bw/2-4);
    ctx.fillStyle='rgba(18,36,25,.9)';ctx.fillRect(tx-bw/2,ty-11,bw,23);
    ctx.strokeStyle='rgba(255,229,164,.75)';ctx.lineWidth=1;ctx.strokeRect(tx-bw/2,ty-11,bw,23);
    ctx.fillStyle='#fff0c9';ctx.fillText(detail,tx,ty,bw-10);
