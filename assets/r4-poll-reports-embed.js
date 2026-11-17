@@ -17,7 +17,7 @@ async function pollReportEmbed(){
    }
    if(!people.length)root.append(el('p','Not enough finalized polls yet.','stat-muted'));
   };
-  const eligible=data.profiles.filter(x=>x.eligible>=3);
+  const eligible=data.profiles.filter(x=>x.eligible>=3&&x.responded>=3);
   draw('embedded-poll-no',eligible.filter(x=>x.no>0&&x.responded>0).sort((a,b)=>b.noRate-a.noRate||b.no-a.no),
    x=>x.no+' No of '+x.responded+' votes ('+Math.round(x.noRate*100)+'%)');
   draw('embedded-poll-missing',eligible.filter(x=>x.missing>0).sort((a,b)=>b.missing/a.eligible-a.missing/b.eligible||b.missing-a.missing),
