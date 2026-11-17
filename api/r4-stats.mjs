@@ -6,6 +6,8 @@ import {GET as auditPage} from '../lib/r4-audit-page.mjs';
 import {GET as statsPage} from '../lib/r4-stats-page.mjs';
 import {GET as reportsPage} from '../lib/r4-reports-page.mjs';
 import {GET as nicknamesPage} from '../lib/r4-nicknames-page.mjs';
+import {GET as pollsPage} from '../lib/r4-polls-page.mjs';
+import {GET as pollsGet,POST as pollsPost} from '../lib/r4-polls-handler.mjs';
 import {buildMemberPerformance} from '../lib/member-performance.mjs';
 import {stageRange,stageForDate,weekStart} from '../assets/r4-train-rules.mjs';
 import {buildTrainAdvice,resolveNames,isTopDonationTrain} from '../lib/train-advice.mjs';
@@ -106,6 +108,8 @@ export async function GET(request){
  if(view==='audit')return auditPage(request);
  if(view==='reports')return reportsPage(request);
  if(view==='nicknames')return nicknamesPage(request);
+ if(view==='polls')return pollsPage(request);
+ if(view==='polls_api')return pollsGet(request);
  if(!await authorizedAccess(request))return json({error:'R4 sign-in required'},401);
  const q=new URL(request.url).searchParams;
  try{
@@ -355,6 +359,7 @@ async function dsUpload(form,request){
  return json({ok:true,id:created[0].id},201);
 }
 export async function POST(request){
+ if(new URL(request.url).searchParams.get('view')==='polls_api')return pollsPost(request);
  if(!await authorizedAccess(request))return json({error:'R4 sign-in required'},401);
  if(!authorizeWrite(request))return json({error:'Invalid request origin'},403);
  try{
