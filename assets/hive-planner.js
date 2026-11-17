@@ -491,6 +491,38 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
    if(scale>=6){ctx.fillStyle='#1e261b';ctx.font='bold '+clamp(Math.min(p[2],p[3])*.22,8,15)+'px system-ui';ctx.textAlign='center';ctx.fillText(t.label.split(' ')[0],p[0]+p[2]/2,p[1]+p[3]/2);ctx.textAlign='left';}
   }
  }
+ const compactAllianceView=exportKind==='screen'&&scale<4.5&&!dragMove;
+ if(compactAllianceView){
+  // At an overview zoom, replace the tiny bases with one coloured occupied
+  // region per connected alliance group. These are not new saved territories.
+  const labels=[];
+  const renderCluster=(cluster,draft=false)=>{
+   const p=rxy(cluster.bounds),color=colorFor(cluster.allianceId);
+   ctx.globalAlpha=draft?.32:.86;ctx.fillStyle=color;ctx.fillRect(...p);ctx.globalAlpha=1;
+   ctx.lineWidth=draft?2.3:2;ctx.strokeStyle=draft?'#fff1c2':color;
+   if(draft)ctx.setLineDash([5,4]);
+   ctx.strokeRect(...p);ctx.setLineDash([]);
+   const label=nameFor(cluster.allianceId)+(draft?' · PREVIEW':'');
+   ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+   const bw=Math.min(Math.max(48,ctx.measureText(label).width+18),w-8);
+   const cx=clamp(p[0]+p[2]/2,bw/2+4,w-bw/2-4);
+   const desired=clamp(p[1]+p[3]/2,14,h-14);
+   let cy=desired;
+   const candidates=[0,-27,27,-54,54,-81,81];
+   for(const delta of candidates){
+    const y=clamp(desired+delta,14,h-14);
+    const box={l:cx-bw/2,r:cx+bw/2,t:y-12,b:y+12};
+    if(!labels.some(v=>box.l<v.r+4&&box.r>v.l-4&&box.t<v.b+4&&box.b>v.t-4)){cy=y;break;}
+   }
+   labels.push({l:cx-bw/2,r:cx+bw/2,t:cy-12,b:cy+12});
+   ctx.fillStyle='rgba(13,31,24,.96)';ctx.fillRect(cx-bw/2,cy-12,bw,24);
+   ctx.strokeStyle=color;ctx.lineWidth=2;ctx.strokeRect(cx-bw/2,cy-12,bw,24);
+   ctx.fillStyle='#fff4d5';ctx.fillText(label,cx,cy,bw-9);
+   ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  };
+  for(const cluster of allianceBaseClusters(state))renderCluster(cluster);
+  for(const cluster of allianceBaseClusters(state,preview))renderCluster(cluster,true);
+ }else{
  const useNumbers=exportKind==='detailed';
  for(const b of state.bases){
   if(exportKind==='screen'&&dragMove?.id===b.id)continue;
@@ -517,6 +549,7 @@ function scene(ctx,w,h,cx,cy,scale,{exportKind='screen',showMud=true,showBuff=tr
   }
  }
  for(const b of preview){const p=rxy(footprint(b,state));ctx.fillStyle='rgba(166,219,238,.32)';ctx.fillRect(...p);ctx.strokeStyle='#a2edff';ctx.lineWidth=2;ctx.strokeRect(...p);}
+ }
  // Show original footprint and a cell-snapped draft while long-press dragging.
  // Exported images do not include the transient draft.
  if(exportKind==='screen'&&dragMove){
@@ -589,6 +622,7 @@ function draw(){
  }
  ctx.setTransform(dpr,0,0,dpr,0,0);
  scene(ctx,width,height,view.x,view.y,view.scale,{showMud:displayMud,showBuff:displayBuff,showGrid:displayGrid});
+ $('overview-mode-note').hidden=!(view.scale<4.5&&!dragMove);
  $('map-coordinate').textContent=dragMove
   ?'Moving base to X '+dragMove.x+' · Y '+dragMove.y+
    (dragMove.check.hard.length?' · BLOCKED':dragMove.check.warnings.length?' · WARNING':' · Valid')
