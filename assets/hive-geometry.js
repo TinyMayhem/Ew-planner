@@ -156,6 +156,48 @@ export function inspectBaseMove(state,baseId,x,y){
  const candidate={...base,x,y};
  return {...inspectPlacement(candidate,state,{ignoreId:baseId}),candidate};
 }
+// Select commander bases by physical footprint, not by their centre only.
+// Preview and exports never alter the persistent base records.
+export function basesInSelection(state,area,allianceId=null){
+ if(!area)return [];
+ const box={left:Math.min(area.x1,area.x2),right:Math.max(area.x1,area.x2),
+  top:Math.min(area.y1,area.y2),bottom:Math.max(area.y1,area.y2)};
+ return (state.bases||[]).filter(b=>(!allianceId||b.allianceId===allianceId)&&intersects(footprint(b,state),box));
+}
+// A uniform integer translation keeps the entire group's relative spacing intact.
+// Test each moved base against everything *outside* the selection, never against
+// the original footprint of a fellow selected base.
+export function inspectGroupMove(state,ids,dx,dy){
+ const selected=new Set(ids||[]),bases=(state.bases||[]).filter(b=>selected.has(b.id));
+ const result={hard:[],warnings:[],moves:[],dx,dy,count:bases.length};
+ if(!bases.length||bases.length!==selected.size){
+  result.hard.push('Selection contains missing bases');return result;
+ }
+ if(!Number.isSafeInteger(dx)||!Number.isSafeInteger(dy)){
+  result.hard.push('Movement must use whole grid cells');return result;
+ }
+ const locked=bases.filter(b=>b.locked);
+ if(locked.length){result.hard.push(locked.length+' locked base(s) cannot move');return result;}
+ const otherBases=(state.bases||[]).filter(b=>!selected.has(b.id));
+ const world={...state,bases:otherBases};
+ for(const base of bases){
+  const target={...base,x:base.x+dx,y:base.y+dy};
+  if(!Number.isSafeInteger(target.x)||!Number.isSafeInteger(target.y)||
+   target.x<1||target.x>1998||target.y<1||target.y>1998){
+   result.hard.push('Base '+(base.number||base.memberName||base.id)+' would leave the map');
+   continue;
+  }
+  result.moves.push(target);
+  const check=inspectPlacement(target,world,{spacing:state.settings?.spacing||0});
+  if(check.hard.length)
+   result.hard.push('Base '+(base.number||base.memberName||base.id)+': '+check.hard.join(', '));
+  for(const warning of check.warnings){
+   // Retain actionable warnings without presenting dozens of identical lines.
+   if(!result.warnings.includes(warning))result.warnings.push(warning);
+  }
+ }
+ return result;
+}
 // Draft territory editing uses world cell coordinates and never modifies saved rows.
 export function territoryBoundsFromCorners(a,b){
  return {x1:Math.min(a.x,b.x),x2:Math.max(a.x,b.x),y1:Math.min(a.y,b.y),y2:Math.max(a.y,b.y)};
