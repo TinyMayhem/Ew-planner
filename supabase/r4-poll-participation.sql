@@ -119,7 +119,13 @@ begin
      jsonb_build_object('source',src,'note',left(coalesce(item->>'note',''),500)),p_actor);
    end if;
   end loop;
-  -- Even finalized polls can be amended, but the history remains visible.
+  -- A new upload requires the category to be reviewed again. Manual late
+  -- responses leave finalized polling intact, but remain visible in history.
+  if mode<>'manual' then
+   if category='yes' then update public.utw_poll_events set reviewed_yes=false,status='review' where id=p_poll_id;
+   elsif category='no' then update public.utw_poll_events set reviewed_no=false,status='review' where id=p_poll_id;
+   else update public.utw_poll_events set reviewed_maybe=false,status='review' where id=p_poll_id; end if;
+  end if;
  elsif p_operation='review' then
   category:=lower(coalesce(p_payload->>'category',''));
   review_flag:=coalesce((p_payload->>'reviewed')::boolean,false);
