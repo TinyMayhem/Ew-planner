@@ -1,4 +1,4 @@
-import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera} from './hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds} from './hive-geometry.js';
 
 const API='/r4-hive',app=document.getElementById('hive-app');
 const $=id=>document.getElementById(id);
@@ -9,7 +9,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
 let state=null,revision=0,history=[],members=[],aliases=[],user=null,busy=false;
 let activeAlliance='utw',tool='select',selected=null,preview=[],showNames='auto',displayMud=true,displayBuff=true,displayGrid=true;
-let view={x:499,y:499,scale:10},pointer=null,dragMove=null,hoverCell=null,drawArea=null,canvas,ctx,width=900,height=600,polling=false;
+let view={x:499,y:499,scale:10},pointer=null,dragMove=null,hoverCell=null,drawArea=null,areaGesture=null,canvas,ctx,width=900,height=600,polling=false;
 const touchPoints=new Map();let pinchGesture=null,ignoreTouchUntilRelease=false;
 const LONG_PRESS_MS=450, LONG_PRESS_SLOP_PX=9;
 const typeChoices=Object.entries(OBJECTS).filter(([k])=>!['base','capitol','city'].includes(k));
@@ -46,8 +46,9 @@ const html=[
  '<div class="field"><label>Min X</label><input id="x1" type="number" value="450"></div><div class="field"><label>Max X</label><input id="x2" type="number" value="550"></div>',
  '<div class="field"><label>Min Y</label><input id="y1" type="number" value="450"></div><div class="field"><label>Max Y</label><input id="y2" type="number" value="550"></div>',
  '<div class="field wide"><label>Section spacing</label><select id="territory-gap"><option value="0">No gap</option><option value="1">1-cell gap</option><option value="2">2-cell gap</option></select></div></div>',
- '<div class="actions"><button id="add-territory" class="btn primary">Add section</button></div>',
- '<p class="hint">Or choose Draw territory on the map, drag across an area, then save its name here. Solid boundary = assigned; dashed = actual occupied.</p>',
+ '<div class="actions"><button id="add-territory" class="btn primary">Save territory</button><button id="clear-territory-draft" class="btn">Clear draft</button></div>',
+ '<p class="hint">Draw a rectangle on the map. Your draft stays visible until you save or clear it. Adjust its corners on the map, or edit the X/Y fields above. Saved sections can be edited below.</p>',
+ '<h3>Saved territories</h3><div id="territory-list" class="territory-list"></div>',
  '<div id="territory-priority"></div></section>',
  '<section class="panel"><h2>✨ Smart suggestions</h2><div class="fields"><div class="field wide"><label>Fill section</label><select id="suggest-section"></select></div>',
  '<div class="field"><label>Number of bases</label><input id="suggest-count" type="number" min="1" max="250" value="20"></div>',
@@ -66,6 +67,7 @@ const html=[
  '<button class="btn active" data-tool="select">Select / Pan</button><button class="btn" data-tool="base">Tap: Base</button><button class="btn" data-tool="city">Tap: City</button><button class="btn" data-tool="obstacle">Tap: Obstacle</button><button class="btn" data-tool="territory">Draw territory</button>',
  '</div><div class="zoomset"><button class="btn" id="zoom-out">−</button><button class="btn" id="zoom-in">+</button><button class="btn" id="fit">Fit active area</button></div></div>',
  '<div class="map-wrap"><canvas id="map-canvas" aria-label="Interactive UTW map coordinate grid"></canvas><div class="map-overlay" id="map-coordinate">X: 499 · Y: 499</div></div>',
+ '<div id="territory-draft-bar" class="draft-bar" hidden><span id="territory-draft-summary"></span><div class="actions"><button id="draft-save" class="btn primary">Save territory</button><button id="draft-edit" class="btn">Edit coordinates</button><button id="draft-clear" class="btn">Clear</button></div></div>',
  '<div class="map-legend"><span><i class="swatch" style="background:#b16b4b"></i>Contaminated</span><span><i class="swatch" style="background:#b69a58"></i>Physical obstacle</span><span><i class="swatch" style="background:#b1eb8a"></i>3×3 green preview = placeable</span><span><i class="swatch" style="background:#e5b37e"></i>City label = level and name</span>',
  '<span>Solid = assigned territory</span><span>Dashed = occupied territory</span><span>↑ Y increases north · → X increases east</span>',
  '<label style="display:inline"><input id="mud-toggle" type="checkbox" checked style="width:auto"> Mud</label>',
