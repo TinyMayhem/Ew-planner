@@ -79,7 +79,7 @@ test('Train Desk displays confirmed historical names and filters former members 
 test('Top Donation R4 restriction uses private roles and is checked again before creating or editing a train',()=>{
  const api=readFileSync('api/r4-stats.mjs','utf8');
  const ui=readFileSync('assets/r4-stats.js','utf8');
- assert.match(api,/list\('utw_r4_roles',[^\n]*alliance:'eq.utw'/);
+ assert.match(api,/list\('utw_r4_accounts',[^\n]*role:'in.\(r4,admin\)'/);
  assert.match(api,/donationR4Conflict\(body.source,body.slot,body.member_id,body.vip_member_id\)/);
  assert.match(api,/donationR4Conflict\(old\[0\].source,old\[0\].slot,body.member_id,body.vip_member_id\)/);
  assert.match(ui,/R4 not eligible/);
