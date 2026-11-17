@@ -95,6 +95,16 @@ export function inspectPlacement(base,state,{spacing=null,extra=[],ignoreId=null
  if(relevant.length&&!relevant.some(t=>{const zone={left:t.x1,right:t.x2,top:t.y1,bottom:t.y2};return r.left>=zone.left&&r.right<=zone.right&&r.top>=zone.top&&r.bottom<=zone.bottom;}))warnings.push('Base footprint is outside or crosses its assigned territory section');
  return {hard:[...new Set(hard)],warnings,mud,section:sectionFor(base,state)};
 }
+// Validate a proposed drag without mutating a saved base or the shared map.
+export function inspectBaseMove(state,baseId,x,y){
+ const base=(state.bases||[]).find(b=>b.id===baseId);
+ if(!base)return {hard:['Base no longer exists'],warnings:[],mud:0,candidate:null};
+ if(base.locked)return {hard:['This base is locked'],warnings:[],mud:0,candidate:null};
+ if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||x>1999||y<0||y>1999)
+  return {hard:['Outside the map coordinates'],warnings:[],mud:0,candidate:null};
+ const candidate={...base,x,y};
+ return {...inspectPlacement(candidate,state,{ignoreId:baseId}),candidate};
+}
 export function boundsOfState(state,{zones=true,territories=true}={}){
  const rs=[];
  if(state.capitolPlaced){rs.push(rect(state.center.x,state.center.y,21,21,state.calibration));if(zones)rs.push(...zoneRects(state));}

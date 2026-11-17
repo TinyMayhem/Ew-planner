@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel,mapToPixel,pixelToMap,screenFootprint} from '../assets/hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove} from '../assets/hive-geometry.js';
 import {GET as hiveGet,POST as hivePost,validateState} from '../lib/r4-hive-handler.mjs';
 const make=()=>({center:{x:499,y:499},capitolPlaced:true,calibration:{evenX:'negative',evenY:'negative',verified:false},alliances:[{id:'utw',name:'UTW',color:'#3478c0'}],territories:[],obstacles:[],bases:[],settings:{spacing:1,showNames:'auto'}});
 const base=(id,x,y)=>({id,type:'base',x,y,allianceId:'utw',memberName:'',locked:false,sectionOverride:null});
@@ -132,4 +132,39 @@ test('Even-sized mud and city outlines preserve positive screen height',()=>{
  assert.equal(mud[2],400);
  assert.equal(mud[3],400);
  assert.ok(mud[1]<mapToPixel(499,499,camera).y);
+});
+
+test('Long-press draft move preserves identity and reports clear placement',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.bases=[{...base('tiny-base',436,476),memberName:'Tiny',number:7,allianceId:'utw',sectionOverride:null}];
+ const result=inspectBaseMove(state,'tiny-base',436,479);
+ assert.equal(result.hard.length,0);
+ assert.equal(result.candidate.id,'tiny-base');
+ assert.equal(result.candidate.memberName,'Tiny');
+ assert.equal(result.candidate.number,7);
+ assert.equal(result.candidate.x,436);
+ assert.equal(result.candidate.y,479);
+ assert.equal(state.bases[0].y,476,'preview must not mutate saved coordinates');
+});
+test('Long-press base move cannot overlap another base or a mine',()=>{
+ const state=make();state.capitolPlaced=false;
+ state.bases=[base('a',436,476),base('b',436,482)];
+ assert.deepEqual(inspectBaseMove(state,'a',436,482).hard,['Another base']);
+ state.obstacles.push({id:'mine',type:'mine',x:436,y:479});
+ assert.deepEqual(inspectBaseMove(state,'a',436,479).hard,['Resource Mine']);
+});
+test('Locked bases, missing bases and out-of-bounds moves are rejected',()=>{
+ const state=make();state.capitolPlaced=false;state.bases=[{...base('a',436,476),locked:true}];
+ assert.deepEqual(inspectBaseMove(state,'a',436,479).hard,['This base is locked']);
+ state.bases[0].locked=false;
+ assert.deepEqual(inspectBaseMove(state,'a',2000,479).hard,['Outside the map coordinates']);
+ assert.deepEqual(inspectBaseMove(state,'missing',436,479).hard,['Base no longer exists']);
+});
+test('Long-press move into mud requires the same warning as typed coordinate moves',()=>{
+ const state=make();const original=base('a',499,551);state.bases.push(original);
+ const result=inspectBaseMove(state,'a',499,548);
+ assert.equal(result.hard.length,0);
+ assert.equal(result.mud,6);
+ assert.ok(result.warnings.some(w=>w.includes('6 of 9')));
+ assert.equal(state.bases[0].y,551);
 });
