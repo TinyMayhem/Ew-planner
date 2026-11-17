@@ -1,4 +1,4 @@
-import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds,allianceBaseClusters,allianceUsage,packingGrid} from './hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds,allianceBaseClusters,allianceUsage,packingGrid,basesInSelection,inspectGroupMove} from './hive-geometry.js';
 
 const API='/r4-hive',app=document.getElementById('hive-app');
 const $=id=>document.getElementById(id);
@@ -9,7 +9,8 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
 let state=null,revision=0,history=[],members=[],aliases=[],user=null,busy=false;
 let activeAlliance='utw',tool='select',selected=null,preview=[],showNames='auto',displayMud=true,displayBuff=true,displayGrid=true;
-let view={x:499,y:499,scale:10},pointer=null,dragMove=null,hoverCell=null,drawArea=null,areaGesture=null,editingTerritoryId=null,canvas,ctx,width=900,height=600,polling=false;
+let view={x:499,y:499,scale:10},pointer=null,dragMove=null,groupBox=null,groupDrag=null,hoverCell=null,drawArea=null,areaGesture=null,editingTerritoryId=null,canvas,ctx,width=900,height=600,polling=false;
+const groupSelection=new Set();
 const touchPoints=new Map();let pinchGesture=null,ignoreTouchUntilRelease=false;
 const LONG_PRESS_MS=450, LONG_PRESS_SLOP_PX=9;
 const typeChoices=Object.entries(OBJECTS).filter(([k])=>!['base','capitol','city'].includes(k));
@@ -67,16 +68,21 @@ const html=[
  '<div class="actions"><button id="undo" class="btn">Undo last edit</button><button id="restore" class="btn">Restore selected revision</button><button id="snapshot" class="btn">Mark snapshot</button></div>',
  '<div id="history-list" class="history"></div></section></aside>',
  '<div class="map-column"><section class="map-card"><div class="map-tools"><div class="toolset">',
- '<button class="btn active" data-tool="select">Select / Pan</button><button class="btn" data-tool="base">Tap: Base</button><button class="btn" data-tool="city">Tap: City</button><button class="btn" data-tool="obstacle">Tap: Obstacle</button><button class="btn" data-tool="territory">Draw territory</button>',
+ '<button class="btn active" data-tool="select">Select / Pan</button><button class="btn" data-tool="group">Select Group</button><button class="btn" data-tool="base">Tap: Base</button><button class="btn" data-tool="city">Tap: City</button><button class="btn" data-tool="obstacle">Tap: Obstacle</button><button class="btn" data-tool="territory">Draw territory</button>',
  '</div><div class="zoomset"><button class="btn" id="zoom-out">−</button><button class="btn" id="zoom-in">+</button><button class="btn" id="fit">Fit active area</button></div></div>',
  '<div class="map-wrap"><canvas id="map-canvas" aria-label="Interactive UTW map coordinate grid"></canvas><div class="map-overlay" id="map-coordinate">X: 499 · Y: 499</div></div>',
+ '<div id="group-controls" class="group-controls" hidden>',
+ '<div class="group-header"><strong id="group-count">0 bases selected</strong><span id="group-status">Draw around bases or tap them to select.</span></div>',
+ '<div class="group-actions"><button class="btn" id="group-select-all">Select all current alliance</button><button class="btn" id="group-clear">Clear selection</button></div>',
+ '<div class="group-move-fields"><label>Move X cells <input id="group-dx" type="number" value="0" step="1"></label><label>Move Y cells <input id="group-dy" type="number" value="0" step="1"></label><button id="group-move" class="btn primary">Move selected</button></div>',
+ '<p class="hint">Drag a rectangle around bases to select them. Tap individual bases to add or remove. Long-press a selected base, then drag the entire group. Pinch with two fingers to pan or zoom. Locked bases cannot move.</p></div>',
  '<div id="territory-draft-bar" class="draft-bar" hidden><span id="territory-draft-summary"></span><div class="actions"><button id="draft-save" class="btn primary">Save territory</button><button id="draft-edit" class="btn">Edit coordinates</button><button id="draft-clear" class="btn">Clear</button></div></div>',
  '<div class="map-legend"><span><i class="swatch" style="background:#b16b4b"></i>Contaminated</span><span><i class="swatch" style="background:#b69a58"></i>Physical obstacle</span><span><i class="swatch" style="background:#b1eb8a"></i>3×3 green preview = placeable</span><span><i class="swatch" style="background:#e5b37e"></i>City label = level and name</span>',
  '<span>Solid = assigned territory</span><span>Dashed = occupied territory</span><span>↑ Y increases north · → X increases east</span><span id="overview-mode-note" hidden>Overview: alliance colours and names. Zoom in for individual bases.</span>',
  '<label style="display:inline"><input id="mud-toggle" type="checkbox" checked style="width:auto"> Mud</label>',
  '<label style="display:inline"><input id="buff-toggle" type="checkbox" checked style="width:auto"> Influence</label>',
  '<label style="display:inline"><input id="grid-toggle" type="checkbox" checked style="width:auto"> Grid</label></div>',
- '<div class="mobile-caption">Faint 1×1 cells and gentle 3-cell guides match base-sized placement. Guides do not force snapping. One finger: tap to select, long-hold a base to move, or drag to pan. Two fingers: slide together to pan, or pinch apart/together to zoom. Buttons still work.</div></section>',
+ '<div class="mobile-caption">Faint 1×1 cells and gentle 3-cell guides match base-sized placement. Guides do not force snapping. One finger: tap to select, long-hold a base to move, or drag to pan. Select Group: draw over bases, then long-hold one to move them together. Two fingers: slide together to pan, or pinch apart/together to zoom. Buttons still work.</div></section>',
  '<section id="selection" class="details"><h2>Selected item</h2><p class="muted">Tap a base, obstacle or territory to edit it.</p></section>',
  '<section class="report"><h2>Alliance ranges & base counts</h2><div class="report-grid" id="reports"></div></section>',
  '<div id="message" class="status" aria-live="polite"></div></div></div>'
