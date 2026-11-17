@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera} from '../assets/hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera,territoryBoundsFromCorners,moveTerritoryBounds,resizeTerritoryBounds} from '../assets/hive-geometry.js';
 import {GET as hiveGet,POST as hivePost,validateState} from '../lib/r4-hive-handler.mjs';
 const make=()=>({center:{x:499,y:499},capitolPlaced:true,calibration:{evenX:'negative',evenY:'negative',verified:false},alliances:[{id:'utw',name:'UTW',color:'#3478c0'}],territories:[],obstacles:[],bases:[],settings:{spacing:1,showNames:'auto'}});
 const base=(id,x,y)=>({id,type:'base',x,y,allianceId:'utw',memberName:'',locked:false,sectionOverride:null});
@@ -197,4 +197,28 @@ test('Pinch scale respects map zoom limits, keeping finite coordinates',()=>{
   assert.ok(r.scale>=1&&r.scale<=70);
   assert.ok(Number.isFinite(r.x)&&Number.isFinite(r.y));
  }
+});
+
+test('Drawing a territory normalizes corners independent of drag direction and north-positive Y',()=>{
+ assert.deepEqual(territoryBoundsFromCorners({x:550,y:480},{x:450,y:540}),{x1:450,x2:550,y1:480,y2:540});
+ assert.deepEqual(territoryBoundsFromCorners({x:450,y:540},{x:550,y:480}),{x1:450,x2:550,y1:480,y2:540});
+});
+test('Draft territory can be moved without changing size',()=>{
+ const original={x1:450,x2:550,y1:480,y2:540};
+ assert.deepEqual(moveTerritoryBounds(original,12,-7),{x1:462,x2:562,y1:473,y2:533});
+ assert.deepEqual(original,{x1:450,x2:550,y1:480,y2:540});
+});
+test('Draft territory drag clamps to the physical map coordinates',()=>{
+ assert.deepEqual(moveTerritoryBounds({x1:4,x2:9,y1:1990,y2:1999},-25,50),{x1:0,x2:5,y1:1990,y2:1999});
+});
+test('Each draft corner resizes the bounds using the opposite corner as anchor',()=>{
+ const t={x1:450,x2:550,y1:480,y2:540};
+ assert.deepEqual(resizeTerritoryBounds(t,'nw',440,550),{x1:440,x2:550,y1:480,y2:550});
+ assert.deepEqual(resizeTerritoryBounds(t,'ne',560,551),{x1:450,x2:560,y1:480,y2:551});
+ assert.deepEqual(resizeTerritoryBounds(t,'sw',435,470),{x1:435,x2:550,y1:470,y2:540});
+ assert.deepEqual(resizeTerritoryBounds(t,'se',560,460),{x1:450,x2:560,y1:460,y2:540});
+});
+test('Dragging a territory corner across the opposite corner remains valid',()=>{
+ const t={x1:450,x2:550,y1:480,y2:540};
+ assert.deepEqual(resizeTerritoryBounds(t,'nw',600,400),{x1:550,x2:600,y1:400,y2:480});
 });
