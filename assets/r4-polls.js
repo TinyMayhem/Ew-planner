@@ -295,7 +295,7 @@ async function drawReport(){
    }
    if(!arr.length)root.append(node('p','Not enough reviewed polls to rank members yet.','stat-muted'));
   }
-  listing('poll-report-no',profiles.filter(x=>x.eligible>=min&&x.responded>0&&x.no>0).sort((a,b)=>b.noRate-a.noRate||b.no-a.no),m=>(Math.round(m.noRate*100)+'% No · '+m.no+' of '+m.responded+' answers'));
+  listing('poll-report-no',profiles.filter(x=>x.eligible>=min&&x.responded>=min&&x.no>0).sort((a,b)=>b.noRate-a.noRate||b.no-a.no),m=>(Math.round(m.noRate*100)+'% No · '+m.no+' of '+m.responded+' answers'));
   listing('poll-report-nonresponders',profiles.filter(x=>x.eligible>=min&&x.missing>0).sort((a,b)=>b.missing/a.eligible-a.missing/b.eligible||b.missing-a.missing),m=>(m.missing+' missing of '+m.eligible+' polls ('+Math.round(m.missing/m.eligible*100)+'%)'));
   const old=$('poll-report-member').value,select=$('poll-report-member');select.replaceChildren(new Option('Choose member…',''));
   for(const person of profiles.filter(x=>!tidy($('poll-report-search').value)||tidy(x.name).includes(tidy($('poll-report-search').value))).sort((a,b)=>a.name.localeCompare(b.name)))
