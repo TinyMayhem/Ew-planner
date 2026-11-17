@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds} from '../assets/hive-geometry.js';
-import {GET as hiveGet,POST as hivePost} from '../lib/r4-hive-handler.mjs';
+import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel} from '../assets/hive-geometry.js';
+import {GET as hiveGet,POST as hivePost,validateState} from '../lib/r4-hive-handler.mjs';
 const make=()=>({center:{x:499,y:499},capitolPlaced:true,calibration:{evenX:'negative',evenY:'negative',verified:false},alliances:[{id:'utw',name:'UTW',color:'#3478c0'}],territories:[],obstacles:[],bases:[],settings:{spacing:1,showNames:'auto'}});
 const base=(id,x,y)=>({id,type:'base',x,y,allianceId:'utw',memberName:'',locked:false,sectionOverride:null});
 test('Odd footprints center on the provided coordinate',()=>{
@@ -63,4 +63,34 @@ test('Hive API cannot be viewed or edited without R4 sign-in',async()=>{
  assert.equal(get.status,303);
  const post=await hivePost(new Request(baseUrl,{method:'POST',headers:{origin:'https://example.test','Content-Type':'application/json'},body:'{}'}));
  assert.equal(post.status,401);
+});
+
+
+test('Named city displays its level and exact 7x7 footprint, plus 15x15 mud',()=>{
+ const state=make();state.capitolPlaced=false;
+ const city={id:'city1',type:'city',name:'Lawless Road',level:3,ownerAllianceId:'utw',x:550,y:540};
+ state.obstacles.push(city);
+ assert.equal(cityLabel(city),'L3 · Lawless Road');
+ assert.deepEqual(footprint(city,state),{left:547,top:537,right:553,bottom:543});
+ const zone=zoneRects(state)[0];
+ assert.equal(zone.left,543);assert.equal(zone.right,557);
+ assert.equal(zone.top,533);assert.equal(zone.bottom,547);
+ assert.equal(validateState(state),'');
+ assert.deepEqual(inspectPlacement(base('b',551,540),state).hard,['City']);
+});
+test('Legacy cities still display with fallback labels',()=>{
+ const state=make();state.capitolPlaced=false;
+ const city={id:'oldcity',type:'city',x:550,y:540};
+ state.obstacles.push(city);
+ assert.equal(cityLabel(city),'L? · City');
+ assert.equal(validateState(state),'');
+});
+test('City editing metadata is validated without changing obstacles schema',()=>{
+ const state=make();state.capitolPlaced=false;
+ const city={id:'city2',type:'city',name:'Derby Grounds',level:4,ownerAllianceId:'utw',x:550,y:540};
+ state.obstacles.push(city);
+ assert.equal(validateState(state),'');
+ city.level=11;assert.match(validateState(state),/Invalid city/);
+ city.level=4;city.ownerAllianceId='unknown';assert.match(validateState(state),/Invalid city/);
+ city.ownerAllianceId=null;city.name='a'.repeat(71);assert.match(validateState(state),/Invalid city/);
 });
