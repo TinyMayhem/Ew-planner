@@ -155,6 +155,8 @@ export async function POST(request){
     if(p.items.some(i=>!uuid(i.member_id)||!['csv','screenshot','manual'].includes(i.source)||String(i.note||'').length>500))return json({error:'Invalid reviewed vote'},400);
    }else if(body.operation==='eligibility'){
     if(!uuid(body.payload.member_id)||!['add','remove'].includes(body.payload.mode))return json({error:'Invalid eligibility update'},400);
+   }else if(body.operation==='remove_vote'){
+    if(!uuid(body.payload.member_id)||String(body.payload.reason||'').length>500)return json({error:'Choose a valid vote to remove'},400);
    }else if(body.operation==='review'){
     if(!['yes','no','maybe'].includes(body.payload.category)||typeof body.payload.reviewed!=='boolean')return json({error:'Invalid review status'},400);
    }else if(body.operation!=='finalize')return json({error:'Unsupported action'},400);
