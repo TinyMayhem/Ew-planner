@@ -9,7 +9,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
 let state=null,revision=0,history=[],members=[],aliases=[],user=null,busy=false;
 let activeAlliance='utw',tool='select',selected=null,preview=[],showNames='auto',displayMud=true,displayBuff=true,displayGrid=true;
-let view={x:499,y:499,scale:10},pointer=null,dragMove=null,hoverCell=null,drawArea=null,areaGesture=null,canvas,ctx,width=900,height=600,polling=false;
+let view={x:499,y:499,scale:10},pointer=null,dragMove=null,hoverCell=null,drawArea=null,areaGesture=null,editingTerritoryId=null,canvas,ctx,width=900,height=600,polling=false;
 const touchPoints=new Map();let pinchGesture=null,ignoreTouchUntilRelease=false;
 const LONG_PRESS_MS=450, LONG_PRESS_SLOP_PX=9;
 const typeChoices=Object.entries(OBJECTS).filter(([k])=>!['base','capitol','city'].includes(k));
@@ -218,9 +218,11 @@ function showTerritoryDraft(){
  bar.hidden=!drawArea;
  if(drawArea){
   const t=drawArea;
-  $('territory-draft-summary').textContent='Unsaved territory · '+nameFor(activeAlliance)+
+  $('territory-draft-summary').textContent=(editingTerritoryId?'Editing saved territory':'Unsaved territory')+' · '+nameFor(activeAlliance)+
    ' · X '+t.x1+'–'+t.x2+' · Y '+t.y1+'–'+t.y2+
-   ' · Drag the corners to resize, or the inside to move';
+   ' · Drag corners to resize or the inside to move';
+  $('draft-save').textContent=editingTerritoryId?'Save changes':'Save territory';
+  $('draft-clear').textContent=editingTerritoryId?'Cancel edit':'Clear';
  }
 }
 function syncTerritoryFields(t){
@@ -229,7 +231,22 @@ function syncTerritoryFields(t){
  draw();
 }
 function clearTerritoryDraft(){
- drawArea=null;areaGesture=null;showTerritoryDraft();draw();
+ drawArea=null;areaGesture=null;editingTerritoryId=null;showTerritoryDraft();draw();
+}
+function startEditingTerritoryOnMap(id){
+ const territory=state.territories.find(t=>t.id===id);
+ if(!territory)return inform('Territory no longer exists',true);
+ activeAlliance=territory.allianceId;
+ $('alliance').value=activeAlliance;
+ $('territory-name').value=territory.name;
+ $('territory-gap').value=String(territory.gap);
+ editingTerritoryId=id;
+ drawArea={x1:territory.x1,x2:territory.x2,y1:territory.y1,y2:territory.y2};
+ syncTerritoryFields(drawArea);
+ tool='territory';hoverCell=null;
+ document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool));
+ focusTerritory(territory);
+ inform('Editing '+territory.name+'. Move or resize the highlighted rectangle, then Save changes. Cancel leaves the saved territory untouched.');
 }
 function focusTerritory(t,scrollToMap=true){
  if(!t)return;
@@ -247,14 +264,19 @@ function openTerritory(id,scroll=true){
 }
 function addTerritory(){
  const a=alliance(),bounds=territoryFieldBounds(),gap=number('territory-gap');
- const name=$('territory-name').value.trim()||a.name+' section '+(state.territories.filter(t=>t.allianceId===a.id).length+1);
- if(!bounds)return inform('Please use valid minimum and maximum X/Y coordinates.',true);
- const next=clone(state),pri=next.territories.filter(t=>t.allianceId===a.id).length;
- const saved={id:uid(),allianceId:a.id,name:name.slice(0,65),...bounds,gap,priority:pri};
- next.territories.push(saved);
- commit(next,'Added '+a.name+' territory '+name).then(ok=>{
+ const current=editingTerritoryId?state.territories.find(t=>t.id===editingTerritoryId):null;
+ if(editingTerritoryId&&!current)return inform('This saved territory is no longer available. Cancel editing before creating a new one.',true);
+ const name=$('territory-name').value.trim()||
+  (current?.name||a.name+' section '+(state.territories.filter(t=>t.allianceId===a.id).length+1));
+ if(!bounds||![0,1,2].includes(gap))return inform('Please use valid X/Y bounds and base spacing.',true);
+ const next=clone(state),saved=current?next.territories.find(t=>t.id===current.id):{
+  id:uid(),allianceId:a.id,priority:next.territories.filter(t=>t.allianceId===a.id).length
+ };
+ Object.assign(saved,{name:name.slice(0,65),...bounds,gap});
+ if(!current)next.territories.push(saved);
+ commit(next,(current?'Updated':'Added')+' '+nameFor(saved.allianceId)+' territory '+name).then(ok=>{
   if(ok){
-   drawArea=null;areaGesture=null;showTerritoryDraft();
+   drawArea=null;areaGesture=null;editingTerritoryId=null;showTerritoryDraft();
    selected={kind:'territory',id:saved.id};
    renderSelection();focusTerritory(saved,false);
   }
@@ -327,10 +349,13 @@ function renderSelection(){
   ['x1','x2','y1','y2'].map(k=>'<div class="field"><label>'+k.toUpperCase()+'</label><input id="edit-'+k+'" type="number" value="'+o[k]+'"></div>').join('')+
   '<div class="field wide"><label>Gap between bases</label><select id="edit-territory-gap">'+[0,1,2].map(n=>'<option value="'+n+'" '+(n===o.gap?'selected':'')+'>'+n+' cell'+(n===1?'':'s')+'</option>').join('')+'</select></div></div>'+
   '<p class="muted">Priority '+(o.priority+1)+' · Existing bases will not move when you edit this territory.</p>'+
-  '<div class="actions"><button id="save-selected" class="btn primary">Save territory changes</button><button id="focus-selected-territory" class="btn">Locate on map</button><button id="delete-selected" class="btn danger">Delete section</button></div>';
+  '<div class="actions"><button id="save-selected" class="btn primary">Save territory changes</button><button id="edit-territory-map" class="btn">Resize on map</button><button id="focus-selected-territory" class="btn">Locate on map</button><button id="delete-selected" class="btn danger">Delete section</button></div>';
  }
  $('save-selected').onclick=saveSelected;$('delete-selected').onclick=deleteSelected;
- if(selected.kind==='territory')$('focus-selected-territory').onclick=()=>focusTerritory(o);
+ if(selected.kind==='territory'){
+  $('focus-selected-territory').onclick=()=>focusTerritory(o);
+  $('edit-territory-map').onclick=()=>startEditingTerritoryOnMap(o.id);
+ }
 }
 function saveSelected(){
  if(!selected)return;
@@ -603,13 +628,13 @@ function chooseTerritoryAction(point,isTouch=false){
   {mode:'sw',x:t.x1,y:t.y1},{mode:'se',x:t.x2,y:t.y1}
  ];
  const local=mapToPixel(point.x,point.y,projection);
- const tolerance=isTouch?Math.max(2,23/view.scale):Math.max(1,13/view.scale);
+ const tolerancePx=isTouch?23:13;
  let best=null,min=Infinity;
  for(const c of corners){
   const dist=Math.hypot(local.x-mapToPixel(c.x,c.y,projection).x,local.y-mapToPixel(c.x,c.y,projection).y);
   if(dist<min){min=dist;best=c;}
  }
- if(min<=tolerance*view.scale)return {mode:best.mode};
+ if(min<=tolerancePx)return {mode:best.mode};
  if(point.x>=t.x1&&point.x<=t.x2&&point.y>=t.y1&&point.y<=t.y2)return {mode:'move'};
  return {mode:'new'};
 }
@@ -704,7 +729,10 @@ function attachCanvas(){
   if(tool==='territory'){
    const action=chooseTerritoryAction(initial,e.pointerType==='touch');
    areaGesture={mode:action.mode,initial,original:drawArea?{...drawArea}:null,previous:drawArea?{...drawArea}:null};
-   if(action.mode==='new')drawArea=territoryBoundsFromCorners(initial,initial);
+   if(action.mode==='new'){
+    drawArea=territoryBoundsFromCorners(initial,initial);
+    editingTerritoryId=null;
+   }
    showTerritoryDraft();
   }
   draw();
