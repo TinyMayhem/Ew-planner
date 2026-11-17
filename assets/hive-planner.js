@@ -1,6 +1,6 @@
 import {OBJECTS,rect,footprint,zoneRects,influenceRects,intersects,inspectPlacement,sectionFor,boundsOfState,occupiedBounds,proposeBases,contains} from './hive-geometry.js';
 
-const API='/api/r4-hive',app=document.getElementById('hive-app');
+const API='/r4-hive',app=document.getElementById('hive-app');
 const $=id=>document.getElementById(id);
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const number=id=>Number($(id)?.value);
