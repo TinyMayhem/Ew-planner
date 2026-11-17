@@ -17,6 +17,8 @@ import {GET as runDuelBackupCron} from '../lib/r4-duel-backup.mjs';
 
 const HEADERS={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
 export const validThp=value=>Number.isSafeInteger(value)&&value>=0;
+export const validSquadType=value=>value===null||['tank','air','missile'].includes(value);
+export const validSquadPower=value=>value===null||Number.isSafeInteger(value)&&value>=0;
 const json=(body,status=200)=>Response.json(body,{status,headers:HEADERS});
 const isoDate=v=>typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v)&&!Number.isNaN(Date.parse(v+'T00:00:00Z'))&&new Date(v+'T00:00:00Z').toISOString().slice(0,10)===v;
 const isMonday=v=>isoDate(v)&&new Date(v+'T00:00:00Z').getUTCDay()===1;
@@ -50,7 +52,8 @@ async function donationR4Conflict(source,slot,conductorId,vipId){
  if(!isTopDonationTrain(source,slot))return '';
  const [members,aliases]=await Promise.all([
   list('utw_stat_members',{select:'id,display_name',limit:'1000'}),
-  list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'})
+  list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'}),
+    list('utw_r4_member_squad_profiles',{select:'source_member_id,member_name,squad_type,squad_power,updated_at,updated_by',order:'member_name.asc',limit:'1000'})
  ]);
  const r4=await utwR4Membership(members,aliases);
  const offenders=members.filter(m=>r4.has(m.id)&&(m.id===conductorId||m.id===vipId));
@@ -125,7 +128,7 @@ export async function GET(request){
    if(actor?.role==='von')return json({error:'UTW R4 access required'},403);
    const at=q.get('date');
    if(!isoDate(at))return json({error:'Choose a valid THP snapshot date'},400);
-   const [records,latest,members,aliases]=await Promise.all([
+   const [records,latest,members,aliases,squads]=await Promise.all([
     list('utw_r4_member_thp_history',{
      select:'source_member_id,member_name,thp,recorded_on,entry_source,updated_at,updated_by',
      recorded_on:'eq.'+at,order:'member_name.asc',limit:'1000'
@@ -134,7 +137,7 @@ export async function GET(request){
     list('utw_stat_members',{select:'id,display_name',limit:'1000'}),
     list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'})
    ]);
-   if(![records,latest,members,aliases].every(Array.isArray))throw Error('Incomplete THP snapshot');
+   if(![records,latest,members,aliases,squads].every(Array.isArray))throw Error('Incomplete THP snapshot');
    const resolve=resolveNames(members,aliases),mapped=new Map(),conflicts=new Set(),unmatched=[];
    for(const r of latest){
     const deskId=resolve(r.member_name);
@@ -143,7 +146,7 @@ export async function GET(request){
     mapped.set(deskId,{member_id:deskId,source_member_id:r.source_member_id,name:r.member_name,thp:r.thp,recorded_on:r.recorded_on});
    }
    for(const id of conflicts)mapped.delete(id);
-   return json({date:at,records,latest,mapped:[...mapped.values()],unmatched,
+   return json({date:at,records,latest,squads,mapped:[...mapped.values()],unmatched,
     ambiguous:conflicts.size,
     explanation:'Latest THP for each member at or before date, not necessarily measured that day'});
   }
@@ -377,6 +380,33 @@ export async function POST(request){
   if(raw.length>150000)return json({error:'Request too large'},413);
   const body=JSON.parse(raw);
   switch(body.action){
+   case 'member_squad':{
+    const actor=await sessionUser(request);
+    if(!actor||actor.role==='von')return json({error:'UTW R4 access required'},403);
+    const id=body.source_member_id,n=name(body.member_name);
+    if(typeof id!=='string'||!/^[A-Za-z0-9_-]{1,100}$/.test(id)||
+      !n||n.length>100||/[\x00-\x1f\x7f]/.test(n))return json({error:'Choose a valid member'},400);
+    const squadType=body.squad_type===null?null:body.squad_type;
+    const squadPower=body.squad_power===null?null:body.squad_power;
+    if(!validSquadType(squadType)||!validSquadPower(squadPower))
+     return json({error:'Choose Tank, Air or Missile, and a valid optional squad power'},400);
+    if(squadType===null&&squadPower===null){
+     await del('utw_r4_member_squad_profiles',{source_member_id:'eq.'+id});
+     await recordAudit(request,'member_squad_clear',{source_member_id:id},false);
+     return json({ok:true,deleted:true,record:null});
+    }
+    const record={source_member_id:id,member_name:n,squad_type:squadType,
+     squad_power:squadPower,updated_at:new Date().toISOString(),
+     updated_by:String(actor.username||actor.display_name||'R4').slice(0,80)};
+    const saved=await db('utw_r4_member_squad_profiles?on_conflict=source_member_id',{
+     method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},
+     body:JSON.stringify([record])
+    });
+    if(!Array.isArray(saved)||saved.length!==1)throw Error('Squad details were not saved');
+    await recordAudit(request,'member_squad_save',{source_member_id:id,squad_type:squadType,
+      squad_power:squadPower},false);
+    return json({ok:true,record:saved[0]});
+   }
    case 'member_thp':{
     const actor=await sessionUser(request);
     if(actor?.role==='von')return json({error:'UTW R4 access required'},403);
