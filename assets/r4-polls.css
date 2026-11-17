@@ -3,3 +3,5 @@
 .poll-thumbnails img{height:210px;width:auto;max-width:170px;object-fit:contain;border:1px solid #d2c2a6;border-radius:8px;background:#eee;scroll-snap-align:start}
 .poll-report-embedded{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
 @media(max-width:700px){.poll-report-embedded{grid-template-columns:1fr}.poll-thumbnails img{height:170px}}
+
+.poll-remove-vote{font-size:11px!important;padding:5px 8px!important;margin-top:5px!important;border-color:#cba99b!important;color:#9a503c!important;min-height:28px!important}
