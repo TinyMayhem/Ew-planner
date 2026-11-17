@@ -24,7 +24,8 @@ export function authorized(request){
   if(expires<=now||expires>now+28800000)return false;
   return isEqual(Buffer.from(signature),Buffer.from(signed(expiry)));
 }
-function shell(body){return SHELL_HEAD+body+SHELL_TAIL}
+const SHORTCUT_CSS="\n.r4-shortcuts{display:grid;gap:9px;margin:17px 0 21px;min-width:0}\n.r4-shortcuts-label{font-size:11px;letter-spacing:.11em;font-weight:850;color:#5d7665;margin:10px 0 0;text-transform:uppercase}\n.r4-side .r4-shortcut{display:flex;gap:11px;align-items:center;min-width:0;width:100%;box-sizing:border-box;background:#1d6045;color:#fff9df;padding:13px 14px;border-radius:13px;border:1px solid #175239;box-shadow:0 3px 10px #0a281b18;text-decoration:none;white-space:normal;overflow-wrap:anywhere;font-weight:750;font-size:14px;line-height:1.35}\n.r4-side .r4-shortcut:hover,.r4-side .r4-shortcut:focus-visible{background:#287455;outline:2px solid #86c69d;outline-offset:2px}\n.r4-shortcut-icon{flex:0 0 24px;font-size:19px;line-height:1.1;text-align:center}\n.r4-shortcut-label{min-width:0;flex:1 1 auto}\n.r4-shortcut-arrow{flex:0 0 auto;font-size:19px;margin-left:auto}\n@media(max-width:380px){.r4-side .r4-shortcut{font-size:13px;padding:11px 10px;gap:8px}}\n";
+function shell(body){return SHELL_HEAD.replace('</style>',SHORTCUT_CSS+'</style>')+body+SHELL_TAIL}
 function login(error=''){return shell(LOGIN_HTML.replace('__ERROR__',error).replace('</section></main>','<p><a href="/r4-planner?setup=1">Set up individual R4 logins</a></p></section></main>'))}
 const duelFor=(alliance)=>{
  const name=alliance==='von'?'VON':'UTW';
@@ -33,9 +34,26 @@ const duelFor=(alliance)=>{
 const plannerFor=(alliance,role)=>{
   const isVon=alliance==='von';
   let dashboard=isVon?DASHBOARD_HTML.replaceAll('UTW','VON'):DASHBOARD_HTML;
-  if(!isVon)dashboard=dashboard.replace('<p style="margin-top:10px"><a class="r4-btn primary" href="/r4-reports">','<p style="margin-top:10px"><a class="r4-btn primary" href="/r4-stats?thp=1">🛡 Member THP Tracker →</a></p><p style="margin-top:10px"><a class="r4-btn primary" href="/r4-reports">');
-  if(!isVon)dashboard=dashboard.replace('<p style="margin-top:12px"><a class="r4-btn primary" href="/r4-planner?duel=1">','<p style="margin-top:10px"><a class="r4-btn primary" href="/r4-hive">🗺 Hive &amp; Territory Planner →</a></p><p style="margin-top:12px"><a class="r4-btn primary" href="/r4-planner?duel=1">');
-  if(isVon)dashboard=dashboard.replace(/<p style="margin-top:16px"><a class="r4-btn primary" href="\/r4-stats">[\s\S]*?<\/a><\/p>/,'').replace(/<p style="margin-top:10px"><a class="r4-btn primary" href="\/r4-reports">[\s\S]*?<\/a><\/p>/,'').replace(/<p style="margin-top:10px"><a class="r4-btn primary" href="\/r4-nicknames">[\s\S]*?<\/a><\/p>/,'');
+  // Replace the old inline pill links with full-width, responsive navigation cards.
+  const oldStart=dashboard.indexOf('<p style="margin-top:16px"><a class="r4-btn primary" href="/r4-stats">');
+  const oldEnd=dashboard.indexOf('<div class="r4-note">',oldStart);
+  if(oldStart<0||oldEnd<0)throw Error('R4 shortcut block not found');
+  const shortcut=(icon,label,href)=>'<a class="r4-shortcut" href="'+href+'"><span class="r4-shortcut-icon" aria-hidden="true">'+icon+'</span><span class="r4-shortcut-label">'+label+'</span><span class="r4-shortcut-arrow" aria-hidden="true">→</span></a>';
+  const memberTools=[
+   ['📊','Member Stats & Train Desk','/r4-stats'],
+   ['🛡','Member THP Tracker','/r4-stats?thp=1'],
+   ['📋','Member Performance Reports','/r4-reports'],
+   ['🔄','This Week’s Name Changes','/r4-nicknames#this-week'],
+   ['✏️','Nickname Manager','/r4-nicknames'],
+   ['📦','Archived Members','/r4-nicknames#archived-members']
+  ];
+  const seasonTools=[['🗺','Hive & Territory Planner','/r4-hive'],['⚔','Alliance Duel','/r4-planner?duel=1']];
+  const menu=isVon?'<nav class="r4-shortcuts" aria-label="VON tools">'+shortcut('⚔','Alliance Duel','/r4-planner?duel=1')+'</nav>':
+   '<nav class="r4-shortcuts" aria-label="R4 tools"><p class="r4-shortcuts-label">MEMBER OPERATIONS</p>'+
+   memberTools.map(row=>shortcut(...row)).join('')+
+   '<p class="r4-shortcuts-label">SEASON 6 TOOLS</p>'+
+   seasonTools.map(row=>shortcut(...row)).join('')+'</nav>';
+  dashboard=dashboard.slice(0,oldStart)+menu+dashboard.slice(oldEnd);
   const switcher=role==='admin'
    ?'<div class="r4-note"><strong>Alliance workspace</strong><p><a class="r4-btn'+(isVon?'':' primary')+'" href="/r4-planner?alliance=utw">UTW checklist</a> <a class="r4-btn'+(isVon?' primary':'')+'" href="/r4-planner?alliance=von">VON checklist</a></p></div>'
    :'<p class="r4-brow">'+(isVon?'VON':'UTW')+' operations checklist</p>';
