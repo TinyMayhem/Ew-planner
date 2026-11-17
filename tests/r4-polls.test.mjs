@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 import {parsePollOcrText,parsePollCsv,cleanPollName} from '../assets/r4-poll-parser.mjs';
-import {GET,POST} from '../api/r4-polls.mjs';
+import {GET,POST} from '../lib/r4-polls-handler.mjs';
 const members=[
  {id:'1',display_name:'Texas Bandit'},
  {id:'2',display_name:'Sorree Crank Meister'},
@@ -52,7 +52,8 @@ test('Poll UI, API, reports and migration are integrated',()=>{
  const routes=JSON.parse(readFileSync('vercel.json','utf8'));
  const sql=readFileSync('supabase/r4-poll-participation.sql','utf8');
  const client=readFileSync('assets/r4-polls.js','utf8');
- assert.ok(routes.rewrites.some(x=>x.source==='/r4-polls'));
+ assert.ok(routes.rewrites.some(x=>x.source==='/r4-polls'&&x.destination.includes('view=polls')));
+ assert.ok(routes.rewrites.some(x=>x.source==='/api/r4-polls'&&x.destination.includes('view=polls_api')));
  for(const field of ['poll-images','poll-csv','poll-manual-save','poll-finalize','poll-missing','poll-report-no'])
   assert.ok(page.includes(field),field);
  assert.ok(report.includes('embedded-poll-no'));
@@ -60,7 +61,7 @@ test('Poll UI, API, reports and migration are integrated',()=>{
  assert.match(sql,/utw_poll_change/);
  assert.match(sql,/revision=revision\+1/);
  assert.match(client,/parsePollOcrText/);
- for(const path of ['assets/r4-polls.js','assets/r4-poll-parser.mjs','assets/r4-poll-reports-embed.js','api/r4-polls.mjs']){
+ for(const path of ['assets/r4-polls.js','assets/r4-poll-parser.mjs','assets/r4-poll-reports-embed.js','lib/r4-polls-handler.mjs']){
   const result=spawnSync(process.execPath,['--check',path],{encoding:'utf8'});
   assert.equal(result.status,0,result.stderr);
  }
