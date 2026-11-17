@@ -40,6 +40,18 @@ export function mapToPixel(x,y,{x:cx,y:cy,width,height,scale}){
 export function pixelToMap(px,py,{x:cx,y:cy,width,height,scale}){
  return {x:cx+(px-width/2)/scale,y:cy-(py-height/2)/scale};
 }
+// Two-finger gesture math. Keep the map coordinate below the starting pinch
+// midpoint underneath the moving midpoint while changing zoom and position.
+export function pinchCamera(startView,startingMidpoint,currentMidpoint,zoomRatio,width,height){
+ const safeRatio=Number.isFinite(zoomRatio)&&zoomRatio>0?zoomRatio:1;
+ const scale=Math.min(70,Math.max(1,startView.scale*safeRatio));
+ const anchor=pixelToMap(startingMidpoint.x,startingMidpoint.y,{...startView,width,height});
+ return {
+  x:anchor.x-(currentMidpoint.x-width/2)/scale,
+  y:anchor.y+(currentMidpoint.y-height/2)/scale,
+  scale
+ };
+}
 export function screenFootprint(r,view){
  const nw=mapToPixel(r.left-0.5,r.bottom+0.5,view);
  return [nw.x,nw.y,(r.right-r.left+1)*view.scale,(r.bottom-r.top+1)*view.scale];

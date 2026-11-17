@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove} from '../assets/hive-geometry.js';
+import {OBJECTS,rect,footprint,zoneRects,inMud,inspectPlacement,proposeBases,sectionFor,occupiedBounds,cityLabel,mapToPixel,pixelToMap,screenFootprint,inspectBaseMove,pinchCamera} from '../assets/hive-geometry.js';
 import {GET as hiveGet,POST as hivePost,validateState} from '../lib/r4-hive-handler.mjs';
 const make=()=>({center:{x:499,y:499},capitolPlaced:true,calibration:{evenX:'negative',evenY:'negative',verified:false},alliances:[{id:'utw',name:'UTW',color:'#3478c0'}],territories:[],obstacles:[],bases:[],settings:{spacing:1,showNames:'auto'}});
 const base=(id,x,y)=>({id,type:'base',x,y,allianceId:'utw',memberName:'',locked:false,sectionOverride:null});
@@ -167,4 +167,34 @@ test('Long-press move into mud requires the same warning as typed coordinate mov
  assert.equal(result.mud,6);
  assert.ok(result.warnings.some(w=>w.includes('6 of 9')));
  assert.equal(state.bases[0].y,551);
+});
+
+test('Two-finger sliding pans in screen direction without changing zoom',()=>{
+ const camera={x:499,y:499,scale:10},w=800,h=600;
+ const moved=pinchCamera(camera,{x:400,y:300},{x:460,y:330},1,w,h);
+ assert.equal(moved.scale,10);
+ assert.equal(moved.x,493,'sliding right reveals smaller X at center');
+ assert.equal(moved.y,502,'sliding down reveals higher Y at center');
+});
+test('Pinch out zooms in and pinch in zooms out around finger midpoint',()=>{
+ const camera={x:499,y:499,scale:10},w=800,h=600;
+ assert.equal(pinchCamera(camera,{x:400,y:300},{x:400,y:300},2,w,h).scale,20);
+ assert.equal(pinchCamera(camera,{x:400,y:300},{x:400,y:300},0.5,w,h).scale,5);
+});
+test('Combined two-finger pan and zoom pins original map location under moving midpoint',()=>{
+ const camera={x:499,y:499,scale:9},w=800,h=600;
+ const start={x:260,y:420},current={x:460,y:355};
+ const anchor=pixelToMap(start.x,start.y,{...camera,width:w,height:h});
+ const result=pinchCamera(camera,start,current,1.8,w,h);
+ const projected=mapToPixel(anchor.x,anchor.y,{...result,width:w,height:h});
+ assert.ok(Math.abs(projected.x-current.x)<1e-9);
+ assert.ok(Math.abs(projected.y-current.y)<1e-9);
+});
+test('Pinch scale respects map zoom limits, keeping finite coordinates',()=>{
+ const camera={x:499,y:499,scale:10},mid={x:600,y:200},w=800,h=600;
+ for(const ratio of [0,0.00001,0.5,1,2,100000,NaN]){
+  const r=pinchCamera(camera,mid,mid,ratio,w,h);
+  assert.ok(r.scale>=1&&r.scale<=70);
+  assert.ok(Number.isFinite(r.x)&&Number.isFinite(r.y));
+ }
 });
