@@ -119,13 +119,32 @@ export function proposeBases(state,{allianceId,region,count=20,gap=1,strategy='b
  }else{
   for(let y=minY+1;y<=maxY-1;y++)for(let x=minX+1;x<=maxX-1;x++)add(x,y);
  }
- if(strategy==='boundary')candidates.sort((a,b)=>a.near-b.near||a.b.y-b.b.y||a.b.x-b.b.x);
- else if(packing==='flex')candidates.sort((a,b)=>(a.b.x%stride)+(a.b.y%stride)-(b.b.x%stride)-(b.b.y%stride)||a.b.y-b.b.y||a.b.x-b.b.x);
- for(const {b} of candidates){
-  if(temp.length>=Math.min(250,count))break;
-  if(inspectPlacement(b,state,{spacing:gap,extra:temp}).hard.length)continue;
-  if(temp.some(p=>Math.abs(p.x-b.x)<3+gap&&Math.abs(p.y-b.y)<3+gap))continue;
-  temp.push(b);
+ if(strategy==='boundary'){
+  candidates.sort((a,b)=>a.near-b.near||a.b.y-b.b.y||a.b.x-b.b.x);
+  for(const {b} of candidates){
+   if(temp.length>=Math.min(250,count))break;
+   if(temp.some(p=>Math.abs(p.x-b.x)<3+gap&&Math.abs(p.y-b.y)<3+gap))continue;
+   temp.push(b);
+  }
+ }else{
+  // Coverage: farthest-first selection spreads the selected number of bases
+  // across the whole rectangle instead of filling only the top rows.
+  // Candidate placement and obstacle safety have already been validated above.
+  const available=candidates.map(x=>x.b);
+  const target=Math.min(250,count);
+  while(temp.length<target&&available.length){
+   let best=-1,bestScore=-Infinity;
+   for(let i=0;i<available.length;i++){
+    const p=available[i];
+    if(temp.some(b=>Math.abs(p.x-b.x)<3+gap&&Math.abs(p.y-b.y)<3+gap))continue;
+    const score=temp.length
+     ?Math.min(...temp.map(b=>(p.x-b.x)**2+(p.y-b.y)**2))
+     :((p.x-minX)**2+(p.y-minY)**2)*-1;
+    if(score>bestScore){best=i;bestScore=score;}
+   }
+   if(best<0)break;
+   temp.push(available.splice(best,1)[0]);
+  }
  }
  return temp;
 }
