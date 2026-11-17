@@ -72,7 +72,7 @@ async function storage(path,options={}){const {url,secret}=sb();const res=await 
 async function getData(week,season,trainStage){
  const end=dateAdd(week,6),trainRange=stageRange(trainStage);
  const [members,aliases,allImports,ds,exceptions,awards,trainLegacy]=await Promise.all([
-  list('utw_stat_members',{select:'id,display_name,created_at',order:'display_name.asc',limit:'1000'}),
+  list('utw_stat_members',{select:'id,display_name,created_at,archived_at',order:'display_name.asc',limit:'1000'}),
   list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'}),
   list('utw_stat_imports',{select:'id,metric,period,filename,row_count,created_at,season_id',season_id:'eq.'+season,period:'gte.'+week,order:'created_at.desc',limit:'500'}),
   list('utw_stat_ds',{select:'*',season_id:'eq.'+season,event_date:'gte.'+week,order:'event_date.desc',limit:'200'}),
@@ -175,13 +175,17 @@ export async function GET(request){
    return json({from:from||null,to:to||null,season:season||'all',...buildMemberPerformance(raw,settings)});
   }
   if(q.get('nicknames')==='1'){
-   const [members,aliases,trainLegacy]=await Promise.all([
-    list('utw_stat_members',{select:'id,display_name',order:'display_name.asc',limit:'1000'}),
+   const monday=new Date();monday.setUTCHours(0,0,0,0);
+   monday.setUTCDate(monday.getUTCDate()-(monday.getUTCDay()+6)%7);
+   const weekStart=monday.toISOString();
+   const [members,aliases,trainLegacy,weeklyChanges]=await Promise.all([
+    list('utw_stat_members',{select:'id,display_name,archived_at',order:'display_name.asc',limit:'1000'}),
     list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'5000'}),
-    list('utw_stat_train_legacy',{select:'train_date,driver_name,vip_name',order:'train_date.desc',limit:'1500'})
+    list('utw_stat_train_legacy',{select:'train_date,driver_name,vip_name',order:'train_date.desc',limit:'1500'}),
+    list('utw_stat_audit',{select:'action,details,created_at',action:'in.(alias,set_display_name)',created_at:'gte.'+weekStart,order:'created_at.desc',limit:'500'})
    ]);
-   if(![members,aliases,trainLegacy].every(Array.isArray))throw Error('Member nickname list unavailable');
-   return json({members,aliases,trainLegacy});
+   if(![members,aliases,trainLegacy,weeklyChanges].every(Array.isArray))throw Error('Member nickname list unavailable');
+   return json({members,aliases,trainLegacy,weeklyChanges,weekStart});
   }
   if(q.get('scan_recent')==='1'){
    const [imports,ds]=await Promise.all([
@@ -203,7 +207,7 @@ export async function GET(request){
       (!['never','vs','donations','ds','r4','manual'].includes(mode)||!['weekly','stage'].includes(vipMode))||
       (selectedSeason&&!/^[a-z0-9-]{2,30}$/.test(selectedSeason)))return json({error:'Choose a valid train date and category'},400);
    const [members,aliases,legacy,awards,exceptions]=await Promise.all([
-    list('utw_stat_members',{select:'id,display_name',order:'display_name.asc',limit:'1000'}),
+    list('utw_stat_members',{select:'id,display_name,archived_at',order:'display_name.asc',limit:'1000'}),
     list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'}),
     list('utw_stat_train_legacy',{select:'train_date,driver_name,vip_name,source,selection_label',order:'train_date.desc',limit:'1500'}),
     list('utw_stat_awards',{select:'train_date,member_id,vip_member_id,source,slot',order:'train_date.desc',limit:'1500'}),
@@ -404,7 +408,23 @@ export async function POST(request){
     return json({ok:true,records:saved,record:saved[0]});
    }
    case 'import':return await importCsv(body,request);
-   case 'alias':{
+   case 'archive_member':
+    case 'restore_member':{
+     if(!uuid(body.member_id))return json({error:'Choose a valid member'},400);
+     const archive=body.action==='archive_member';
+     const found=await list('utw_stat_members',{select:'id,display_name,archived_at',id:'eq.'+body.member_id,limit:'1'});
+     if(found.length!==1)return json({error:'Member not found'},404);
+     if(Boolean(found[0].archived_at)===archive)return json({ok:true,alreadySet:true,archived_at:found[0].archived_at});
+     const saved=await db('utw_stat_members?'+urlParams({id:'eq.'+body.member_id,
+      archived_at:archive?'is.null':'not.is.null'}),{
+      method:'PATCH',headers:{Prefer:'return=representation'},
+      body:JSON.stringify({archived_at:archive?new Date().toISOString():null})
+     });
+     if(!Array.isArray(saved)||saved.length!==1)return json({error:'Member status changed. Refresh and try again.'},409);
+     await recordAudit(request,body.action,{member_id:body.member_id,display_name:found[0].display_name,previous_archived_at:found[0].archived_at},false);
+     return json({ok:true,archived_at:saved[0].archived_at});
+    }
+    case 'alias':{
     const alias=name(body.alias),memberId=body.member_id;
     if(alias.length<1||alias.length>60||!uuid(memberId))return json({error:'Enter a valid nickname and member'},400);
     const [member,claimed]=await Promise.all([
