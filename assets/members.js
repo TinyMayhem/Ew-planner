@@ -120,6 +120,8 @@ async function refresh(){
   if([...season.options].some(option=>option.value===oldSeason))season.value=oldSeason;
   draw();
  }catch(error){
+  $('memberGate').hidden=false;
+  $('memberContent').hidden=true;
   $('memberMessage').textContent=error.message;
   $('trainStatus').textContent=error.message;
  }
