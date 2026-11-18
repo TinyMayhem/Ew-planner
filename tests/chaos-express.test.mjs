@@ -24,7 +24,10 @@ const knownLayouts=[
  [['tiny','noosh'],['spuddy','wakka'],['savvy','ghostlyy'],['rylis','hippie']],
  [['savvy','wakka'],['sorree','chibi'],['spuddy','rylis'],['hippie','noosh'],['ube','ghostlyy']],
  [['tiny','mo'],['baba','ganoosh'],['rylis','savvy'],['sorree','chibi'],['ube','wakka']],
- [['ghostlyy','ube'],['tiny','chibi'],['savvy','sorree'],['spuddy','rylis'],['noosh','hippie']]
+ [['ghostlyy','ube'],['tiny','chibi'],['savvy','sorree'],['spuddy','rylis'],['noosh','hippie']],
+ [["circuit","baba"],["tiny","mo"],["noosh","hippie"],["chibi","ube"],["ghostlyy","spuddy"],["wakka","rylis"]],
+ [["circuit","noosh"],["baba","spuddy"],["tiny","chibi"],["savvy","ghostlyy"],["sorree","wakka"],["ube","rylis"]],
+ [["circuit","ghostlyy"],["tiny","mo"],["baba","noosh"],["hippie","savvy"],["spuddy","rylis"],["sorree","chibi"]]
 ];
 
 function satisfies(rule,layout){
@@ -43,9 +46,9 @@ function satisfies(rule,layout){
  return false;
 }
 
-test('chaos express grows from 2 carts to 5 and keeps exactly two seats each',()=>{
- assert.equal(levels.length,12);
- assert.equal(people.length,14);
+test('chaos express grows from 2 carts to 6 and keeps exactly two seats each',()=>{
+ assert.equal(levels.length,15);
+ assert.equal(people.length,15);
  for(let i=0;i<levels.length;i++){
   const count=4+2*Math.floor(i/3);
   assert.equal(levels[i].riders.length,count,'Level '+(i+1)+' passenger count');
@@ -79,6 +82,15 @@ test('every level has at least one verified all-rules-satisfied arrangement',()=
   assert.ok(layout.every(cart=>cart.length===2),'Two seats each at level '+(i+1));
   for(const rule of level.rules)assert.ok(satisfies(rule,layout),'Unsolvable rule for '+rule.person+' at level '+(i+1));
  }
+});
+
+test('Circuit is aviation-focused and forensic, while Baba rejects McDonald’s',()=>{
+ const circuit=people.find(p=>p.id==='circuit'),baba=people.find(p=>p.id==='baba');
+ assert.ok(circuit&&baba);
+ assert.ok(circuit.quotes.some(q=>/aircraft|aviation|flight|flew|manifest/i.test(q)));
+ assert.ok(circuit.quotes.some(q=>/reconstruct|manifest|generations/i.test(q)));
+ assert.ok(baba.quotes.every(q=>/McDonald|arches/i.test(q)));
+ assert.ok(levels.slice(12).every(l=>l.riders.includes('circuit')));
 });
 
 test('board rendering and result counts scale with current level',()=>{
