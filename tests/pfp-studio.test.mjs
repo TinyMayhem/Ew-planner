@@ -48,3 +48,14 @@ test('image generation fails closed without explicit enablement',async()=>{
  assert.equal(result.status,503);
  assert.equal((await result.json()).error.includes('not enabled'),true);
 });
+
+test('preview never presents a canvas mock-up as an AI-generated image',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const browser=await readFile(new URL('../assets/pfp-studio.js',import.meta.url),'utf8');
+ const html=await readFile(new URL('../members.html',import.meta.url),'utf8');
+ assert.equal(browser.includes('demoComposite'),false);
+ assert.equal(browser.includes('canvas.toBlob'),false);
+ assert.match(html,/AI generation not connected/);
+ assert.match(html,/Copy instructions for ChatGPT/);
+ assert.match(browser,/elements.button.disabled=!config.ready/);
+});
