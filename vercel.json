@@ -29,6 +29,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/arcade",
+      "destination": "/api/buddies?arcade=1"
+    },
+    {
       "source": "/r4-hive",
       "destination": "/api/r4-planner?view=hive"
     },
