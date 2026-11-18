@@ -45,7 +45,7 @@ function promptText(){
  let scene='';
  if(theme==='squad'){
   const units={tank:'the supplied simplified light-cyan tank icon, with its upper turret and lower body with three circular holes',aircraft:'the supplied simplified light-cyan diagonal airplane icon',missile:'the supplied simplified light-cyan missile-launcher truck icon with angled launcher and cutout window'};
-  const poses={surprise:'interacting playfully with',riding:'riding',clinging:'clinging to',popping:'popping out from behind'};
+  const poses={surprise:'interacting playfully with',riding:'riding',clinging:'clinging to',popping:'popping out from behind',hugging:'hugging',lounging:'lounging on'};
   scene='Create a dynamic square profile picture of the character '+(poses[$('pfpPose').value]||poses.surprise)+' '+(units[$('pfpSquad').value]||units.tank)+'. Retain the flat pale-cyan icon shape on its vivid cyan-to-blue background. Do not replace the icon with a realistic vehicle, redesign its silhouette, add invented game logos, or force a chibi style. The character can drape over, hug, peek behind or perch on the icon without hiding the symbol.';
  }else if(theme==='starter'){
   scene='Create a character-centered starter-pack composition with favourite things: '+($('pfpFavourites').value.trim()||'[Add favourite things]')+'. Make the items recognizable.';
