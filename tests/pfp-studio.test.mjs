@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {THEMES,buildPrompt,cleanFavourites,choice,imageKind} from '../lib/pfp-studio.mjs';
-import {GET,POST} from '../api/pfp-studio.mjs';
+import {GET,POST} from '../lib/pfp-studio-handler.mjs';
 
 test('three beta themes have distinct identities',()=>{
  assert.deepEqual(THEMES.map(t=>t.id),['squad','starter','royalty']);
