@@ -6,13 +6,10 @@
   "outputDirectory": ".",
   "functions": {
     "api/buddies.mjs": {
-      "maxDuration": 30
+      "maxDuration": 120
     },
     "api/builds.mjs": {
       "maxDuration": 30
-    },
-    "api/pfp-studio.mjs": {
-      "maxDuration": 120
     }
   },
   "headers": [
@@ -31,6 +28,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/api/pfp-studio",
+      "destination": "/api/buddies?pfp=1"
+    },
     {
       "source": "/r4-hive",
       "destination": "/api/r4-planner?view=hive"
