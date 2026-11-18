@@ -1,0 +1,22 @@
+.pfp-section{position:relative;overflow:hidden;background:linear-gradient(135deg,#fff9ec,#f4ead8)}
+.pfp-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.pfp-heading h2{margin:0}.pfp-status{display:inline-block;border:1px solid #c8b383;background:#fcf0cf;border-radius:30px;padding:6px 12px;font-size:12px;font-weight:750}
+.pfp-intro{margin:10px 0 20px;color:#685e4d}
+.pfp-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:22px;align-items:start}
+.pfp-workshop{display:grid;gap:14px}.pfp-workshop .field{margin:0}.pfp-workshop select,.pfp-workshop textarea{width:100%;padding:10px;border:1px solid #c8ae8b;border-radius:9px;background:#fffdf5;min-height:44px;font:inherit}
+.pfp-workshop textarea{min-height:80px;resize:vertical}
+.pfp-workshop fieldset{margin:0}.pfp-workshop .checks{gap:14px}
+.pfp-upload{border:2px dashed #b5a47d;border-radius:14px;background:#fff8e7;padding:16px}
+.pfp-upload input{width:100%;margin-top:10px;max-width:100%}
+.pfp-helper{font-size:12px;color:#716657;line-height:1.5}
+.pfp-output{background:#183b2d;border:1px solid #254b3a;border-radius:16px;padding:16px;color:#fff2cc;text-align:center}
+.pfp-output h3{font-size:19px;margin:0 0 12px;color:#f7d9a0}
+.pfp-artboard{width:100%;max-width:440px;aspect-ratio:1;display:grid;place-items:center;overflow:hidden;background:linear-gradient(140deg,#527d78,#253d53);border:2px solid #f3d9a2;border-radius:14px;margin:0 auto}
+.pfp-artboard img{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain}
+.pfp-empty{padding:22px;color:#e8dbc8;font-size:14px}
+.pfp-result-buttons{display:flex;flex-wrap:wrap;justify-content:center;gap:9px;margin-top:15px}
+.pfp-result-buttons .btn{flex:1}
+.pfp-message{min-height:22px;margin:0;color:#f8dfaf;font-size:13px}
+.pfp-privacy{margin-top:15px;font-size:12px;color:#786956}
+.pfp-small-cap{color:#745d35;font-size:12px;font-weight:750;text-transform:uppercase;letter-spacing:.11em}
+@media(max-width:770px){.pfp-grid{grid-template-columns:1fr}.pfp-output{max-width:550px;margin:auto;width:100%}}
