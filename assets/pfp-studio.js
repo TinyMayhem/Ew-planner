@@ -52,7 +52,7 @@ function promptText(){
  }else if(theme==='royalty'){
   scene='Create a fantasy royalty portrait of the character as a '+$('pfpRole').value+'. Rich forest green and warm gold accents.';
  }
- return 'Use my uploaded image as the character reference. Preserve the character’s recognisable face, skin tone, hairstyle, key accessories and identity. '+style+' '+scene+' '+clothing+' Square 1:1 Discord profile picture; keep the character clearly visible, avoid unwanted frames, text and watermarks.';
+ return 'Use my uploaded image as the character reference. Preserve the character’s recognisable face, skin tone, hairstyle, key accessories and identity. If the image is a character reference sheet, create ONE newly posed character in ONE scene. Do NOT reproduce the turnaround sheet, a collage, expression samples or an image grid. '+style+' '+scene+' '+clothing+' Square 1:1 Discord profile picture; keep the character clearly visible, avoid unwanted frames, text and watermarks.';
 }
 function updatePrompt(){elements.prompt.value=promptText();}
 function updateSymbolReference(){
