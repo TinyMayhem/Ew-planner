@@ -2,12 +2,12 @@ import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv} from
 import {archivedWeeks,vsWeekSlots,vsLeaderboard,vsMissingDaily,weekOf,scoreFlag} from './r4-vs-archive.mjs';
 import {stageForDate,stageRange,trainWarnings,isR4Train,addDays as trainAddDays} from './r4-train-rules.mjs';
 import {trainLabelForDate} from './r4-train-schedule.mjs';
-import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=auto90-v1-20261106';
+import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=ds-teams-v1-20261117';
 import {initConductorSearch} from './r4-conductor-search.mjs';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
-const state={data:null,week:'',season:'post-s5',trainStage:15,archiveImports:[],csvQueue:[],candidates:[]};
+const state={data:null,week:'',season:'post-s5',trainStage:15,archiveImports:[],csvQueue:[],candidates:[],dsTeamResults:null};
 let csvBusy=false,nextCsvId=0,conductorSearch=null;
 const text=(tag,content,cls)=>{const el=document.createElement(tag);if(content!==undefined&&content!==null)el.textContent=String(content);if(cls)el.className=cls;return el};
 const dateAdd=(s,days)=>new Date(Date.parse(s+'T00:00:00Z')+days*86400000).toISOString().slice(0,10);
@@ -270,7 +270,7 @@ function directory(){
  if(!filtered.length)root.append(elEmpty('No matching members.'));
 }
 function memberFields(){
- for(const id of ['merge-from','merge-to','alias-member','ds-first','ds-second','ds-third','train-member','train-vip','exception-member'])opt(id,id==='ds-second'||id==='ds-third'||id==='train-member'||id==='train-vip');
+ for(const id of ['merge-from','merge-to','alias-member','ds-first','ds-second','ds-third','ds-manual-member','train-member','train-vip','exception-member'])opt(id,id==='ds-second'||id==='ds-third'||id==='ds-manual-member'||id==='train-member'||id==='train-vip');
  directory();
 }
 function dsHistory(){
@@ -282,6 +282,94 @@ function dsHistory(){
   const remove=text('button','Delete DS record','stat-button');remove.type='button';remove.addEventListener('click',()=>{if(confirm('Remove Desert Storm result from '+d.event_date+'? The owner can undo this.'))action(()=>post({action:'delete_ds',id:d.id}),'DS result removed and audited.')});card.append(remove);
   const a=text('a','Open original screenshot');a.href='/api/r4-stats?image='+encodeURIComponent(d.id);a.target='_blank';a.rel='noopener';const image=document.createElement('img');image.src=a.href;image.alt='DS evidence screenshot';image.loading='lazy';image.className='stat-evidence';a.prepend(image);card.append(a);root.append(card);
  }
+}
+let dsBoardSequence=0;
+async function dsTeamBoards(){
+ const root=$('ds-team-boards');if(!root||!state.data)return;
+ const date=$('ds-date').value,seq=++dsBoardSequence;
+ if(!validDate(date)){root.replaceChildren(elEmpty('Select a valid DS date.'));return}
+ root.replaceChildren(text('p','Loading DS Team A and Team B…','stat-muted'));
+ try{
+  const q=new URLSearchParams({ds_teams:'1',date,season:state.season});
+  const r=await fetch('/api/r4-stats?'+q,{credentials:'same-origin',cache:'no-store'});
+  const data=await r.json();if(seq!==dsBoardSequence)return;
+  if(!r.ok)throw Error(data.error||'Team standings unavailable');
+  root.replaceChildren();state.dsTeamResults=data;
+  for(const team of ['a','b']){
+   const saved=(data.teams||[]).find(x=>x.team===team);
+   const card=text('article',null,'stat-card ds-team-card');
+   card.append(text('h3','Team '+team.toUpperCase()+' · '+(saved?.rows?.length||0)+' scored members'));
+   if(saved){
+    card.append(text('p','Updated by '+saved.updated_by+' · Revision '+saved.revision,'stat-muted'));
+    const ranked=[...saved.rows].sort((a,b)=>Number(b.points)-Number(a.points));
+    for(const [i,v] of ranked.slice(0,30).entries()){
+     const row=text('div',null,'stat-row');
+     row.append(text('strong','#'+(i+1)+' '+memberName(v.member_id)),text('span',fmt(v.points)+' pts','stat-muted'));
+     card.append(row);
+    }
+    if(ranked.length>30)card.append(text('p','Showing first 30 of '+ranked.length+'.','stat-muted'));
+   }else card.append(text('p','No reviewed scoreboard uploaded for this team and date.','stat-muted'));
+   if(saved){
+    const download=text('button','Download Team '+team.toUpperCase()+' CSV','stat-button');
+    download.type='button';
+    download.onclick=()=>{
+     const csv=[['member_name','points'],...[...saved.rows].sort((a,b)=>Number(b.points)-Number(a.points))
+      .map(x=>[memberName(x.member_id),x.points])]
+      .map(row=>row.map(value=>'"'+String(value).replaceAll('"','""')+'"').join(',')).join('\r\n');
+     const url=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
+     const link=document.createElement('a');link.href=url;link.download='utw-ds-team-'+team+'-'+saved.event_date+'.csv';
+     document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+    };
+    card.append(download);
+    if(saved.rows?.length){
+     const clear=text('button','Clear Team '+team.toUpperCase()+' results','stat-button');
+     clear.type='button';clear.onclick=async()=>{
+      if(!confirm('Clear all DS Team '+team.toUpperCase()+' scores for '+date+'? This keeps the audit history and does not alter the other team.'))return;
+      try{
+       await post({action:'ds_team_clear',season_id:state.season,event_date:date,team,revision:saved.revision});
+       await dsTeamBoards();void candidates();
+       notice('Team '+team.toUpperCase()+' scores cleared. Historical edits remain in the audit log.');
+      }catch(e){notice(e.message,true)}
+     };
+     card.append(clear);
+    }
+   }
+   const button=text('button','Upload Team '+team.toUpperCase()+' screenshots / CSV','stat-button primary');
+   button.type='button';button.onclick=()=>openDsTeamScanner(team);card.append(button);root.append(card);
+  }
+  if(data.changes?.length)root.append(text('p','Recent edits: '+data.changes.slice(0,5).map(x=>'Team '+x.team.toUpperCase()+' '+x.action+' by '+x.actor).join(' · '),'stat-muted'));
+ }catch(e){if(seq===dsBoardSequence)root.replaceChildren(elEmpty(e.message))}
+}
+const parseDsScore=raw=>{
+ const match=String(raw||'').trim().replaceAll(',','').replace(/\s+/g,'').match(/^(\d+(?:\.\d+)?)([kmb])?$/i);
+ if(!match)return null;
+ const n=Number(match[1])*({k:1e3,m:1e6,b:1e9}[String(match[2]||'').toLowerCase()]||1);
+ return Number.isSafeInteger(n)&&n>=0?n:null;
+};
+async function saveManualDsTeam(){
+ const date=$('ds-date').value,team=$('ds-manual-team').value,id=$('ds-manual-member').value;
+ const points=parseDsScore($('ds-manual-points').value);
+ if(!validDate(date)||!id||points===null){notice('Choose a DS date, member and valid score (e.g. 12.5M).',true);return}
+ const m=byId(id);if(!m){notice('Member not found.',true);return}
+ try{
+  const q=new URLSearchParams({ds_teams:'1',date,season:state.season});
+  const response=await fetch('/api/r4-stats?'+q,{credentials:'same-origin',cache:'no-store'});
+  const latest=await response.json();
+  if(!response.ok)throw Error(latest.error||'Could not read current DS team');
+  const current=(latest.teams||[]).find(x=>x.team===team);
+  await post({action:'ds_team',season_id:state.season,event_date:date,team,
+   mode:'append',revision:current?.revision??0,rows:[{name:m.display_name,points}]});
+  $('ds-manual-points').value='';
+  await dsTeamBoards();void candidates();
+  notice('Saved '+m.display_name+' on DS Team '+team.toUpperCase()+' with '+fmt(points)+' points.');
+ }catch(e){notice(e.message,true)}
+}
+function openDsTeamScanner(team){
+ showTab('scanner');
+ const type=$('ocr-type');if(!type)return;
+ type.value='ds_team_'+team;type.dispatchEvent(new Event('change'));
+ $('ocr-date').value=$('ds-date').value;
+ $('ocr-progress').textContent='Scan or upload DS Team '+team.toUpperCase()+' rankings for '+$('ocr-date').value+'.';
 }
 const activeException=(id,source,date)=>state.data.exceptions.filter(x=>x.active&&x.member_id===id&&x.starts_on<=date&&x.ends_on>=date&&(x.scope==='all'||x.scope===source));
 const recentAwards=(id,date,source,slot)=>state.data.awards.filter(x=>(x.member_id===id||x.vip_member_id===id)&&x.train_date<=date&&x.train_date>=dateAdd(date,-7)&&isR4Train(x)===isR4Train({source,slot}));
@@ -348,10 +436,37 @@ function showVipAdvice(advice,{autoSelect=false}={}){
  }
  if(pool.length>25)root.append(text('p','Showing the first 25 suggestions. You can still pick any member from Selected VIP above.','stat-muted'));
 }
+function showDsTeamAdvice(advice){
+ const root=$('train-ds-teams');root.replaceChildren();
+ root.hidden=advice?.mode!=='ds';
+ if(root.hidden)return;
+ for(const info of advice.teamRecommendations||[]){
+  const selected=info.team===$('train-ds-team').value;
+  const card=text('div',null,'train-pair-card ds-team-advice');
+  card.append(text('strong','TEAM '+info.team.toUpperCase()+(selected?' · SELECTED':''),'train-pair-heading'));
+  if(info.recommended){
+   card.append(text('p','#'+info.recommended.place+' '+info.recommended.name+' · '+fmt(info.recommended.points)+' pts','train-pair-line'));
+   card.append(text('small','Highest eligible scorer from Team '+info.team.toUpperCase(),'stat-muted'));
+  }else card.append(text('p',info.uploaded?'No eligible team conductor. Check saved exceptions and Stage limits.':'No reviewed team scoreboard yet.','stat-muted'));
+  if(info.skipped?.length)card.append(text('small','Skipped: '+info.skipped.map(x=>'#'+x.place+' '+x.name+' ('+x.reasons.join('; ')+')').join(' · '),'stat-muted'));
+  const button=text('button',selected?'Viewing Team '+info.team.toUpperCase():'View Team '+info.team.toUpperCase(),'stat-button');
+  button.type='button';button.disabled=selected;
+  button.onclick=()=>{$('train-ds-team').value=info.team;updateDsTrainSlot();setConductorSelection('');void candidates()};
+  card.append(button);root.append(card);
+ }
+}
+function updateDsTrainSlot(){
+ if($('train-source').value!=='ds')return;
+ const slot=$('train-slot'),label='DS Team '+$('train-ds-team').value.toUpperCase();
+ if(!slot.value||/^(?:Train \d+|DS Team [AB])$/i.test(slot.value.trim()))slot.value=label;
+ else if(/^DS Team [AB] · /.test(slot.value))slot.value=slot.value.replace(/^DS Team [AB] /,label+' ');
+}
 async function candidates(){
  const root=$('candidates'),vipRoot=$('vip-candidates'),date=$('train-date').value,
   mode=$('train-source').value,slot=$('train-slot').value,vipMode=$('train-vip-mode').value;
  $('train-donations-source').hidden=mode!=='vs'&&mode!=='donations';
+ $('train-ds-team-wrap').hidden=mode!=='ds';
+ if(mode!=='ds')$('train-ds-teams').hidden=true;
  const requestId=(state.adviceRequest||0)+1;state.adviceRequest=requestId;state.advice=null;
  root.replaceChildren();vipRoot.replaceChildren();
  if(!validDate(date)){root.append(elEmpty('Select a valid train date for recommendations.'));return}
@@ -359,13 +474,13 @@ async function candidates(){
  else root.append(text('p','Checking saved train history and scores…','stat-muted'));
  vipRoot.append(text('p','Checking VIP history…','stat-muted'));
  try{
-  const query=new URLSearchParams({train_advice:'1',date,mode,slot,vip_mode:vipMode,season:state.season});
+  const query=new URLSearchParams({train_advice:'1',date,mode,slot,vip_mode:vipMode,season:state.season,ds_team:$('train-ds-team').value});
   const response=await fetch('/api/r4-stats?'+query.toString(),{credentials:'same-origin',cache:'no-store'});
   const advice=await response.json();
   if(requestId!==state.adviceRequest)return;
   if(response.status===401){location.href='/r4-planner';return}
   if(!response.ok)throw Error(advice.error||'Recommendations unavailable');
-  state.advice=advice;root.replaceChildren();
+  state.advice=advice;root.replaceChildren();showDsTeamAdvice(advice);
   root.append(text('p',advice.context,'stat-muted'));
    if(advice.excludedDepartedCount)root.append(text('p','Former UTW members are excluded from new recommendations. Their historical train entries are still kept.','stat-muted'));
    if(mode==='donations')root.append(text('p','R4 department leaders and backups are excluded from Top Donation conductor and VIP choices, using the saved UTW roles list.','stat-muted'));
@@ -575,7 +690,7 @@ function trainHistory(){
   const button=text('button','Remove mistaken assignment','stat-button');button.addEventListener('click',()=>{if(confirm('Delete this train assignment?'))action(()=>post({action:'delete_award',id:award.id}),'Assignment removed.')});row.append(button);root.append(row)
  }
 }
-function render(){if(!state.data)return;overview();archive();imports();memberFields();dsHistory();exceptionList();trainHistory();trainCalendar();candidates();eligibilityWarnings()}
+function render(){if(!state.data)return;overview();archive();imports();memberFields();dsHistory();void dsTeamBoards();exceptionList();trainHistory();trainCalendar();candidates();eligibilityWarnings()}
 async function load(){
  const week=$('week').value;state.season=$('season').value;
  if(!validDate(week)||monday(week)!==week){notice('Select a Monday for the week.',true);return}
@@ -714,6 +829,10 @@ function wire(){
  $('season').value='post-s5';$('season').addEventListener('change',load);
  $('season-report').addEventListener('click',async()=>{try{const response=await fetch('/api/r4-stats?report=1&season='+encodeURIComponent(state.season),{cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'Could not generate report');const columns=['member_name','vs_daily_total','vs_weekly_total','donations_total','recorded_vs_days','recorded_vs_weeks','trains_awarded'];const csv=[columns.join(','),...(data.rows||[]).map(row=>columns.map(k=>'\"'+String(row[k]??'').replaceAll('"','""')+'\"').join(','))].join('\r\n');const object=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=object;a.download='utw-season-report-'+state.season+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(object),1500);notice('Season report downloaded.')}catch(e){notice(e.message,true)}});
  $('week').addEventListener('change',()=>{$('train-date').value=$('week').value;$('ds-date').value=$('week').value;load()});
+ $('ds-date').addEventListener('change',()=>void dsTeamBoards());
+ $('ds-scan-a').addEventListener('click',()=>openDsTeamScanner('a'));
+ $('ds-scan-b').addEventListener('click',()=>openDsTeamScanner('b'));
+ $('ds-manual-save').addEventListener('click',()=>void saveManualDsTeam());
  document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>showTab(button.dataset.tab)));
  $('vs-refresh').addEventListener('click',load);
  $('daily-date').addEventListener('change',()=>lines('daily-vs',ranking('vs_daily',$('daily-date').value),20,'vs_daily'));
@@ -735,9 +854,11 @@ function wire(){
   if(mode==='vs'&&validDate(date)&&new Date(date+'T00:00:00Z').getUTCDay()===6&&/^R4(?:\s|$)/i.test(slot.value))slot.value='Saturday VS top scores';
   if(mode==='r4'&&slot.value==='Saturday VS top scores')slot.value=trainLabelForDate(stageForDate(date),date)||'R4 train';
   if(mode==='vs'||mode==='donations'){setConductorSelection('');$('train-vip').value=''}
+  if(mode==='ds')updateDsTrainSlot();
   candidates();eligibilityWarnings();
  });
  $('train-date').addEventListener('change',()=>{const date=$('train-date').value;if(!validDate(date))return;const stage=stageForDate(date);const label=trainLabelForDate(stage,date);if(label){$('train-slot').value=label;$('train-source').value=inferTrainMode(label)}if(stage!==state.trainStage){state.trainStage=stage;$('train-stage').value=String(stage);load()}else{opt('train-member',true);opt('train-vip',true);candidates();eligibilityWarnings()}});
+ $('train-ds-team').addEventListener('change',()=>{updateDsTrainSlot();setConductorSelection('');void candidates()});
  $('train-member').addEventListener('change',()=>{showVipAdvice(state.advice,{autoSelect:!!state.advice?.scoreRanked});eligibilityWarnings()});$('train-vip').addEventListener('change',eligibilityWarnings);$('train-vip-mode').addEventListener('change',()=>{candidates();eligibilityWarnings()});$('train-slot').addEventListener('change',()=>{candidates();eligibilityWarnings()});
  $('award').addEventListener('click',()=>{const mode=$('train-source').value,source=mode==='never'&&/^r4/i.test($('train-slot').value)?'r4':mode==='never'?'manual':mode,date=$('train-date').value,id=$('train-member').value,vipId=$('train-vip').value,reason=$('train-reason').value.trim();
   if(!id||!vipId||!date||id===vipId){notice('Select a date and two different members: conductor and VIP.',true);return}
@@ -756,7 +877,11 @@ function wire(){
    const blocked=[...activeException(id,source,date),...activeException(vipId,source,date)];
   if(blocked.length&&(!reason||!confirm('A selected player has an active exception. Save a manual override with the stated reason?'))){notice('An override reason and confirmation are required for an excepted member.',true);return}
   const warnings=currentTrainWarnings();if(warnings.length&&!confirm('Review train eligibility warnings:\n\n'+warnings.join('\n')+'\n\nRecord this assignment anyway?'))return;
-  action(()=>post({action:'award',season_id:state.season,train_date:date,slot:$('train-slot').value,member_id:id,vip_member_id:vipId,source,reason}), 'Conductor and VIP recorded.');
+  const selectedSlot=source==='ds'?
+   ('DS Team '+$('train-ds-team').value.toUpperCase()+
+    (/^DS Team [AB]$/i.test($('train-slot').value.trim())?'':' · '+$('train-slot').value.replace(/^DS Team [AB]\s*·?\s*/i,'').slice(0,36))).slice(0,50):
+   $('train-slot').value;
+  action(()=>post({action:'award',season_id:state.season,train_date:date,slot:selectedSlot,member_id:id,vip_member_id:vipId,source,reason}), 'Conductor and VIP recorded.');
  });
  $('exception-save').addEventListener('click',()=>action(()=>post({action:'exception',member_id:$('exception-member').value,scope:$('exception-scope').value,starts_on:$('exception-start').value,ends_on:$('exception-end').value,reason:$('exception-reason').value}), 'Exception saved.'));
  initScreenshotWizard({getMembers:members,getAliases:aliases,getSeason:()=>state.season,reload:load,submit:post,today:serverToday});
