@@ -31,7 +31,7 @@ async function save(board,revision){
  });
  return Array.isArray(rows)&&rows.length===1;
 }
-const pageAllowed=request=>!process.env.UTW_PAGE_PASSWORD||validSession(request.headers.get('cookie'),'page')||validSession(request.headers.get('cookie'));
+const pageAllowed=request=>validSession(request.headers.get('cookie'),'page')||validSession(request.headers.get('cookie')); // fail closed even if the passcode setting is missing
 export async function GET(request){if(!pageAllowed(request))return json({ready:false,locked:true,message:'Enter the alliance password to open the buddy board.'});if(!configured())return json({ready:false,message:'Buddy signup is not open yet. Check the production settings.',setupNeeded:[!process.env.SUPABASE_URL&&'SUPABASE_URL',!process.env.SUPABASE_SECRET_KEY&&'SUPABASE_SECRET_KEY',!(process.env.UTW_ADMIN_PASSWORD?.length>=16)&&'UTW_ADMIN_PASSWORD must have at least 16 characters',!(process.env.UTW_SESSION_SECRET?.length>=32)&&'UTW_SESSION_SECRET must have at least 32 characters'].filter(Boolean)});try{if(new URL(request.url).searchParams.get('view')==='trains'){
  const [records,legacy,players,seasons]=await Promise.all([
   database('utw_stat_awards?select=train_date,slot,member_id,vip_member_id,season_id,source&order=train_date.asc,slot.asc&limit=500'),
