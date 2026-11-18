@@ -7,7 +7,7 @@ import {initConductorSearch} from './r4-conductor-search.mjs';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
-const state={data:null,week:'',season:'post-s5',trainStage:15,archiveImports:[],csvQueue:[],candidates:[]};
+const state={data:null,week:'',season:'post-s5',trainStage:15,archiveImports:[],csvQueue:[],candidates:[],dsTeamResults:null};
 let csvBusy=false,nextCsvId=0,conductorSearch=null;
 const text=(tag,content,cls)=>{const el=document.createElement(tag);if(content!==undefined&&content!==null)el.textContent=String(content);if(cls)el.className=cls;return el};
 const dateAdd=(s,days)=>new Date(Date.parse(s+'T00:00:00Z')+days*86400000).toISOString().slice(0,10);
@@ -270,7 +270,7 @@ function directory(){
  if(!filtered.length)root.append(elEmpty('No matching members.'));
 }
 function memberFields(){
- for(const id of ['merge-from','merge-to','alias-member','ds-first','ds-second','ds-third','train-member','train-vip','exception-member'])opt(id,id==='ds-second'||id==='ds-third'||id==='train-member'||id==='train-vip');
+ for(const id of ['merge-from','merge-to','alias-member','ds-first','ds-second','ds-third','ds-manual-member','train-member','train-vip','exception-member'])opt(id,id==='ds-second'||id==='ds-third'||id==='ds-manual-member'||id==='train-member'||id==='train-vip');
  directory();
 }
 function dsHistory(){
@@ -294,7 +294,7 @@ async function dsTeamBoards(){
   const r=await fetch('/api/r4-stats?'+q,{credentials:'same-origin',cache:'no-store'});
   const data=await r.json();if(seq!==dsBoardSequence)return;
   if(!r.ok)throw Error(data.error||'Team standings unavailable');
-  root.replaceChildren();
+  root.replaceChildren();state.dsTeamResults=data;
   for(const team of ['a','b']){
    const saved=(data.teams||[]).find(x=>x.team===team);
    const card=text('article',null,'stat-card ds-team-card');
@@ -309,11 +309,48 @@ async function dsTeamBoards(){
     }
     if(ranked.length>30)card.append(text('p','Showing first 30 of '+ranked.length+'.','stat-muted'));
    }else card.append(text('p','No reviewed scoreboard uploaded for this team and date.','stat-muted'));
+   if(saved){
+    const download=text('button','Download Team '+team.toUpperCase()+' CSV','stat-button');
+    download.type='button';
+    download.onclick=()=>{
+     const csv=[['member_name','points'],...[...saved.rows].sort((a,b)=>Number(b.points)-Number(a.points))
+      .map(x=>[memberName(x.member_id),x.points])]
+      .map(row=>row.map(value=>'"'+String(value).replaceAll('"','""')+'"').join(',')).join('\r\n');
+     const url=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
+     const link=document.createElement('a');link.href=url;link.download='utw-ds-team-'+team+'-'+saved.event_date+'.csv';
+     document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+    };
+    card.append(download);
+   }
    const button=text('button','Upload Team '+team.toUpperCase()+' screenshots / CSV','stat-button primary');
    button.type='button';button.onclick=()=>openDsTeamScanner(team);card.append(button);root.append(card);
   }
   if(data.changes?.length)root.append(text('p','Recent edits: '+data.changes.slice(0,5).map(x=>'Team '+x.team.toUpperCase()+' '+x.action+' by '+x.actor).join(' · '),'stat-muted'));
  }catch(e){if(seq===dsBoardSequence)root.replaceChildren(elEmpty(e.message))}
+}
+const parseDsScore=raw=>{
+ const match=String(raw||'').trim().replaceAll(',','').replace(/\s+/g,'').match(/^(\d+(?:\.\d+)?)([kmb])?$/i);
+ if(!match)return null;
+ const n=Number(match[1])*({k:1e3,m:1e6,b:1e9}[String(match[2]||'').toLowerCase()]||1);
+ return Number.isSafeInteger(n)&&n>=0?n:null;
+};
+async function saveManualDsTeam(){
+ const date=$('ds-date').value,team=$('ds-manual-team').value,id=$('ds-manual-member').value;
+ const points=parseDsScore($('ds-manual-points').value);
+ if(!validDate(date)||!id||points===null){notice('Choose a DS date, member and valid score (e.g. 12.5M).',true);return}
+ const m=byId(id);if(!m){notice('Member not found.',true);return}
+ try{
+  const q=new URLSearchParams({ds_teams:'1',date,season:state.season});
+  const response=await fetch('/api/r4-stats?'+q,{credentials:'same-origin',cache:'no-store'});
+  const latest=await response.json();
+  if(!response.ok)throw Error(latest.error||'Could not read current DS team');
+  const current=(latest.teams||[]).find(x=>x.team===team);
+  await post({action:'ds_team',season_id:state.season,event_date:date,team,
+   mode:'append',revision:current?.revision??0,rows:[{name:m.display_name,points}]});
+  $('ds-manual-points').value='';
+  await dsTeamBoards();void candidates();
+  notice('Saved '+m.display_name+' on DS Team '+team.toUpperCase()+' with '+fmt(points)+' points.');
+ }catch(e){notice(e.message,true)}
 }
 function openDsTeamScanner(team){
  showTab('scanner');
@@ -783,6 +820,7 @@ function wire(){
  $('ds-date').addEventListener('change',()=>void dsTeamBoards());
  $('ds-scan-a').addEventListener('click',()=>openDsTeamScanner('a'));
  $('ds-scan-b').addEventListener('click',()=>openDsTeamScanner('b'));
+ $('ds-manual-save').addEventListener('click',()=>void saveManualDsTeam());
  document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>showTab(button.dataset.tab)));
  $('vs-refresh').addEventListener('click',load);
  $('daily-date').addEventListener('change',()=>lines('daily-vs',ranking('vs_daily',$('daily-date').value),20,'vs_daily'));
