@@ -208,10 +208,24 @@ export async function GET(request){
    if(!utwConfigured())return json({error:'Alliance Duel scores are not connected'},503);
    return json(await utwWeeklyOverview(reportWeek));
   }
+  if(q.get('ds_teams')==='1'){
+   const at=q.get('date'),season=q.get('season')||'post-s5';
+   const actor=await sessionUser(request);
+   if(!actor||actor.role==='von')return json({error:'UTW R4 access required'},403);
+   if(!isoDate(at)||!/^[a-z0-9-]{2,30}$/.test(season))return json({error:'Choose DS date and season'},400);
+   const [records,changes]=await Promise.all([
+    list('utw_ds_team_rankings',{select:'id,season_id,event_date,team,rows,revision,updated_by,updated_at',
+     season_id:'eq.'+season,event_date:'eq.'+at,order:'team.asc',limit:'2'}),
+    list('utw_ds_team_changes',{select:'id,event_date,team,action,actor,created_at',
+     season_id:'eq.'+season,event_date:'eq.'+at,order:'id.desc',limit:'30'})
+   ]);
+   if(!Array.isArray(records)||!Array.isArray(changes))throw Error('DS team rankings unavailable');
+   return json({date:at,season,teams:records,changes});
+  }
   if(q.get('train_advice')==='1'){
-   const date=q.get('date'),mode=q.get('mode'),slot=clean(q.get('slot'),100),vipMode=q.get('vip_mode')||'weekly',selectedSeason=q.get('season');
+   const date=q.get('date'),mode=q.get('mode'),slot=clean(q.get('slot'),100),vipMode=q.get('vip_mode')||'weekly',selectedSeason=q.get('season'),dsTeam=q.get('ds_team')||'a';
    if(!isoDate(date)||date<'2025-12-29'||stageForDate(date)>40||
-      (!['never','vs','donations','ds','r4','manual'].includes(mode)||!['weekly','stage'].includes(vipMode))||
+      (!['never','vs','donations','ds','r4','manual'].includes(mode)||!['weekly','stage'].includes(vipMode)||!['a','b'].includes(dsTeam))||
       (selectedSeason&&!/^[a-z0-9-]{2,30}$/.test(selectedSeason)))return json({error:'Choose a valid train date and category'},400);
    const [members,aliases,legacy,awards,exceptions]=await Promise.all([
     list('utw_stat_members',{select:'id,display_name,archived_at',order:'display_name.asc',limit:'1000'}),
@@ -221,7 +235,7 @@ export async function GET(request){
     list('utw_stat_exceptions',{select:'member_id,scope,starts_on,ends_on,reason,active',active:'eq.true',limit:'1000'})
    ]);
    if(![members,aliases,legacy,awards,exceptions].every(Array.isArray))throw Error('Incomplete train records');
-   let scoreboard=[],scoreDate=null,dsEvent=null;
+   let scoreboard=[],scoreDate=null,dsEvent=null,dsTeamReports=[];
    const monday=weekStart(date);
    let scoreSourceNote='';
    if(mode==='vs'||mode==='donations'){
@@ -262,8 +276,16 @@ export async function GET(request){
     }
    }
    if(mode==='ds'){
-    const podium=await list('utw_stat_ds',{select:'event_date,first_member,second_member,third_member',event_date:'gte.'+dateAdd(date,-14),order:'event_date.desc,created_at.desc',limit:'30'});
+    const [podium,teams]=await Promise.all([
+     list('utw_stat_ds',{select:'event_date,first_member,second_member,third_member',event_date:'gte.'+dateAdd(date,-14),order:'event_date.desc,created_at.desc',limit:'30'}),
+     list('utw_ds_team_rankings',{select:'event_date,team,rows,revision,updated_by',
+      event_date:'gte.'+dateAdd(date,-14),event_date:'lte.'+date,
+      ...(selectedSeason?{season_id:'eq.'+selectedSeason}:{}),
+      order:'event_date.desc,updated_at.desc',limit:'60'})
+    ]);
     dsEvent=podium.find(x=>x.event_date<=date)||null;
+    // Keep Team A/B independent. Never assign a legacy podium to a team by assumption.
+    dsTeamReports=['a','b'].map(team=>teams.find(r=>r.team===team)).filter(Boolean);
    }
    let rosterIds=[],rosterDate=null,vsRecordCounts={};
    if(mode!=='vs'&&mode!=='donations'){
@@ -287,7 +309,19 @@ export async function GET(request){
     }
    }
    const r4MemberIds=isTopDonationTrain(mode,slot)?[...await utwR4Membership(members,aliases)]:[];
-   const advice=buildTrainAdvice({date,mode,slot,vipMode,members,aliases,legacy,awards,exceptions,scoreboard,scoreDate,dsEvent,rosterIds,rosterDate,vsRecordCounts,r4MemberIds});
+   const adviceInput={date,mode,slot,vipMode,members,aliases,legacy,awards,exceptions,scoreboard,scoreDate,dsEvent,rosterIds,rosterDate,vsRecordCounts,r4MemberIds};
+   const advice=buildTrainAdvice({...adviceInput,dsTeam:mode==='ds'?dsTeam:null,
+    dsTeamRows:mode==='ds'?dsTeamReports.find(r=>r.team===dsTeam)||null:null});
+   if(mode==='ds'){
+    const byTeam=['a','b'].map(team=>{
+     const report=dsTeamReports.find(r=>r.team===team)||null;
+     const result=buildTrainAdvice({...adviceInput,dsTeam:team,dsTeamRows:report});
+     return {team,sourceDate:result.dataDate,recommended:result.recommended,
+      skipped:result.rejected,candidates:result.candidates,
+      eligibleCount:result.eligibleCount,context:result.context,uploaded:!!report};
+    });
+    advice.teamRecommendations=byTeam;
+   }
    advice.context+=scoreSourceNote;
    return json(advice);
   }
@@ -380,6 +414,37 @@ export async function POST(request){
   if(raw.length>150000)return json({error:'Request too large'},413);
   const body=JSON.parse(raw);
   switch(body.action){
+   case 'ds_team':{
+    const actor=await sessionUser(request);
+    if(!actor||actor.role==='von')return json({error:'UTW R4 access required'},403);
+    const eventDate=body.event_date,season=body.season_id,team=body.team,
+     mode=body.mode||'replace',rows=body.rows;
+    if(!isoDate(eventDate)||typeof season!=='string'||!/^[a-z0-9-]{2,30}$/.test(season)||
+     !['a','b'].includes(team)||!['append','replace'].includes(mode)||
+     !Array.isArray(rows)||rows.length<1||rows.length>200||
+     !(body.revision===null||Number.isInteger(body.revision)&&body.revision>=0))
+     return json({error:'Choose a valid date, team, upload mode and reviewed scores'},400);
+    const [members,aliases,seasons]=await Promise.all([
+     list('utw_stat_members',{select:'id,display_name',limit:'1000'}),
+     list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'5000'}),
+     list('utw_stat_seasons',{select:'id',id:'eq.'+season,limit:'1'})
+    ]);
+    if(seasons.length!==1)return json({error:'Invalid DS season'},400);
+    const resolve=resolveNames(members,aliases),mapped=[],seen=new Set();
+    for(const row of rows){
+     const label=name(row?.name),id=resolve(label),points=row?.points;
+     if(!label||!id||!Number.isSafeInteger(points)||points<0)
+      return json({error:'Every DS player must have a verified roster name and valid nonnegative score: '+label},400);
+     if(seen.has(id))return json({error:'Duplicate member in reviewed DS ranking: '+label},400);
+     seen.add(id);mapped.push({member_id:id,points});
+    }
+    const result=await db('rpc/utw_ds_team_apply',{method:'POST',body:JSON.stringify({
+     p_season:season,p_date:eventDate,p_team:team,p_mode:mode,p_rows:mapped,
+     p_revision:body.revision,p_actor:String(actor.username||actor.display_name||'R4').slice(0,80)
+    })});
+    await recordAudit(request,'ds_team_'+mode,{season,date:eventDate,team,players:mapped.length,revision:result.revision},false);
+    return json(result);
+   }
    case 'member_squad':{
     const actor=await sessionUser(request);
     if(!actor||actor.role==='von')return json({error:'UTW R4 access required'},403);
