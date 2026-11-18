@@ -25,7 +25,7 @@ Add these Vercel project **server-only environment variables** directly in Verce
 - `UTW_PFP_THEME=squad`: weekly active theme; choose `squad`, `starter` or `royalty`.
 - `UTW_PFP_MODEL=gpt-image-2.5-flare`: optional image model override.
 
-These existing production variables must also be configured: `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `UTW_SESSION_SECRET`, `UTW_PAGE_PASSWORD`. The guarded POST checks the existing member cookie and uses the existing Supabase rate-limit RPC. It fails closed if any of those prerequisites is missing.
+These existing production variables must also be configured: `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `UTW_SESSION_SECRET`, `UTW_PAGE_PASSWORD`. The PFP endpoint is internally rewritten to the existing `/api/buddies` serverless function to keep within the Vercel Hobby 12-function limit. The guarded POST checks the existing member cookie and uses the existing Supabase rate-limit RPC. It fails closed if any of those prerequisites is missing.
 
 The current rate limit is two attempts per existing rate-limit window per IP, **not two attempts per individually identified member or per week**. For broader member rollout, implement account-based quotas and an atomic spend cap first. Also set a budget limit in the OpenAI project. The four-character shared passcode is not adequate by itself as an anti-abuse or billing control.
 
