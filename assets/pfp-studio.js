@@ -1,33 +1,64 @@
-// Images stay in browser memory. No uploads happen in demo mode and no local/session storage is used.
+// PFP Studio: no fake graphic generator, no stored images, real AI calls only when server enables them.
 const $=id=>document.getElementById(id);
-const elements={form:$('pfpForm'),theme:$('pfpTheme'),file:$('pfpImage'),art:$('pfpArtboard'),status:$('pfpMessage'),mode:$('pfpMode'),download:$('pfpDownload'),button:$('pfpGenerate')};
+const elements={form:$('pfpForm'),theme:$('pfpTheme'),file:$('pfpImage'),art:$('pfpArtboard'),status:$('pfpMessage'),mode:$('pfpMode'),download:$('pfpDownload'),button:$('pfpGenerate'),prompt:$('pfpPrompt'),copy:$('pfpCopy')};
 let config={ready:false,activeTheme:'squad',themes:[]},sourceUrl=null,resultUrl=null,busy=false;
-const themeDetails={
- squad:{tag:'SQUAD',label:()=>({tank:'TANK',aircraft:'AIRCRAFT',missile:'MISSILE'})[$('pfpSquad').value]||'SQUAD',emoji:()=>({tank:'🛡',aircraft:'✈',missile:'🚀'})[$('pfpSquad').value]||'✦'},
- starter:{tag:'STARTER PACK',label:()=>($('pfpFavourites').value.trim().slice(0,44)||'FAVOURITE THINGS'),emoji:()=> '♡'},
- royalty:{tag:'ROYALTY',label:()=> $('pfpRole').selectedOptions[0]?.textContent.toUpperCase()||'ROYALTY',emoji:()=> '♛'}
-};
-const show=(message)=>{elements.status.textContent=message;};
+
+function show(message){elements.status.textContent=message;}
 function release(){
  if(sourceUrl){URL.revokeObjectURL(sourceUrl);sourceUrl=null;}
  if(resultUrl){URL.revokeObjectURL(resultUrl);resultUrl=null;}
-}
-function clearResult(message){
- if(resultUrl){URL.revokeObjectURL(resultUrl);resultUrl=null;}
- elements.download.removeAttribute('href');elements.download.hidden=true;
- elements.art.replaceChildren();
- elements.art.append(Object.assign(document.createElement('div'),{className:'pfp-empty',textContent:'Your PFP preview will appear here.'}));
- if(message)show(message);
 }
 function showPicture(url,label){
  elements.art.replaceChildren();
  const img=document.createElement('img');img.alt=label;img.src=url;elements.art.append(img);
 }
+function showEmpty(){
+ elements.art.replaceChildren();
+ const empty=document.createElement('div');
+ empty.className='pfp-empty';
+ empty.textContent='Upload a reference image. This is an input preview only, not an AI result.';
+ elements.art.append(empty);
+}
+function clearResult(){
+ if(resultUrl){URL.revokeObjectURL(resultUrl);resultUrl=null;}
+ elements.download.removeAttribute('href');elements.download.hidden=true;
+ if(sourceUrl)showPicture(sourceUrl,'Original uploaded character, not AI-generated');
+ else showEmpty();
+}
+function setMode(){
+ elements.mode.textContent=config.ready?'AI image editing enabled':'AI not connected';
+ elements.button.disabled=!config.ready||busy;
+ elements.button.textContent=config.ready?'✨ Generate AI PFP':'AI generation not connected';
+}
+function promptText(){
+ const theme=elements.theme.value;
+ const chosenStyle=$('pfpStyle').value;
+ const style={
+ original:'Match the art style, proportions, medium and rendering of the uploaded image. Do not automatically turn the character chibi.',
+ theme:'Use a polished, imaginative illustrated style for the theme.',
+ anime:'Anime illustration.',chibi:'Expressive chibi illustration with cute compact proportions.',
+ comic:'Bold, colorful comic-book illustration.',photorealistic:'Photorealistic rendering.',
+ '3d':'Stylized 3D render.',watercolor:'Soft painterly watercolor.'
+ }[chosenStyle]||'Match the art style of the uploaded image.';
+ const clothing=$('pfpOutfit').value==='keep'?'Preserve the original outfit.':'Give the character an outfit matching the theme.';
+ let scene='';
+ if(theme==='squad'){
+  const units={tank:'armored tank',aircraft:'fighter aircraft',missile:'stylized missile'};
+  const poses={surprise:'interacting playfully with',riding:'riding',clinging:'clinging to',popping:'popping out from behind'};
+  scene='Create a dynamic square profile picture of the character '+(poses[$('pfpPose').value]||poses.surprise)+' a '+(units[$('pfpSquad').value]||units.tank)+'. Blue background; clear action and strong composition. Do not add invented military or game symbols.';
+ }else if(theme==='starter'){
+  scene='Create a character-centered starter-pack composition with favourite things: '+($('pfpFavourites').value.trim()||'[Add favourite things]')+'. Make the items recognizable.';
+ }else if(theme==='royalty'){
+  scene='Create a fantasy royalty portrait of the character as a '+$('pfpRole').value+'. Rich forest green and warm gold accents.';
+ }
+ return 'Use my uploaded image as the character reference. Preserve the character’s recognisable face, skin tone, hairstyle, key accessories and identity. '+style+' '+scene+' '+clothing+' Square 1:1 Discord profile picture; keep the character clearly visible, avoid unwanted frames, text and watermarks.';
+}
+function updatePrompt(){elements.prompt.value=promptText();}
 function updateTheme(){
  const id=elements.theme.value;
  for(const [theme,section] of [['squad','pfpSquadFields'],['starter','pfpStarterFields'],['royalty','pfpRoyaltyFields']])$(section).hidden=id!==theme;
  $('pfpThemeDescription').textContent=config.themes.find(t=>t.id===id)?.subtitle||'';
- clearResult('Choose an image and make your PFP. Nothing is stored.');
+ updatePrompt();clearResult();
 }
 function validate(){
  const file=elements.file.files?.[0];
@@ -37,110 +68,93 @@ function validate(){
  if(elements.theme.value==='starter'&&!$('pfpFavourites').value.trim())throw Error('Tell us at least one favourite thing.');
  return file;
 }
-function drawCentered(ctx,img,x,y,w,h){
- const scale=Math.min(w/img.width,h/img.height);
- const width=img.width*scale,height=img.height*scale;
- ctx.drawImage(img,x+(w-width)/2,y+(h-height)/2,width,height);
-}
-async function demoComposite(file){
- const bitmap=await createImageBitmap(file);
- try{
-  const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=1024;
-  const ctx=canvas.getContext('2d');if(!ctx)throw Error('Image preview is unavailable on this device.');
-  const palettes={squad:['#294e6b','#8bbbd8','#f7df93'],starter:['#6f447e','#dfa4ba','#f7db9a'],royalty:['#173d33','#62856c','#f6d78c']};
-  const colors=palettes[elements.theme.value]||palettes.squad;
-  const bg=ctx.createLinearGradient(0,0,1024,1024);bg.addColorStop(0,colors[0]);bg.addColorStop(1,colors[1]);ctx.fillStyle=bg;ctx.fillRect(0,0,1024,1024);
-  ctx.globalAlpha=.22;ctx.fillStyle=colors[2];
-  for(let i=0;i<24;i++){const x=(i*349+83)%1019,y=(i*193+43)%1024,r=7+(i%5)*9;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
-  ctx.globalAlpha=1;ctx.fillStyle='#fffbec';ctx.beginPath();ctx.roundRect(104,130,816,762,38);ctx.fill();
-  ctx.save();ctx.beginPath();ctx.roundRect(121,147,782,728,28);ctx.clip();
-  ctx.fillStyle='#eee9db';ctx.fillRect(121,147,782,728);
-  drawCentered(ctx,bitmap,137,161,750,697);ctx.restore();
-  ctx.fillStyle='#15382e';ctx.beginPath();ctx.roundRect(85,31,854,102,25);ctx.fill();
-  ctx.fillStyle='#fff2c8';ctx.font='bold 33px system-ui,sans-serif';ctx.textAlign='center';ctx.fillText('UTW  •  PFP STUDIO  •  DEMO',512,95);
-  ctx.fillStyle='#15382e';ctx.beginPath();ctx.roundRect(160,858,704,125,27);ctx.fill();
-  ctx.font='bold 40px system-ui,sans-serif';ctx.fillStyle=colors[2];
-  ctx.fillText(String(themeDetails[elements.theme.value].label()).slice(0,28),512,933,640);
-  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
-  if(!blob)throw Error('The preview image could not be created.');
-  return {blob,mime:'image/png'};
- }finally{bitmap.close();}
-}
 function imageFromBase64(encoded,mime){
  const raw=atob(encoded),bytes=new Uint8Array(raw.length);
  for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
  return new Blob([bytes],{type:mime});
 }
-function offerDownload(blob,mime,isDemo){
+function offerDownload(blob,mime){
  if(resultUrl)URL.revokeObjectURL(resultUrl);
  resultUrl=URL.createObjectURL(blob);
- showPicture(resultUrl,isDemo?'Demo composite, not an AI-generated image':'AI-created weekly PFP');
- elements.download.href=resultUrl;elements.download.download='utw-'+elements.theme.value+'-pfp.'+(mime==='image/png'?'png':'webp');
+ showPicture(resultUrl,'AI-generated weekly PFP');
+ elements.download.href=resultUrl;
+ elements.download.download='utw-'+elements.theme.value+'-pfp.'+(mime==='image/png'?'png':'webp');
  elements.download.hidden=false;
- show(isDemo?'Demo mock-up ready! Your source image stayed on this device. AI editing is not enabled yet.':'Your AI PFP is ready. Download it before leaving; it is not saved by Members Den.');
+ show('AI image generated. Download before leaving because Members Den does not save images.');
 }
 async function generate(event){
- event.preventDefault();if(busy)return;
+ event.preventDefault();
+ if(busy)return;
+ if(!config.ready){show('AI generation is not connected. Copy the prompt and upload your original photo to ChatGPT to test it.');return;}
  let file;try{file=validate();}catch(error){show(error.message);return;}
- busy=true;elements.button.disabled=true;elements.button.textContent='Creating your PFP...';clearResult('Working on your PFP...');
+ busy=true;setMode();clearResult();show('Requesting an AI image edit...');
  try{
-  if(!config.ready){
-   const result=await demoComposite(file);
-   offerDownload(result.blob,result.mime,true);
-  }else{
-   if(elements.theme.value!==config.activeTheme)throw Error('This weekly theme is not active.');
-   const form=new FormData(elements.form);
-   form.set('image',file,file.name);
-   const response=await fetch('/api/pfp-studio',{method:'POST',credentials:'same-origin',cache:'no-store',body:form});
-   const data=await response.json();
-   if(!response.ok||!data.ok)throw Error(data.error||'The image service is unavailable.');
-   const blob=imageFromBase64(data.image,data.mime||'image/webp');
-   offerDownload(blob,data.mime||'image/webp',false);
-  }
- }catch(error){show(error.message||'Could not make your PFP. Try a smaller image.');}
- finally{busy=false;elements.button.disabled=false;elements.button.textContent='✨ Make my PFP';}
+  if(elements.theme.value!==config.activeTheme)throw Error('This is not the active theme.');
+  const form=new FormData(elements.form);form.set('image',file,file.name);
+  const response=await fetch('/api/pfp-studio',{method:'POST',credentials:'same-origin',cache:'no-store',body:form});
+  const data=await response.json();
+  if(!response.ok||!data.ok)throw Error(data.error||'The image service is unavailable.');
+  const mime=data.mime||'image/webp';
+  offerDownload(imageFromBase64(data.image,mime),mime);
+ }catch(error){show(error.message||'Could not generate an image.');}
+ finally{busy=false;setMode();}
 }
 function previewOnly(){
  const section=$('trains');if(section)section.hidden=true;
  const gate=$('memberGate'),content=$('memberContent');
  const apply=()=>{if(content.hidden)content.hidden=false;if(!gate.hidden)gate.hidden=true;};
  apply();
- // Other member modules may finish fetching after this one; keep only this demo shell visible.
  new MutationObserver(apply).observe(content,{attributes:true,attributeFilter:['hidden']});
+}
+async function copyPrompt(){
+ try{
+  await navigator.clipboard.writeText(elements.prompt.value);
+  show('AI instructions copied. Upload the character image into ChatGPT along with those instructions to test an actual AI edit.');
+ }catch{
+  elements.prompt.focus();elements.prompt.select();
+  show('Select and copy the instructions above, then upload your photo with them in ChatGPT.');
+ }
 }
 async function init(){
  try{
   const response=await fetch('/api/pfp-studio',{cache:'no-store'});
-  if(!response.ok)throw Error('Could not load the studio settings.');
+  if(!response.ok)throw Error('Could not load studio settings.');
   config=await response.json();
   if(config.demoPreviewAllowed&&new URLSearchParams(location.search).get('pfpPreview')==='1')previewOnly();
-  elements.mode.textContent=config.ready?'AI beta enabled':'Safe demo mode';
-  $('pfpTheme').replaceChildren();
-  for(const theme of config.themes){
-   if(config.ready&&theme.id!==config.activeTheme)continue;
-   const option=new Option(theme.title,theme.id);
-   elements.theme.append(option);
-  }
-  elements.theme.value=config.activeTheme;updateTheme();
-  if(!config.ready)show('Demo mode: Make my PFP creates a basic graphic mock-up locally, not an AI edit. No photo is uploaded.');
- }catch(error){
-  elements.mode.textContent='Demo configuration unavailable';
-  config.themes=[{id:'squad',title:'Pick Your Squad',subtitle:'Choose your squad and pose.'},{id:'starter',title:'Your Starter Pack',subtitle:'Show your favourite things.'},{id:'royalty',title:'UTW Royalty',subtitle:'Choose your royal role.'}];
-  elements.theme.replaceChildren(...config.themes.map(theme=>new Option(theme.title,theme.id)));updateTheme();
-  show('Offline demo available. Your image stays on this device.');
+ }catch{
+  config={ready:false,activeTheme:'squad',themes:[
+   {id:'squad',title:'Pick Your Squad',subtitle:'Choose a squad and pose.'},
+   {id:'starter',title:'Your Starter Pack',subtitle:'Add favourite things.'},
+   {id:'royalty',title:'UTW Royalty',subtitle:'Choose a royal role.'}
+  ]};
  }
+ elements.theme.replaceChildren();
+ for(const theme of config.themes){
+  if(config.ready&&theme.id!==config.activeTheme)continue;
+  elements.theme.append(new Option(theme.title,theme.id));
+ }
+ elements.theme.value=config.activeTheme;setMode();updateTheme();
+ if(!config.ready)show('AI generation is not connected. Your original photo stays on this device; use Copy instructions to test in ChatGPT.');
 }
 elements.theme.addEventListener('change',updateTheme);
+for(const id of ['pfpSquad','pfpPose','pfpStyle','pfpOutfit','pfpRole','pfpFavourites']){
+ $(id).addEventListener('change',updatePrompt);
+ $(id).addEventListener('input',updatePrompt);
+}
 elements.file.addEventListener('change',()=>{
- clearResult();
  if(sourceUrl){URL.revokeObjectURL(sourceUrl);sourceUrl=null;}
+ clearResult();
  const file=elements.file.files?.[0];
  if(file&&file.size<=3000000&&['image/png','image/jpeg','image/webp'].includes(file.type)){
-  sourceUrl=URL.createObjectURL(file);showPicture(sourceUrl,'Your uploaded character preview');
-  show('Photo selected. Pick your options and make your PFP.');
+  sourceUrl=URL.createObjectURL(file);
+  showPicture(sourceUrl,'Original uploaded character, not AI-generated');
+  show(config.ready?'Image ready to use as the AI reference.':'This is only your original image. No AI edit has been performed.');
  }else if(file){show('Use a PNG, JPG or WebP image smaller than 3 MB.');}
 });
 elements.form.addEventListener('submit',generate);
-$('pfpClear').addEventListener('click',()=>{elements.form.reset();release();updateTheme();show('Everything cleared from this page.');});
+elements.copy.addEventListener('click',copyPrompt);
+$('pfpClear').addEventListener('click',()=>{
+ elements.form.reset();release();updateTheme();show('Image preview and selections cleared.');
+});
 window.addEventListener('pagehide',release);
 init();
