@@ -367,7 +367,7 @@ export const stageTrainLabels={
   "Top donation last week",
   "Event Top 2 scores (DS mvp or other)",
   "R4 Vote (no train for a while)",
-  "R4 Iz",
+  "R4 Chibi Tsarina Aura",
   "Roulette",
   "R4 CatalystX",
   "No VS train Mvp's"
