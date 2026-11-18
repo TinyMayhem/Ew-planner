@@ -20,12 +20,15 @@ create table if not exists public.utw_ds_team_changes (
  season_id text not null,
  event_date date not null,
  team text not null,
- action text not null check(action in ('append','replace')),
+ action text not null check(action in ('append','replace','clear')),
  before_rows jsonb not null default '[]'::jsonb,
  after_rows jsonb not null default '[]'::jsonb,
  actor text not null,
  created_at timestamptz not null default now()
 );
+alter table public.utw_ds_team_changes drop constraint if exists utw_ds_team_changes_action_check;
+alter table public.utw_ds_team_changes add constraint utw_ds_team_changes_action_check
+ check(action in ('append','replace','clear'));
 create index if not exists utw_ds_team_changes_ranking_idx
  on public.utw_ds_team_changes(ranking_id,id desc);
 alter table public.utw_ds_team_rankings enable row level security;
@@ -52,13 +55,13 @@ declare
  seen uuid[]:=array[]::uuid[];
  count_rows integer;
 begin
- if p_team not in ('a','b') or p_mode not in ('append','replace')
+ if p_team not in ('a','b') or p_mode not in ('append','replace','clear')
    or p_date is null or length(trim(p_actor))<2 or length(p_actor)>80
    or jsonb_typeof(p_rows)<>'array' then
    raise exception 'Choose a valid Desert Storm date, team, and upload method';
  end if;
  count_rows:=jsonb_array_length(p_rows);
- if count_rows<1 or count_rows>200 then raise exception 'Review 1 to 200 ranked players'; end if;
+ if (p_mode='clear' and count_rows<>0) or (p_mode<>'clear' and (count_rows<1 or count_rows>200)) then raise exception 'Review 1 to 200 ranked players, or clear an existing team'; end if;
  select * into rec from public.utw_ds_team_rankings
   where season_id=p_season and event_date=p_date and team=p_team for update;
  if found then
@@ -72,7 +75,7 @@ begin
   insert into public.utw_ds_team_rankings(season_id,event_date,team,updated_by)
    values(p_season,p_date,p_team,p_actor) returning * into rec;
  end if;
- combined:=case when p_mode='replace' then '[]'::jsonb else original_rows end;
+ combined:=case when p_mode in ('replace','clear') then '[]'::jsonb else original_rows end;
  for item in select value from jsonb_array_elements(p_rows) loop
   begin
    mid:=(item->>'member_id')::uuid;
