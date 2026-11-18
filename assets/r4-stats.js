@@ -2,7 +2,7 @@ import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv} from
 import {archivedWeeks,vsWeekSlots,vsLeaderboard,vsMissingDaily,weekOf,scoreFlag} from './r4-vs-archive.mjs';
 import {stageForDate,stageRange,trainWarnings,isR4Train,addDays as trainAddDays} from './r4-train-rules.mjs';
 import {trainLabelForDate} from './r4-train-schedule.mjs';
-import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=auto90-v1-20261106';
+import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=ds-teams-v1-20261117';
 import {initConductorSearch} from './r4-conductor-search.mjs';
 
 (()=>{'use strict';
@@ -282,6 +282,45 @@ function dsHistory(){
   const remove=text('button','Delete DS record','stat-button');remove.type='button';remove.addEventListener('click',()=>{if(confirm('Remove Desert Storm result from '+d.event_date+'? The owner can undo this.'))action(()=>post({action:'delete_ds',id:d.id}),'DS result removed and audited.')});card.append(remove);
   const a=text('a','Open original screenshot');a.href='/api/r4-stats?image='+encodeURIComponent(d.id);a.target='_blank';a.rel='noopener';const image=document.createElement('img');image.src=a.href;image.alt='DS evidence screenshot';image.loading='lazy';image.className='stat-evidence';a.prepend(image);card.append(a);root.append(card);
  }
+}
+let dsBoardSequence=0;
+async function dsTeamBoards(){
+ const root=$('ds-team-boards');if(!root||!state.data)return;
+ const date=$('ds-date').value,seq=++dsBoardSequence;
+ if(!validDate(date)){root.replaceChildren(elEmpty('Select a valid DS date.'));return}
+ root.replaceChildren(text('p','Loading DS Team A and Team B…','stat-muted'));
+ try{
+  const q=new URLSearchParams({ds_teams:'1',date,season:state.season});
+  const r=await fetch('/api/r4-stats?'+q,{credentials:'same-origin',cache:'no-store'});
+  const data=await r.json();if(seq!==dsBoardSequence)return;
+  if(!r.ok)throw Error(data.error||'Team standings unavailable');
+  root.replaceChildren();
+  for(const team of ['a','b']){
+   const saved=(data.teams||[]).find(x=>x.team===team);
+   const card=text('article',null,'stat-card ds-team-card');
+   card.append(text('h3','Team '+team.toUpperCase()+' · '+(saved?.rows?.length||0)+' scored members'));
+   if(saved){
+    card.append(text('p','Updated by '+saved.updated_by+' · Revision '+saved.revision,'stat-muted'));
+    const ranked=[...saved.rows].sort((a,b)=>Number(b.points)-Number(a.points));
+    for(const [i,v] of ranked.slice(0,30).entries()){
+     const row=text('div',null,'stat-row');
+     row.append(text('strong','#'+(i+1)+' '+memberName(v.member_id)),text('span',fmt(v.points)+' pts','stat-muted'));
+     card.append(row);
+    }
+    if(ranked.length>30)card.append(text('p','Showing first 30 of '+ranked.length+'.','stat-muted'));
+   }else card.append(text('p','No reviewed scoreboard uploaded for this team and date.','stat-muted'));
+   const button=text('button','Upload Team '+team.toUpperCase()+' screenshots / CSV','stat-button primary');
+   button.type='button';button.onclick=()=>openDsTeamScanner(team);card.append(button);root.append(card);
+  }
+  if(data.changes?.length)root.append(text('p','Recent edits: '+data.changes.slice(0,5).map(x=>'Team '+x.team.toUpperCase()+' '+x.action+' by '+x.actor).join(' · '),'stat-muted'));
+ }catch(e){if(seq===dsBoardSequence)root.replaceChildren(elEmpty(e.message))}
+}
+function openDsTeamScanner(team){
+ showTab('scanner');
+ const type=$('ocr-type');if(!type)return;
+ type.value='ds_team_'+team;type.dispatchEvent(new Event('change'));
+ $('ocr-date').value=$('ds-date').value;
+ $('ocr-progress').textContent='Scan or upload DS Team '+team.toUpperCase()+' rankings for '+$('ocr-date').value+'.';
 }
 const activeException=(id,source,date)=>state.data.exceptions.filter(x=>x.active&&x.member_id===id&&x.starts_on<=date&&x.ends_on>=date&&(x.scope==='all'||x.scope===source));
 const recentAwards=(id,date,source,slot)=>state.data.awards.filter(x=>(x.member_id===id||x.vip_member_id===id)&&x.train_date<=date&&x.train_date>=dateAdd(date,-7)&&isR4Train(x)===isR4Train({source,slot}));
@@ -575,7 +614,7 @@ function trainHistory(){
   const button=text('button','Remove mistaken assignment','stat-button');button.addEventListener('click',()=>{if(confirm('Delete this train assignment?'))action(()=>post({action:'delete_award',id:award.id}),'Assignment removed.')});row.append(button);root.append(row)
  }
 }
-function render(){if(!state.data)return;overview();archive();imports();memberFields();dsHistory();exceptionList();trainHistory();trainCalendar();candidates();eligibilityWarnings()}
+function render(){if(!state.data)return;overview();archive();imports();memberFields();dsHistory();void dsTeamBoards();exceptionList();trainHistory();trainCalendar();candidates();eligibilityWarnings()}
 async function load(){
  const week=$('week').value;state.season=$('season').value;
  if(!validDate(week)||monday(week)!==week){notice('Select a Monday for the week.',true);return}
@@ -714,6 +753,9 @@ function wire(){
  $('season').value='post-s5';$('season').addEventListener('change',load);
  $('season-report').addEventListener('click',async()=>{try{const response=await fetch('/api/r4-stats?report=1&season='+encodeURIComponent(state.season),{cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'Could not generate report');const columns=['member_name','vs_daily_total','vs_weekly_total','donations_total','recorded_vs_days','recorded_vs_weeks','trains_awarded'];const csv=[columns.join(','),...(data.rows||[]).map(row=>columns.map(k=>'\"'+String(row[k]??'').replaceAll('"','""')+'\"').join(','))].join('\r\n');const object=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=object;a.download='utw-season-report-'+state.season+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(object),1500);notice('Season report downloaded.')}catch(e){notice(e.message,true)}});
  $('week').addEventListener('change',()=>{$('train-date').value=$('week').value;$('ds-date').value=$('week').value;load()});
+ $('ds-date').addEventListener('change',()=>void dsTeamBoards());
+ $('ds-scan-a').addEventListener('click',()=>openDsTeamScanner('a'));
+ $('ds-scan-b').addEventListener('click',()=>openDsTeamScanner('b'));
  document.querySelectorAll('[data-tab]').forEach(button=>button.addEventListener('click',()=>showTab(button.dataset.tab)));
  $('vs-refresh').addEventListener('click',load);
  $('daily-date').addEventListener('change',()=>lines('daily-vs',ranking('vs_daily',$('daily-date').value),20,'vs_daily'));
