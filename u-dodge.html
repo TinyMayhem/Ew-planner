@@ -249,8 +249,43 @@ function showResults(r){const x=state;const funnyWin=[['⚔️','MO WOULD BE PRO
  const div=$('newBadges');div.replaceChildren();if(r.unlocked.length){let h=document.createElement('h3');h.textContent='🎖 ACHIEVEMENT UNLOCKED!';div.append(h);for(const b of r.unlocked){let a=document.createElement('p');a.className='notice';if(b.icon==='NUGGET'){const n=document.createElement('span');n.className='nugget-icon';n.setAttribute('aria-label','Chicken nugget');a.append(n,document.createTextNode(' '+b.name+' · '+b.desc))}else a.textContent=b.icon+' '+b.name+' · '+b.desc;div.append(a)}}
  const board=boardList(r.mode,'weekly',r.playerKind),pos=board.findIndex(s=>s.name===r.name&&(s.tag||'')===(r.tag||'')),next=pos>0?board[pos-1]:null;$('nextRank').textContent=next?'NEXT TARGET: '+next.name+' · '+next.score.toLocaleString()+' pts · '+(next.score-r.score+1)+' pts to beat them'+(next.score===r.score?' (ties go to the earlier score)':''):pos===0?'YOU ARE #1 IN YOUR LOCAL WEEKLY BOARD!':'Score recorded in your local game history.';$('copyStatus').textContent='';}
 $('copy').onclick=async()=>{if(!lastResult)return;const r=lastResult,rank=boardList(r.mode,'weekly',r.playerKind).findIndex(s=>s.name===r.name&&(s.tag||'')===(r.tag||''))+1,ach=r.unlocked.map(x=>x.name).join(', ')||'None this run';const t='🍔 BABA’S U-DODGE · U-BITES 🍟\nPlayer: '+r.name+'\nMode: '+(r.mode==='quick'?'Quick Play':'Endless Chaos')+'\nScore: '+r.score.toLocaleString()+'\nLocal weekly rank: '+(rank||'Unranked')+'\nAchievements: '+ach+'\nBaba survived. His dignity didn’t.\n(arcade scoreboard: shared if saved successfully)';try{await navigator.clipboard.writeText(t);$('copyStatus').textContent='Score copied!'}catch{$('copyStatus').textContent=t}};
-function renderBoard(){const buttons=[['lbQuick',lbMode==='quick'],['lbEndless',lbMode==='endless'],['lbWeekly',lbWhen==='weekly'],['lbAll',lbWhen==='all']];for(const [id,on] of buttons)$(id).className='btn mini '+(on?'gold':'dark');const area=$('boardEntries');area.replaceChildren();$('profile').classList.add('hidden');const rows=boardList(lbMode,lbWhen);if(!rows.length){let p=document.createElement('p');p.textContent='No scores yet. Be the first to torment Baba!';area.append(p)}rows.forEach((r,i)=>{const el=document.createElement('div');el.className='board-line';const number=document.createElement('strong');number.textContent=String(i+1)+'.';const b=document.createElement('button');b.textContent=r.name;b.onclick=()=>renderProfile(r.name);const value=document.createElement('strong');value.textContent=r.score.toLocaleString();el.append(number,b,value);area.append(el)});}
-$('lbQuick').onclick=()=>{lbMode='quick';renderBoard()};$('lbEndless').onclick=()=>{lbMode='endless';renderBoard()};$('lbWeekly').onclick=()=>{lbWhen='weekly';renderBoard()};$('lbAll').onclick=()=>{lbWhen='all';renderBoard()};
+async function renderBoard(){
+ const n=++boardRequest,group=$('lbGroup').value;
+ const buttons=[['lbQuick',lbMode==='quick'],['lbEndless',lbMode==='endless'],['lbWeekly',lbWhen==='weekly'],['lbAll',lbWhen==='all']];
+ for(const [id,on] of buttons)$(id).className='btn mini '+(on?'gold':'dark');
+ const area=$('boardEntries');area.replaceChildren();$('profile').classList.add('hidden');
+ $('boardStatus').textContent='Loading shared leaderboard...';
+ let rows=[],remote=false;
+ try{
+  const params=new URLSearchParams({mode:lbMode,when:lbWhen,group});
+  const res=await fetch('/api/arcade?'+params,{credentials:'same-origin',cache:'no-store'});
+  const data=await res.json();
+  if(!res.ok||!data.ready)throw Error(data.error||'Scoreboard is offline');
+  if(n!==boardRequest)return;
+  rows=data.entries||[];remote=true;
+  $('boardStatus').textContent='Shared across devices · '+(group==='all'?'All visitors and UTW players':group==='guest'?'Visitor scores only':'UTW passcode holders')+' · Self-entered names, not identity verified';
+ }catch(error){
+  if(n!==boardRequest)return;
+  rows=boardList(lbMode,lbWhen,group);
+  $('boardStatus').textContent='Shared scoreboard unavailable. Showing scores saved on this device only.';
+ }
+ if(!rows.length){const p=document.createElement('p');p.textContent=remote?'No shared scores yet. Be the first to torment Baba!':'No scores on this device yet.';area.append(p)}
+ rows.forEach((r,i)=>{
+  const el=document.createElement('div');el.className='board-line';
+  const number=document.createElement('strong');number.textContent=String(i+1)+'.';
+  const b=document.createElement('div'),kind=r.kind||r.playerKind||'member';
+  b.style.fontWeight='850';b.style.overflowWrap='anywhere';
+  b.textContent=(kind==='guest'?(r.tag?'['+r.tag+'] ':''):'')+r.name;
+  const sub=document.createElement('small');sub.style.display='block';sub.style.color='#8a5e40';sub.textContent=kind==='guest'?'Visitor':'UTW access';b.append(sub);
+  const value=document.createElement('strong');value.textContent=Number(r.score).toLocaleString();
+  el.append(number,b,value);area.append(el);
+ });
+}
+$('lbQuick').onclick=()=>{lbMode='quick';renderBoard()};
+$('lbEndless').onclick=()=>{lbMode='endless';renderBoard()};
+$('lbWeekly').onclick=()=>{lbWhen='weekly';renderBoard()};
+$('lbAll').onclick=()=>{lbWhen='all';renderBoard()};
+$('lbGroup').onchange=renderBoard;
 function renderProfile(name){const p=db.players[name];if(!p)return;const box=$('profile');box.classList.remove('hidden');box.replaceChildren();const title=document.createElement('h3');title.textContent='📊 '+name+' · Public Demo Stats';box.append(title);const lines=[['Games played',p.games],['Quick Play best',p.bestQuick],['Endless best',p.bestEndless],['Longest survival',Math.floor(p.longest)+'s']];for(const [label,value] of lines){const div=document.createElement('div');div.className='row spread';const a=document.createElement('span'),b=document.createElement('strong');a.textContent=label;b.textContent=String(value);div.append(a,b);box.append(div)}}
 function renderAchievements(){const name=myName(),p=player();$('badgeOwner').textContent='Private collection for '+name+' · '+p.ach.length+'/10 unlocked (local beta, not account-verified)';const area=$('badgeEntries');area.replaceChildren();badges.forEach(b=>{let owned=p.ach.includes(b.id),box=document.createElement('div');box.className='achievement'+(!owned?' locked':'');const icon=document.createElement('div');const isNugget=b.icon==='NUGGET'&&(owned||!b.secret);icon.className='emoji'+(isNugget?' nugget-icon':'');icon.textContent=!owned&&b.secret?'🔒':isNugget?'':b.icon;const name=document.createElement('b');name.textContent=!owned&&b.secret?'???':b.name;const desc=document.createElement('small');desc.textContent=!owned&&b.secret?'Secret achievement':b.desc;box.append(icon,name,desc);area.append(box)})}
 })();
