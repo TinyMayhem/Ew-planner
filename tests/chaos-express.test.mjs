@@ -85,5 +85,6 @@ test('board rendering and result counts scale with current level',()=>{
  assert.ok(html.includes('for(var c=0;c<cartCount();c++)'));
  assert.ok(html.includes('Array(level().riders.length).fill(null)'));
  assert.ok(html.includes("stats.filled+'/'+level().riders.length+' boarded"));
- assert.ok(html.includes('scroll-snap-type:x proximity'));
+ assert.ok(html.includes('grid-template-columns:repeat(2,minmax(0,1fr))')); 
+ assert.ok(!html.includes('scroll-snap-type:x proximity'),'Passenger roster should be stacked, not sideways swipeable');
 });
