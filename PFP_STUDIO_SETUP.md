@@ -39,3 +39,7 @@ The application does not persist member images. Images briefly travel through a 
 - Run `npm test` (Node 24) before merging.
 
 The preview deliberately does not reframe or decorate source images as if they were generated. To test actual AI editing before enabling the server, copy the prompt and upload the reference image to ChatGPT manually.
+
+## Source-symbol reference update (Tiny prototypes)
+
+The squad UI now shows a vector **outline preview** traced from the three uploaded screenshots (Aircraft, Tank, Missile launcher truck). The outline previews are original-code approximations for choosing the correct unit; they are not a claim to reproduce the source JPEGs pixel-for-pixel. The live AI edit path, once explicitly enabled with billing safeguards, sends the uploaded character plus the selected icon preview as two separate image references. Prompt language asks for the flat pale-cyan silhouettes and blue gradient instead of realistic vehicles. The image model may still redraw an icon, so truly exact pixel preservation requires a future transparent-character and immutable-icon compositing pipeline using the actual source artwork. Member pictures are not written to storage.
