@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#092938">
+<meta name="description" content="Chaos Express, the UTW seating puzzle where Conductor Devi leaves on time regardless of your problems.">
+<title>Chaos Express | UTW Chaos Arcade</title>
+<style>
+:root{color-scheme:dark;--bg:#071827;--panel:#102d3c;--panel2:#184153;--ink:#f4f8ff;--muted:#b8d5df;--gold:#ffc95c;--pink:#fc7ea9;--cyan:#49e0e5;--bad:#ff6379;--good:#7df2b5}
+*{box-sizing:border-box}body{margin:0;min-height:100svh;background:radial-gradient(circle at 50% -20%,#1a6681,#071827 65%);font:16px/1.48 system-ui,Arial,sans-serif;color:var(--ink)}button{font:inherit;cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}a{color:var(--cyan)}.wrap{max-width:920px;margin:auto;padding:14px 14px 80px}.top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 13px}.back{color:var(--muted);text-decoration:none;font-size:14px;font-weight:700}.label{font-size:11px;letter-spacing:.16em;color:var(--gold);font-weight:900}.heading{display:flex;align-items:center;gap:16px;justify-content:space-between;margin:7px 0 16px}.heading h1{margin:0;font-size:clamp(31px,7vw,54px);line-height:1.08;letter-spacing:-.045em}.heading p{margin:7px 0 0;color:var(--muted);font-size:14px}.chip{display:inline-flex;align-items:center;border:1px solid #45788d;border-radius:99px;padding:7px 10px;background:#143746;font-size:11px;font-weight:800;white-space:nowrap}.panel{background:linear-gradient(145deg,#133c4e,#0e2838);border:1px solid #2c6173;box-shadow:0 8px 26px #02121c60;border-radius:20px;padding:16px;margin-bottom:14px}.conductor{display:flex;align-items:center;gap:15px;background:linear-gradient(110deg,#1a5366,#123245);overflow:hidden}.conductor img{width:105px;height:105px;object-fit:cover;object-position:center top;border-radius:18px;border:2px solid #62e0e3;flex:none;background:#02dbeb}.conductor strong{color:var(--gold);font-size:13px;letter-spacing:.03em}.conductor p{margin:5px 0 0;font-size:15px;font-weight:700}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:13px}.stat{background:#122e3d;border:1px solid #2b5e6e;border-radius:13px;text-align:center;padding:10px 6px}.stat small{display:block;color:var(--muted);font-weight:700;letter-spacing:.04em;font-size:11px}.stat b{display:block;font-size:clamp(18px,5vw,29px);font-variant-numeric:tabular-nums}.clock.danger{color:var(--bad);animation:blink .48s infinite alternate}@keyframes blink{to{opacity:.55}}.bar{height:8px;background:#35515c;border-radius:99px;overflow:hidden;margin:-4px 0 14px}.bar span{display:block;width:100%;height:100%;background:var(--gold);transition:width .25s linear}.muted{color:var(--muted)}.screen-title{margin:0 0 6px;font-size:25px;line-height:1.16}.desc{font-size:14px;color:var(--muted);margin:6px 0 15px}.btn{min-height:46px;border:0;border-radius:13px;padding:10px 17px;font-weight:900;transition:transform .1s}.btn:active{transform:scale(.98)}.primary{color:#172532;background:var(--gold)}.secondary{color:var(--ink);background:#245469;border:1px solid #50849a}.accent{background:var(--pink);color:#28111b}.btnrow{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}.btnrow .btn{flex:1}.intro-steps{margin:10px 0 16px;padding-left:19px;font-size:14px;color:#e3f0f5}.intro-steps li{margin:5px 0}.passengers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0 15px}.person{display:flex;align-items:flex-start;gap:9px;border:2px solid #376477;background:#123847;border-radius:14px;padding:10px;text-align:left;color:var(--ink);min-height:105px;width:100%}.person.selected{border-color:var(--gold);box-shadow:0 0 0 2px #ffcf6866;background:#305062}.person.seated{opacity:.5}.avatar{font-size:30px;flex:none}.person .who{display:block;font-size:15px;font-weight:900}.person .demand{display:block;font-size:12px;line-height:1.35;color:var(--muted);margin-top:3px}.train-line{display:flex;align-items:center;gap:5px;margin:5px 0 9px;font-size:18px}.train-line span{font-size:13px;font-weight:900;color:var(--gold)}.carts{display:grid;grid-template-columns:1fr 1fr;gap:10px}.cart{border:3px solid #478ea1;background:linear-gradient(#316f87,#163b53);border-radius:18px;padding:9px 9px 19px;position:relative;box-shadow:inset 0 -8px #082535}.cart:after{content:"●　　　　 ●";font-size:15px;color:#17202c;position:absolute;bottom:-12px;left:0;right:0;text-align:center;letter-spacing:-3px}.cart-title{display:block;text-align:center;font-weight:900;color:#fff9dd;margin-bottom:8px;font-size:13px}.seat{width:100%;min-height:64px;border:2px dashed #70b8c8;background:#103142;border-radius:11px;color:white;text-align:center;margin-bottom:8px;padding:7px 5px;font-size:13px;line-height:1.25;font-weight:800;touch-action:manipulation}.seat.occupied{border-style:solid;border-color:#e4bb5d;background:#265a66}.seat .mini{display:block;font-size:24px}.seat:focus-visible,.person:focus-visible,.btn:focus-visible{outline:3px solid white;outline-offset:2px}.track{height:8px;margin:19px 0 8px;background:repeating-linear-gradient(90deg,#526f75 0 14px,#223743 14px 20px);border-top:2px solid #85a3a1;border-bottom:2px solid #85a3a1}.help{font-size:12px;color:var(--muted);margin-top:7px}.notice{min-height:22px;color:var(--gold);font-size:13px;margin-top:10px;font-weight:750}.badge{font-size:11px;background:#254858;border:1px solid #517d89;padding:5px 9px;border-radius:99px;white-space:nowrap}.score-big{font-size:46px;color:var(--gold);font-weight:1000;letter-spacing:-.05em;line-height:1.2}.verdict{font-size:19px;font-weight:900;color:var(--pink)}.report{margin:12px 0;padding:12px;border-radius:13px;background:#0d2735;border:1px solid #30576c}.report p{margin:7px 0}.report ul{margin:8px 0 0;padding-left:18px;color:var(--muted);font-size:14px}.report li{padding:2px 0}.footer{font-size:12px;color:var(--muted);text-align:center;margin:20px 0}#results,#game{display:none}.leaderboard{font-size:13px;margin-top:6px}.leaderboard div{display:flex;justify-content:space-between;gap:8px;border-top:1px solid #346173;padding:8px 0}.leaderboard b{color:var(--gold)}.mini-label{color:var(--cyan);font-size:12px;letter-spacing:.08em;font-weight:900}body.fullscreen .wrap{max-width:none;min-height:100svh}@media(min-width:680px){.play-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}.passengers{margin-top:0}.panel{padding:20px}.cart{padding:13px 13px 23px}.seat{min-height:82px}}@media(max-width:360px){.wrap{padding:10px 9px 35px}.panel{padding:12px}.conductor img{width:86px;height:86px}.person{padding:7px;gap:6px}.avatar{font-size:23px}.person .who{font-size:13px}.person .demand{font-size:11px}.btn{padding:9px 10px}.cart{padding:7px 7px 15px}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+ <div class="top"><a class="back" href="/members.html">← UTW Chaos Arcade</a><button class="btn secondary" id="full" type="button" aria-label="Toggle fullscreen">⛶ Fullscreen</button></div>
+ <div class="heading"><div><div class="label">🚂 UTW CHAOS ARCADE · PLAYABLE PROTOTYPE</div><h1>THE CHAOS<br>EXPRESS</h1><p>All aboard. Nobody gets along.</p></div><span class="chip">CHOO CHOO, LOSERS!</span></div>
+ <section class="panel conductor" aria-label="Conductor Devi"><img src="/assets/art/devi-conductor.webp" alt="Devi, with his spiky hair, bright blue eyes and smug grin" onerror="this.style.display='none'"><div><strong>🎩 CONDUCTOR DEVI</strong><p id="deviLine" aria-live="polite">I run a train, not a group therapy session.</p></div></section>
+ <div class="stats"><div class="stat"><small>LEVEL</small><b id="levelNum">1 / 3</b></div><div class="stat"><small>TIME TO DEPART</small><b class="clock" id="clock">01:00</b></div><div class="stat"><small>BEST SCORE</small><b id="best">0</b></div></div><div class="bar" aria-hidden="true"><span id="progress"></span></div>
+ <section class="panel" id="intro"><div class="mini-label">NEW PASSENGER DISASTER</div><h2 class="screen-title" id="introTitle">The Red Jacket Incident</h2><p class="desc" id="introDesc"></p><ol class="intro-steps"><li>Tap a passenger, then tap a seat. Or drag them into a cart.</li><li>Follow the short demands on their passenger cards.</li><li>You can depart early for bonus points. At zero, Devi departs anyway.</li><li>Need help? Each hint costs 150 points.</li></ol><button class="btn primary" id="start" type="button">🚂 START BOARDING</button></section>
+ <section class="panel" id="game"><div class="mini-label">BOARDING IN PROGRESS · DEVI IS JUDGING</div><h2 class="screen-title" id="gameTitle">The Red Jacket Incident</h2><p class="desc" id="gameDesc">Select a passenger, then tap a seat.</p><div class="play-grid"><div><div class="mini-label">THE PASSENGERS</div><div class="passengers" id="roster"></div></div><div><div class="train-line">🚂 <span>DEVI'S TRAIN</span> 🚃 🚃</div><div class="carts" id="carts"></div><div class="track" aria-hidden="true"></div><div class="help">Tap a filled seat to remove someone. Different cart, different drama.</div></div></div><div class="notice" id="notice" role="status" aria-live="polite"></div><div class="btnrow"><button class="btn secondary" id="hint" type="button">💡 HINT · −150</button><button class="btn accent" id="depart" type="button">🚂 DEPART NOW</button></div></section>
+ <section class="panel" id="results" aria-live="polite"><div class="mini-label">OFFICIAL POST-DEPARTURE INCIDENT REPORT</div><h2 class="screen-title" id="resultTitle">Devi has departed</h2><div class="score-big" id="points">0</div><div class="verdict" id="verdict"></div><p id="resultQuote"></p><div class="report" id="report"></div><div class="btnrow"><button class="btn secondary" id="retry" type="button">↻ Retry level</button><button class="btn primary" id="next" type="button">Next level →</button></div></section>
+ <section class="panel"><div class="mini-label">🏆 YOUR PERSONAL BESTS</div><p class="desc">Prototype scores are saved on this device only. Shared arcade leaderboard integration comes after gameplay testing.</p><div id="leaderboard" class="leaderboard"></div></section>
+ <div class="footer">UTW · Server 1395 · The train is on time. Your dignity isn't.</div>
+</div>
+<script>
+(function(){
+'use strict';
+var people=[
+ {id:'tiny',name:'Tiny',icon:'🎀',color:'black'},
+ {id:'baba',name:'Baba',icon:'🟥',color:'red'},
+ {id:'mo',name:'Mo',icon:'🍗',color:'blue'},
+ {id:'ganoosh',name:'Ganoosh',icon:'🧥',color:'yellow'}
+];
+var levels=[
+ {title:'The Red Jacket Incident',desc:'Four passengers. Two carts. Zero conflict-resolution training.',seconds:60,rules:[
+  {person:'tiny',type:'not',target:'baba',say:'No red jackets in my cart. BABA.',hint:'Tiny refuses to sit with Baba, who is wearing red.'},
+  {person:'baba',type:'with',target:'ganoosh',say:'I demand Ganoosh as my witness.',hint:'Baba wants to ride with Ganoosh.'},
+  {person:'mo',type:'with',target:'tiny',say:'Tiny respects my nuggets. Same cart.',hint:'Mo and Tiny must share a cart.'},
+  {person:'ganoosh',type:'not',target:'mo',say:'No nuggets near my new jacket.',hint:'Ganoosh will not sit with Mo.'}
+ ],hints:['Mo and Tiny belong together.','Put Baba and Ganoosh in the other cart.']},
+ {title:'Baba Files a Complaint',desc:'Now one passenger insists on the front cart. Of course they do.',seconds:55,rules:[
+  {person:'tiny',type:'front',say:'Front cart. I am the main character.',hint:'Tiny must be in Cart 1.'},
+  {person:'baba',type:'not',target:'tiny',say:'I am avoiding Tiny for legal reasons.',hint:'Baba cannot share a cart with Tiny.'},
+  {person:'mo',type:'with',target:'tiny',say:'Nugget security rides with Tiny.',hint:'Mo and Tiny must share a cart.'},
+  {person:'ganoosh',type:'with',target:'baba',say:'Baba promised me the window seat.',hint:'Ganoosh and Baba must share a cart.'}
+ ],hints:['Tiny wants Cart 1, and Mo insists on joining.','Baba and Ganoosh can argue in Cart 2.']},
+ {title:'HR Has Left the Station',desc:'The rules are still short. The personalities are getting worse.',seconds:50,rules:[
+  {person:'tiny',type:'back',say:'Back cart. I need plausible deniability.',hint:'Tiny must be in Cart 2.'},
+  {person:'baba',type:'front',say:'Cart 1. I called dibs.',hint:'Baba must be in Cart 1.'},
+  {person:'mo',type:'with',target:'baba',say:'Baba owes me twelve nuggets.',hint:'Mo and Baba must share a cart.'},
+  {person:'ganoosh',type:'not',target:'mo',say:'No Mo. No flying nuggets.',hint:'Ganoosh cannot share a cart with Mo.'}
+ ],hints:['Baba and Mo have to ride together in Cart 1.','Tiny and Ganoosh belong in Cart 2.']}
+];
+var index=0,chairs=[null,null,null,null],selected=null,stage='intro',hintCount=0,endAt=0,ticker=null,seconds=60,lastWarn=100,notice='',bestScores={};
+var $=function(id){return document.getElementById(id)};
+try{var saved=JSON.parse(localStorage.getItem('utw-chaos-express-prototype')||'{}');if(saved&&typeof saved==='object')bestScores=saved}catch(e){}
+var level=function(){return levels[index]};
+function currentSeconds(){return Math.max(0,Math.ceil((endAt-Date.now())/1000))}
+function cartOf(who){var i=chairs.indexOf(who);return i<0?-1:Math.floor(i/2)}
+function ruleOkay(rule){var at=cartOf(rule.person);if(at<0)return false;if(rule.type==='front')return at===0;if(rule.type==='back')return at===1;var other=cartOf(rule.target);if(other<0)return false;return rule.type==='with'?at===other:at!==other}
+function evaluate(){
+ var pass=level().rules.filter(ruleOkay),correct=pass.length,filled=chairs.filter(Boolean).length,perfect=filled===4&&correct===4;
+ var remaining=stage==='playing'?currentSeconds():0;
+ var raw=correct*100+pass.length*50+(perfect?300:0)+(perfect?remaining*10:0)-hintCount*150;
+ return {pass:pass,correct:correct,filled:filled,perfect:perfect,remaining:remaining,points:Math.max(0,raw)};
+}
+function saveBest(points){var prev=Number(bestScores[index])||0;if(points>prev){bestScores[index]=points;try{localStorage.setItem('utw-chaos-express-prototype',JSON.stringify(bestScores))}catch(e){}}}
+function renderBest(){
+ $('best').textContent=(Number(bestScores[index])||0).toLocaleString();
+ $('leaderboard').replaceChildren();
+ levels.forEach(function(l,i){var row=document.createElement('div'),name=document.createElement('span'),score=document.createElement('b');name.textContent='Level '+(i+1)+': '+l.title;score.textContent=(Number(bestScores[i])||0).toLocaleString();row.append(name,score);$('leaderboard').append(row)});
+}
+function renderClock(){var s=stage==='playing'?currentSeconds():level().seconds;$('clock').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');$('clock').classList.toggle('danger',s<=10&&stage==='playing');$('progress').style.width=(100*s/level().seconds)+'%';$('progress').style.background=s<=10?'#ff6379':'#ffc95c'}
+function commentary(s){$('deviLine').textContent=s}
+function showPanels(){['intro','game','results'].forEach(function(id){$(id).style.display=(id==='intro'&&stage==='intro')||(id==='game'&&stage==='playing')||(id==='results'&&stage==='results')?'block':'none'})}
+function prepare(i){
+ clearInterval(ticker);index=i;chairs=[null,null,null,null];selected=null;hintCount=0;stage='intro';notice='';lastWarn=100;
+ $('levelNum').textContent=(index+1)+' / '+levels.length;$('introTitle').textContent=level().title;$('introDesc').textContent=level().desc;
+ $('gameTitle').textContent=level().title;$('notice').textContent='';
+ commentary('I run a train, not a group therapy session.');renderBest();renderClock();showPanels();
+}
+function renderBoard(){
+ var roster=$('roster');roster.replaceChildren();
+ people.forEach(function(p){
+  var rule=level().rules.find(function(r){return r.person===p.id}),b=document.createElement('button'),occupied=chairs.includes(p.id);
+  b.type='button';b.className='person'+(selected===p.id?' selected':'')+(occupied?' seated':'');b.draggable=true;b.disabled=occupied;
+  b.setAttribute('aria-pressed',String(selected===p.id));b.innerHTML='<span class="avatar" aria-hidden="true">'+p.icon+'</span><span><span class="who">'+p.name+'</span><span class="demand"></span></span>';
+  b.querySelector('.demand').textContent=rule.say;
+  b.addEventListener('click',function(){selected=selected===p.id?null:p.id;renderBoard()});
+  b.addEventListener('dragstart',function(e){selected=p.id;e.dataTransfer.setData('text/plain',p.id);e.dataTransfer.effectAllowed='move'});
+  roster.append(b);
+ });
+ var carts=$('carts');carts.replaceChildren();
+ for(var c=0;c<2;c++){
+  var cart=document.createElement('div');cart.className='cart';
+  var title=document.createElement('span');title.className='cart-title';title.textContent='CART '+(c+1);cart.append(title);
+  for(var s=0;s<2;s++){
+   (function(pos){
+    var rider=people.find(function(p){return p.id===chairs[pos]}),seat=document.createElement('button');seat.type='button';seat.className='seat'+(rider?' occupied':'');
+    seat.innerHTML=rider?'<span class="mini" aria-hidden="true">'+rider.icon+'</span>'+rider.name:'<span class="mini" aria-hidden="true">＋</span>EMPTY SEAT';
+    seat.setAttribute('aria-label',rider?'Remove '+rider.name+' from Cart '+(c+1):'Seat '+(s+1)+' in Cart '+(c+1));
+    seat.addEventListener('click',function(){place(pos,selected)});
+    seat.addEventListener('dragover',function(e){e.preventDefault();e.dataTransfer.dropEffect='move'});
+    seat.addEventListener('drop',function(e){e.preventDefault();place(pos,e.dataTransfer.getData('text/plain'))});
+    cart.append(seat);
+   })(c*2+s);
+  }
+  carts.append(cart);
+ }
+ $('hint').disabled=hintCount>=2;
+}
+function place(pos,who){
+ if(stage!=='playing')return;
+ if(chairs[pos]){var old=chairs[pos];chairs[pos]=null;selected=old;notice=old+' has been evicted from their seat.'}
+ else if(who&&people.some(function(p){return p.id===who})){var previous=chairs.indexOf(who);if(previous>=0)chairs[previous]=null;chairs[pos]=who;selected=null;notice='Passenger seated. Whether they approve is another matter.'}
+ else{notice='Choose a passenger first, you chaotic raccoon.'}
+ $('notice').textContent=notice;renderBoard();
+}
+function start(){
+ clearInterval(ticker);chairs=[null,null,null,null];selected=null;hintCount=0;stage='playing';lastWarn=100;endAt=Date.now()+level().seconds*1000;notice='Tap a passenger, then a cart seat.';
+ showPanels();renderBoard();renderClock();$('notice').textContent=notice;
+ commentary('Passengers boarding. I already regret this.');
+ ticker=setInterval(function(){
+  if(stage!=='playing'){clearInterval(ticker);return}
+  var s=currentSeconds();renderClock();
+  if(s<=0){finish(false);return}
+  if(s<=5&&lastWarn>5){commentary('FIVE. FOUR. I DON\'T CARE. THREE.');lastWarn=5}
+  else if(s<=10&&lastWarn>10){commentary('FINAL CALL! I WILL LEAVE WITHOUT YOU.');lastWarn=10}
+  else if(s<=20&&lastWarn>20){commentary('Are you boarding passengers or planning a wedding?');lastWarn=20}
+ },150);
+}
+function hint(){
+ if(stage!=='playing'||hintCount>=2)return;
+ var help=level().hints[hintCount];hintCount++;
+ $('notice').textContent='💡 Devi: '+help+' (−150 points)';
+ commentary('You needed help with THAT? Expensive taste.');
+ renderBoard();
+}
+function finish(early){
+ if(stage!=='playing')return;
+ var stats=evaluate();clearInterval(ticker);stage='results';saveBest(stats.points);renderBest();renderClock();showPanels();
+ $('resultTitle').textContent=early?'You pulled the departure lever!':'THE TRAIN HAS LEFT THE STATION';
+ $('points').textContent=stats.points.toLocaleString()+' POINTS';
+ var verdict=stats.perfect?'SUSPICIOUSLY COMPETENT':stats.correct>=2?'MINOR CATASTROPHE':'ABSOLUTE TRAIN WRECK';
+ $('verdict').textContent=verdict;
+ var missing=4-stats.filled,failed=level().rules.filter(function(r){return !ruleOkay(r)}),text='',breakdown=$('report');breakdown.replaceChildren();
+ if(stats.perfect){text='I hate to admit it, but that was almost professional.'}
+ else if(missing){text='We left '+missing+' passenger'+(missing===1?'':'s')+' behind. I call that improved fuel efficiency.'}
+ else{text='Everyone boarded. Somehow, everyone is still offended.'}
+ $('resultQuote').textContent='Devi: “'+text+'”';commentary(stats.perfect?'A functioning railway. Disturbing.':'The train is on time. Your dignity is not.');
+ var summary=document.createElement('p');summary.textContent=stats.filled+'/4 boarded · '+stats.pass.length+'/4 rules satisfied · '+hintCount+' hint'+(hintCount===1?'':'s')+' used';breakdown.append(summary);
+ var calc=document.createElement('p');calc.textContent='Seating '+(stats.correct*100)+' + rules '+(stats.pass.length*50)+' + perfect '+(stats.perfect?300:0)+' + early time '+(stats.perfect?stats.remaining*10:0)+' − hints '+hintCount*150;breakdown.append(calc);
+ if(failed.length){var ul=document.createElement('ul');failed.forEach(function(rule){var li=document.createElement('li');li.textContent=people.find(function(p){return p.id===rule.person}).name+': '+rule.say;ul.append(li)});breakdown.append(ul)}
+ $('next').textContent=index===levels.length-1?'↻ Play from level 1':'Next level →';
+}
+function fullscreen(){
+ if(document.fullscreenElement&&document.exitFullscreen){document.exitFullscreen();return}
+ if(document.documentElement.requestFullscreen){document.documentElement.requestFullscreen().catch(function(){document.body.classList.toggle('fullscreen')})}
+ else document.body.classList.toggle('fullscreen');
+}
+$('start').addEventListener('click',start);$('hint').addEventListener('click',hint);$('depart').addEventListener('click',function(){finish(true)});
+$('retry').addEventListener('click',function(){prepare(index);start()});
+$('next').addEventListener('click',function(){prepare((index+1)%levels.length)});
+$('full').addEventListener('click',fullscreen);
+document.addEventListener('visibilitychange',function(){if(stage==='playing'){renderClock();if(currentSeconds()<=0)finish(false)}});
+prepare(0);
+})();
+</script>
+</body>
+</html>
