@@ -1,7 +1,8 @@
 import {emptyBoard,hash,publicBoard,publicMember,memberByToken,register,update,assign,publish,adminPasswordOK,sessionToken,validSession,invalidatePairs,pagePasswordOK} from '../lib/buddies.mjs';
 import {stageForDate,stageRange} from '../assets/r4-train-rules.mjs';
 import {GET as arcadeGET,POST as arcadePOST} from '../lib/arcade.mjs';
-const configured=()=>Boolean(process.env.SUPABASE_URL&&process.env.SUPABASE_SECRET_KEY&&process.env.UTW_ADMIN_PASSWORD?.length>=16&&process.env.UTW_SESSION_SECRET?.length>=32);
+// Board access needs the database and a secure signed session. Admin-password policy is enforced separately by adminPasswordOK for admin actions.
+const configured=()=>Boolean(process.env.SUPABASE_URL&&process.env.SUPABASE_SECRET_KEY&&process.env.UTW_SESSION_SECRET?.length>=32);
 async function database(path,options={}) {
  try {
   const response=await fetch(process.env.SUPABASE_URL.replace(/\/$/,'')+'/rest/v1/'+path,{
@@ -33,7 +34,7 @@ async function save(board,revision){
  return Array.isArray(rows)&&rows.length===1;
 }
 const pageAllowed=request=>validSession(request.headers.get('cookie'),'page')||validSession(request.headers.get('cookie')); // fail closed even if the passcode setting is missing
-export async function GET(request){if(new URL(request.url).searchParams.get('arcade')==='1')return arcadeGET(request);if(!pageAllowed(request))return json({ready:false,locked:true,message:'Enter the alliance password to open the buddy board.'});if(!configured())return json({ready:false,message:'Buddy signup is not open yet. Check the production settings.',setupNeeded:[!process.env.SUPABASE_URL&&'SUPABASE_URL',!process.env.SUPABASE_SECRET_KEY&&'SUPABASE_SECRET_KEY',!(process.env.UTW_ADMIN_PASSWORD?.length>=16)&&'UTW_ADMIN_PASSWORD must have at least 16 characters',!(process.env.UTW_SESSION_SECRET?.length>=32)&&'UTW_SESSION_SECRET must have at least 32 characters'].filter(Boolean)});try{if(new URL(request.url).searchParams.get('view')==='trains'){
+export async function GET(request){if(new URL(request.url).searchParams.get('arcade')==='1')return arcadeGET(request);if(!pageAllowed(request))return json({ready:false,locked:true,message:'Enter the alliance password to open the buddy board.'});if(!configured())return json({ready:false,message:'Buddy signup is not open yet. Check the production settings.',setupNeeded:[!process.env.SUPABASE_URL&&'SUPABASE_URL',!process.env.SUPABASE_SECRET_KEY&&'SUPABASE_SECRET_KEY',!(process.env.UTW_SESSION_SECRET?.length>=32)&&'UTW_SESSION_SECRET must have at least 32 characters'].filter(Boolean)});try{if(new URL(request.url).searchParams.get('view')==='trains'){
  const [records,legacy,players,seasons]=await Promise.all([
   database('utw_stat_awards?select=train_date,slot,member_id,vip_member_id,season_id,source&order=train_date.asc,slot.asc&limit=500'),
   database('utw_stat_train_legacy?select=train_date,driver_name,vip_name,source,selection_label&order=train_date.asc&limit=500'),
