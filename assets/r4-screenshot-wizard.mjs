@@ -2,6 +2,7 @@ import {parseRankLines,matchRoster,autoVerifyRosterRow,normalizeIgn,validateConf
 import {scanRankingScreenshot} from './r4-ocr-browser.mjs?version=nickname-v6-20261104';
 import {languagesForOcr,describeLanguagePacks,OCR_LANGUAGE_MODES} from './r4-ocr-languages.mjs?version=scan-v4-20261104';
 import {parseCsv,guessColumn,rowsFromCsv} from './r4-csv-utils.mjs';
+import {resolvePollOcrName,rankPollMemberMatches} from './r4-poll-parser.mjs';
 import {weekStart,validTarget} from './r4-csv-utils.mjs';
 
 // The scanner works in the browser. Screenshots leave the device only for DS evidence.
@@ -35,7 +36,7 @@ function selectMembers(members,selected=''){
  for(const m of members)select.append(new Option(m.display_name,m.id));
  select.value=selected;return select;
 }
-function makeRowCard({image,row,index,group,roster,aliases,redraw,updateStatus}){
+function makeRowCard({image,row,index,group,roster,aliases,redraw,updateStatus,dsTeam=false}){
  const card=node('article',null,'ocr-member-card'+(row.confirmed?' ocr-verified':' ocr-uncertain'));
  const header=node('div',null,'ocr-member-head');
  const rowTitle=node('strong','Row '+(index+1)+(row.pinned?' · Green pinned rank':'')+(row.autoMatched?' · Auto-checked (90%+ name match)':row.confirmed?' · Verified':' · Tap to verify'));header.append(rowTitle);
@@ -112,7 +113,8 @@ function makeRowCard({image,row,index,group,roster,aliases,redraw,updateStatus})
    const box=node('div',null,'ocr-roster-picker'),selection=document.createElement('select');
    selection.setAttribute('aria-label','Choose player for row '+(index+1));
    selection.append(new Option('Select correct player…',''));
-   for(const member of roster)selection.append(new Option(member.display_name,member.id));
+   const ordered=dsTeam?rankPollMemberMatches(row.ocrGuess||row.name,roster,aliases).map(x=>roster.find(m=>m.id===x.id)).filter(Boolean):roster;
+   for(const member of ordered)selection.append(new Option(member.display_name,member.id));
    const apply=node('button','Use selected player','stat-button');apply.type='button';
    apply.addEventListener('click',()=>{
     const selected=roster.find(m=>m.id===selection.value);
@@ -229,7 +231,7 @@ export function initScreenshotWizard({getMembers,getAliases,getSeason,reload,sub
    const content=node('div',null,'ocr-image-contents');
    if(!isDs){
     const list=node('div',null,'ocr-member-list');
-    grouped.byImage[imageIndex].forEach(group=>list.append(makeRowCard({image:group.image,row:group.row,index:group.index,group,roster,aliases,redraw:render,updateStatus:renderStatus})));
+    grouped.byImage[imageIndex].forEach(group=>list.append(makeRowCard({image:group.image,row:group.row,index:group.index,group,roster,aliases,redraw:render,updateStatus:renderStatus,dsTeam:type.value.startsWith('ds_team_')})));
     content.append(list);
     if(duplicates)content.append(node('p',duplicates+' overlapping row'+(duplicates===1?'':'s')+' already shown above or in another screenshot. No extra verification needed.','ocr-overlap-note'));
     if(image.diagnostics)content.prepend(node('p',image.diagnostics,'ocr-diagnostic'));
@@ -268,6 +270,12 @@ export function initScreenshotWizard({getMembers,getAliases,getSeason,reload,sub
   save.disabled=busy||!images.length||(!isDs&&(!groups.length||verified!==groups.length||conflicts.length>0));
  }
  function prepareRow(row,roster,aliases){
+  if(type.value.startsWith('ds_team_')){
+   const found=resolvePollOcrName(row.name,roster,aliases);
+   const member=found.member_id?roster.find(m=>m.id===found.member_id):null;
+   return {...row,ocrGuess:row.name,name:member?.display_name||found.name,
+    confirmed:false,autoMatched:false,deleted:false};
+  }
   const m=matchRoster(row.name,roster,aliases);
   const prepared={...row,ocrGuess:row.name,name:m.type==='exact'?m.name:row.name,confirmed:false,deleted:false};
   return ['vs_daily','vs_weekly'].includes(type.value)?autoVerifyRosterRow(prepared,roster,aliases):prepared;
