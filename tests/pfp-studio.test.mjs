@@ -54,7 +54,8 @@ test('preview never presents a canvas mock-up as an AI-generated image',async()=
  const browser=await readFile(new URL('../assets/pfp-studio.js',import.meta.url),'utf8');
  const html=await readFile(new URL('../members.html',import.meta.url),'utf8');
  assert.equal(browser.includes('demoComposite'),false);
- assert.equal(browser.includes('canvas.toBlob'),false);
+ assert.equal(browser.includes('offerDownload(result.blob'),false);
+ assert.match(browser,/async function pngSymbolReference/);
  assert.match(html,/AI generation not connected/);
  assert.match(html,/Copy instructions for ChatGPT/);
  assert.match(browser,/elements.button.disabled=!config.ready/);
