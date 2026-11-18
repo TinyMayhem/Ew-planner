@@ -318,7 +318,7 @@ export async function GET(request){
      const result=buildTrainAdvice({...adviceInput,dsTeam:team,dsTeamRows:report});
      return {team,sourceDate:result.dataDate,recommended:result.recommended,
       skipped:result.rejected,candidates:result.candidates,
-      eligibleCount:result.eligibleCount,context:result.context,uploaded:!!report};
+      eligibleCount:result.eligibleCount,context:result.context,uploaded:!!report?.rows?.length};
     });
     advice.teamRecommendations=byTeam;
    }
@@ -414,6 +414,20 @@ export async function POST(request){
   if(raw.length>150000)return json({error:'Request too large'},413);
   const body=JSON.parse(raw);
   switch(body.action){
+   case 'ds_team_clear':{
+    const actor=await sessionUser(request);
+    if(!actor||actor.role==='von')return json({error:'UTW R4 access required'},403);
+    const date=body.event_date,season=body.season_id,team=body.team,revision=body.revision;
+    if(!isoDate(date)||typeof season!=='string'||!/^[a-z0-9-]{2,30}$/.test(season)||
+     !['a','b'].includes(team)||!Number.isInteger(revision)||revision<0)
+     return json({error:'Choose a saved DS team and valid event date'},400);
+    const result=await db('rpc/utw_ds_team_apply',{method:'POST',body:JSON.stringify({
+     p_season:season,p_date:date,p_team:team,p_mode:'clear',p_rows:[],
+     p_revision:revision,p_actor:String(actor.username||actor.display_name||'R4').slice(0,80)
+    })});
+    await recordAudit(request,'ds_team_clear',{season,date,team,revision:result.revision},false);
+    return json(result);
+   }
    case 'ds_team':{
     const actor=await sessionUser(request);
     if(!actor||actor.role==='von')return json({error:'UTW R4 access required'},403);
