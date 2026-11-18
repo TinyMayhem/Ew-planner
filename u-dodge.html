@@ -42,7 +42,7 @@ $('wrap').addEventListener('pointermove',e=>{if(!pointer.active||!state||state.p
 window.addEventListener('keydown',e=>{if(current==='game'&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){keyboard=e.key==='ArrowLeft'?-1:1;e.preventDefault()}});
 window.addEventListener('keyup',e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight')keyboard=0});
 const foods=[{type:'nugget',emoji:'NUGGET',r:17},{type:'fries',emoji:'🍟',r:20},{type:'burger',emoji:'🍔',r:23},{type:'giant',emoji:'🍔',r:37}];
-function resetState(which){mode=which;return {phase:'count',count:3.1,mode:which,t:0,hearts:3,shield:false,inv:0,slow:0,hitShow:0,score:0,combo:0,dodged:0,wave:1,nextSpawn:.72,nextBox:30,box:null,food:[],x:W/2,targetX:W/2,run:{hits:0,burgers:0,shields:0,fries:0,katana:0,boxes:0,score:0},flash:0,slashed:0,lastPickup:'',pickupT:0}};
+function resetState(which){mode=which;return {phase:'count',count:3.1,mode:which,t:0,hearts:3,shield:false,inv:0,slow:0,hitShow:0,score:0,combo:0,dodged:0,wave:1,nextSpawn:.72,nextBox:15,box:null,food:[],x:W/2,targetX:W/2,run:{hits:0,burgers:0,shields:0,fries:0,katana:0,boxes:0,score:0},flash:0,slashed:0,lastPickup:'',pickupT:0}};
 function start(which){selectMe();state=resetState(which);show('game');updateHUD();last=performance.now();cancelAnimationFrame(raf);raf=requestAnimationFrame(loop);beep('start');announce('Three. Two. One. U chaos!')}
 function waveConfig(){let w=state.wave;return {speed:Math.min(245,123+(w-1)*17),interval:Math.max(.36,.88-Math.min(9,w-1)*.056),largeChance:w>=3?Math.min(.20,.045+(w-3)*.013):0}}
 function spawnFood(){const cfg=waveConfig();let p=Math.random(),type=p<cfg.largeChance?'giant':p<.30?'fries':p<.65?'nugget':'burger',f=foods.find(x=>x.type===type);let o={...f,rot:rnd(-.4,.4),spin:rnd(-1.4,1.4),counted:false};o.x=rnd(f.r+8,W-f.r-8);o.y=-45;o.vx=0;o.vy=rnd(cfg.speed*.8,cfg.speed*1.04);state.food.push(o)}
@@ -56,7 +56,7 @@ function update(dt){if(state.phase==='count'){let old=Math.ceil(state.count);sta
  if(keyboard)state.targetX=clamp(state.targetX+keyboard*300*dt,40,W-40);
  const step=(state.slow>0?135:270)*dt;state.x+=clamp(state.targetX-state.x,-step,step);
  state.nextSpawn-=dt;let guard=0;while(state.nextSpawn<=0&&guard++<3){spawnFood();state.nextSpawn+=waveConfig().interval*rnd(.75,1.3)}
- if(state.t>=state.nextBox){spawnBox();state.nextBox+=30;state.lastPickup='🎁 U-MYSTERY BOX FALLING · CATCH IT!'}
+ if(state.t>=state.nextBox){spawnBox();state.nextBox+=15;state.lastPickup='🎁 U-MYSTERY BOX FALLING · CATCH IT!'}
  if(state.box){state.box.y+=state.box.vy*dt;state.box.rot+=dt*1.2;if(shapeHit(state.box))getBox();else if(state.box.y>H+50){state.box=null;state.lastPickup='🎁 U-MYSTERY BOX MISSED!'}}
  for(const o of state.food){o.x+=o.vx*dt;o.y+=o.vy*dt;o.rot+=o.spin*dt;if(shapeHit(o)){o.counted=true;damage(o);if(state.phase!=='run')break}else if(o.y>H+o.r+6){o.counted=true;gotDodge()}}
  state.food=state.food.filter(o=>!o.counted);
