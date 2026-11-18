@@ -30,8 +30,8 @@ async function db(path,opts={}){
   signal:AbortSignal.timeout(8500)
  });
  if(!response.ok)throw Error('Arcade database unavailable');
- if(response.status===204)return null;
- return response.json();
+ const text=await response.text();
+ return text?JSON.parse(text):null;
 }
 async function rateLimited(request,action){
  const ip=(request.headers.get('x-vercel-forwarded-for')||request.headers.get('x-forwarded-for')||'unknown').split(',')[0].trim().slice(0,80);
