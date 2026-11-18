@@ -59,3 +59,23 @@ test('preview never presents a canvas mock-up as an AI-generated image',async()=
  assert.match(html,/Copy instructions for ChatGPT/);
  assert.match(browser,/elements.button.disabled=!config.ready/);
 });
+
+test('squad variants refer to source-faithful flat icons instead of realistic vehicles',()=>{
+ const tank=buildPrompt({theme:'squad',squad:'tank',style:'original'});
+ const air=buildPrompt({theme:'squad',squad:'aircraft',style:'original'});
+ const missile=buildPrompt({theme:'squad',squad:'missile',style:'original'});
+ assert.match(tank,/lower body containing three circular openings/i);
+ assert.match(air,/diagonal Aircraft symbol/i);
+ assert.match(missile,/Missile launcher truck symbol/i);
+ assert.doesNotMatch(tank,/rugged green armored tank/i);
+ assert.match(missile,/preserve.*recognizable appearance/i);
+});
+test('client has illustrative source-symbol previews and includes secondary reference input',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const icons=await readFile(new URL('../assets/pfp-symbols.js',import.meta.url),'utf8');
+ const browser=await readFile(new URL('../assets/pfp-studio.js',import.meta.url),'utf8');
+ const handler=await readFile(new URL('../lib/pfp-studio-handler.mjs',import.meta.url),'utf8');
+ for(const symbol of ['tank','aircraft','missile'])assert.match(icons,new RegExp(symbol+':'));
+ assert.match(browser,/form\.set\('icon'/);
+ assert.match(handler,/input\.append\('image\[\]'/);
+});
