@@ -321,6 +321,18 @@ async function dsTeamBoards(){
      document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
     };
     card.append(download);
+    if(saved.rows?.length){
+     const clear=text('button','Clear Team '+team.toUpperCase()+' results','stat-button');
+     clear.type='button';clear.onclick=async()=>{
+      if(!confirm('Clear all DS Team '+team.toUpperCase()+' scores for '+date+'? This keeps the audit history and does not alter the other team.'))return;
+      try{
+       await post({action:'ds_team_clear',season_id:state.season,event_date:date,team,revision:saved.revision});
+       await dsTeamBoards();void candidates();
+       notice('Team '+team.toUpperCase()+' scores cleared. Historical edits remain in the audit log.');
+      }catch(e){notice(e.message,true)}
+     };
+     card.append(clear);
+    }
    }
    const button=text('button','Upload Team '+team.toUpperCase()+' screenshots / CSV','stat-button primary');
    button.type='button';button.onclick=()=>openDsTeamScanner(team);card.append(button);root.append(card);
