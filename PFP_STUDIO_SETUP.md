@@ -11,11 +11,11 @@
 - Download the image without storing the uploaded photo or output in a DB, object storage, cookies or localStorage.
 - Browser previews are object URLs revoked when changed/cleared or page is closed.
 
-## Preview the demo
+## Preview the truthful test interface
 Open your Vercel feature-branch deployment at:
 `/members.html?pfpPreview=1#pfpStudio`
 
-The `pfpPreview=1` UI override is only honored by the PFP Studio script when Vercel says `VERCEL_ENV=preview`. It allows visual testing without a production passcode. It does **not** grant backend authentication or enable billable AI generation. The demo makes a simple labeled collage, **not an AI-transformed picture**. Production Member Den keeps its existing passcode gate.
+The `pfpPreview=1` UI override is only honored by the PFP Studio script when Vercel says `VERCEL_ENV=preview`. It allows visual testing without a production passcode. It does **not** grant backend authentication or enable billable AI generation. The demo previews the untouched source image and shows a copyable prompt. It does **not** simulate an AI result or offer a fake download. The real Generate button is visibly disabled until AI is configured. Production Member Den keeps its existing passcode gate.
 
 ## Enabling real AI after testing
 Add these Vercel project **server-only environment variables** directly in Vercel Settings, never in code or chat:
@@ -37,3 +37,5 @@ The application does not persist member images. Images briefly travel through a 
 - Current theme selection is hardcoded for beta; when AI is enabled the server enforces one active theme configured by an env variable.
 - Production admin theme editor, true weekly scheduling, per-member quota and exact icon compositing are next-phase items.
 - Run `npm test` (Node 24) before merging.
+
+The preview deliberately does not reframe or decorate source images as if they were generated. To test actual AI editing before enabling the server, copy the prompt and upload the reference image to ChatGPT manually.
