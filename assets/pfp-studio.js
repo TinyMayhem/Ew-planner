@@ -1,3 +1,4 @@
+import {symbolSvg,labels} from './pfp-symbols.js';
 // PFP Studio: no fake graphic generator, no stored images, real AI calls only when server enables them.
 const $=id=>document.getElementById(id);
 const elements={form:$('pfpForm'),theme:$('pfpTheme'),file:$('pfpImage'),art:$('pfpArtboard'),status:$('pfpMessage'),mode:$('pfpMode'),download:$('pfpDownload'),button:$('pfpGenerate'),prompt:$('pfpPrompt'),copy:$('pfpCopy')};
@@ -43,9 +44,9 @@ function promptText(){
  const clothing=$('pfpOutfit').value==='keep'?'Preserve the original outfit.':'Give the character an outfit matching the theme.';
  let scene='';
  if(theme==='squad'){
-  const units={tank:'armored tank',aircraft:'fighter aircraft',missile:'stylized missile'};
+  const units={tank:'the supplied simplified light-cyan tank icon, with its upper turret and lower body with three circular holes',aircraft:'the supplied simplified light-cyan diagonal airplane icon',missile:'the supplied simplified light-cyan missile-launcher truck icon with angled launcher and cutout window'};
   const poses={surprise:'interacting playfully with',riding:'riding',clinging:'clinging to',popping:'popping out from behind'};
-  scene='Create a dynamic square profile picture of the character '+(poses[$('pfpPose').value]||poses.surprise)+' a '+(units[$('pfpSquad').value]||units.tank)+'. Blue background; clear action and strong composition. Do not add invented military or game symbols.';
+  scene='Create a dynamic square profile picture of the character '+(poses[$('pfpPose').value]||poses.surprise)+' '+(units[$('pfpSquad').value]||units.tank)+'. Retain the flat pale-cyan icon shape on its vivid cyan-to-blue background. Do not replace the icon with a realistic vehicle, redesign its silhouette, add invented game logos, or force a chibi style. The character can drape over, hug, peek behind or perch on the icon without hiding the symbol.';
  }else if(theme==='starter'){
   scene='Create a character-centered starter-pack composition with favourite things: '+($('pfpFavourites').value.trim()||'[Add favourite things]')+'. Make the items recognizable.';
  }else if(theme==='royalty'){
@@ -54,11 +55,17 @@ function promptText(){
  return 'Use my uploaded image as the character reference. Preserve the character’s recognisable face, skin tone, hairstyle, key accessories and identity. '+style+' '+scene+' '+clothing+' Square 1:1 Discord profile picture; keep the character clearly visible, avoid unwanted frames, text and watermarks.';
 }
 function updatePrompt(){elements.prompt.value=promptText();}
+function updateSymbolReference(){
+ const unit=$('pfpSquad').value;
+ const svg=symbolSvg(unit);
+ $('pfpSymbolImage').src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+ $('pfpSymbolName').textContent=(labels[unit]||'Squad')+' symbol';
+}
 function updateTheme(){
  const id=elements.theme.value;
  for(const [theme,section] of [['squad','pfpSquadFields'],['starter','pfpStarterFields'],['royalty','pfpRoyaltyFields']])$(section).hidden=id!==theme;
  $('pfpThemeDescription').textContent=config.themes.find(t=>t.id===id)?.subtitle||'';
- updatePrompt();clearResult();
+ updatePrompt();updateSymbolReference();clearResult();
 }
 function validate(){
  const file=elements.file.files?.[0];
@@ -138,7 +145,7 @@ async function init(){
 }
 elements.theme.addEventListener('change',updateTheme);
 for(const id of ['pfpSquad','pfpPose','pfpStyle','pfpOutfit','pfpRole','pfpFavourites']){
- $(id).addEventListener('change',updatePrompt);
+ $(id).addEventListener('change',()=>{updatePrompt();if(id==='pfpSquad')updateSymbolReference();});
  $(id).addEventListener('input',updatePrompt);
 }
 elements.file.addEventListener('change',()=>{
