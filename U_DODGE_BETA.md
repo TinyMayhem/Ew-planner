@@ -1,0 +1,12 @@
+# Baba's U-Dodge | Playable browser beta
+
+- **Entry point:** `/u-dodge.html` (linked from the password-gated Members Den on this branch).
+- **Branding:** Original U-Bites red/yellow block-U identity. No McDonald's logos, arches, product packaging, or AI API.
+- **Art:** The two member-supplied pixel-chibi Baba images are embedded as optimised WebP data URIs in the HTML for a single-file deploy. No uploaded images are stored by the game.
+- **Gameplay:** Mobile portrait, drag anywhere to move left/right with a speed cap, Quick Play 60 seconds, Endless Chaos, 3 hearts, 1.5-second hit invincibility, giant burger slows speed by half for 2 seconds, 15-second waves, no warning markers, no pause, leaving forfeits.
+- **Drops:** Approximately one U-Mystery Box per 30 seconds, containing Golden Fries (heal, wasted at full hearts), Mo's Ultimate Slash (clears all food, no points), or an R4 Shield (one hit, duplicates wasted). Shield blocks damage, slow and combo loss.
+- **Scoring:** 10 base points per natural dodge, combo multipliers 1/1.5/2/3 at 0/10/25/50 dodges, 5 survival points per second. Beta uses 250 Quick Play completion bonus pending final balancing.
+- **User experience:** Static Baba on the start menu; dramatic start countdown, random silly defeat and victory messages, hit image reactions, optional synth sound and browser speech, menu and immediate rematch, copy results, 10 permanent achievements (7 visible/3 secret), results-only achievement notifications, basic player stats.
+- **Limits of beta:** Scores, achievements, name selection, and per-device leaderboards use `localStorage`, **not shared Supabase records**. They are visible to anyone using that browser profile. Changing device or browser data loses progress. The name input is demo-only, not authenticated or connected to the full UTW roster. None of this is a claim of verified cross-device persistence. A server-backed leaderboard, stable member identity and privacy controls remain release work.
+- **Testing:** Browser smoke test passed in headless Chromium at a 390×844 viewport, including embedded sprite load, start/menu, countdown, first wave, advancing score and no browser JavaScript exceptions. Additional playtesting and balancing should happen before production release.
+- **Deployment:** Feature branch preview only. Do not merge to production until user approval.
