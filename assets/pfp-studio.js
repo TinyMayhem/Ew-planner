@@ -75,6 +75,19 @@ function validate(){
  if(elements.theme.value==='starter'&&!$('pfpFavourites').value.trim())throw Error('Tell us at least one favourite thing.');
  return file;
 }
+async function pngSymbolReference(unit){
+ const img=new Image();
+ const data='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(symbolSvg(unit));
+ img.src=data;
+ await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(Error('The unit reference could not load.'));});
+ const canvas=document.createElement('canvas');canvas.width=512;canvas.height=512;
+ const context=canvas.getContext('2d');
+ if(!context)throw Error('This browser cannot prepare the unit reference.');
+ context.drawImage(img,0,0,512,512);
+ const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+ if(!blob)throw Error('Unable to prepare the unit reference.');
+ return blob;
+}
 function imageFromBase64(encoded,mime){
  const raw=atob(encoded),bytes=new Uint8Array(raw.length);
  for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
@@ -98,6 +111,10 @@ async function generate(event){
  try{
   if(elements.theme.value!==config.activeTheme)throw Error('This is not the active theme.');
   const form=new FormData(elements.form);form.set('image',file,file.name);
+  if(elements.theme.value==='squad'){
+   const symbol=await pngSymbolReference($('pfpSquad').value);
+   form.set('icon',symbol,'squad-reference.png');
+  }
   const response=await fetch('/api/pfp-studio',{method:'POST',credentials:'same-origin',cache:'no-store',body:form});
   const data=await response.json();
   if(!response.ok||!data.ok)throw Error(data.error||'The image service is unavailable.');
