@@ -25,3 +25,9 @@
 .pfp-prompt textarea{width:100%;min-height:160px;padding:11px;border-radius:9px;background:#fef9e8;color:#233b2e;border:1px solid #bda981;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;resize:vertical}
 .pfp-prompt .btn{justify-self:start}
 .pfp-prompt .pfp-helper{color:#e2d3ac}
+
+.pfp-symbol-reference{display:flex;align-items:center;gap:14px;padding:12px;border-radius:12px;background:#eaf6f4;border:1px solid #b9d5d0}
+.pfp-symbol-reference img{width:116px;height:116px;object-fit:contain;flex:none;border-radius:11px;border:1px solid #a8d5df}
+.pfp-symbol-reference strong{display:block;color:#194b54}
+.pfp-symbol-reference p{margin:6px 0 0}
+@media(max-width:520px){.pfp-symbol-reference img{width:90px;height:90px}}
