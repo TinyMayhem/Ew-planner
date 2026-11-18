@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {Script} from 'node:vm';
-import {GET,POST} from '../api/arcade.mjs';
+import {GET,POST} from '../lib/arcade.mjs';
 
 const html=readFileSync(new URL('../u-dodge.html',import.meta.url),'utf8');
 const members=readFileSync(new URL('../members.html',import.meta.url),'utf8');
