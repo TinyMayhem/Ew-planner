@@ -14,7 +14,7 @@ test('Tiny prototype is a self-contained public browser game',()=>{
   assert.doesNotMatch(html,/fetch\(['"]\/api\/arcade/);
 });
 
-test('first two story stages and no accidental stage 3 launch',()=>{
+test('first three story stages with stage four held for later',()=>{
   assert.match(script,/function opening\(/);
   assert.match(script,/function sneakRound\(/);
   assert.match(script,/function startLick\(/);
@@ -22,7 +22,10 @@ test('first two story stages and no accidental stage 3 launch',()=>{
   assert.match(script,/function startDodge\(/);
   assert.match(script,/function stage2End\(/);
   assert.match(script,/Release the Raccoons/);
-  assert.doesNotMatch(script,/function startStage3\(/);
+  assert.match(script,/function startStage3\(/);
+  assert.match(script,/function startRaccoonWave\(/);
+  assert.match(script,/function stage3End\(/);
+  assert.doesNotMatch(script,/function startStage4\(/);
 });
 
 test('energy powers and local checkpoints are represented',()=>{
@@ -63,4 +66,34 @@ test('Stage 2 shows actual obstacle positions and safe lanes before dodge input'
   assert.match(script,/\['left','center'\]/);
   assert.match(script,/duration\+=1\.5;deadline\+=1500/);
   assert.match(script,/result\.textContent=hit\?/);
+});
+
+test('Stage 3 raccoons are visible targets with tappable collision tracking',()=>{
+  assert.match(html,/id="raccoonBoard"/);
+  assert.match(html,/id="raccoonField"/);
+  assert.match(html,/\.raccoon-runner/);
+  assert.match(script,/function raccoonArt\(/);
+  assert.match(script,/function raccoonSweep\(/);
+  assert.match(script,/el\.addEventListener\('click'/);
+  assert.match(script,/if\(\(o\.dir===1&&o\.x>112\)\|\|\(o\.dir===-1&&o\.x< -12\)\)/);
+  assert.match(script,/raccoonWaveEnd\(wave,run\)/);
+});
+
+test('Stage 3 failure produces Mo’s consequence rather than game over',()=>{
+  assert.match(script,/function raccoonVerdict\(/);
+  assert.match(script,/SINCERE APOLOGY/);
+  assert.match(script,/CAT, MAKE A DISTRACTION/);
+  assert.match(script,/function stage3End\(/);
+  assert.match(script,/raccoonsCaught>=7/);
+  assert.match(script,/raccoon-key/);
+  assert.match(script,/Certified Raccoon Wrangler/);
+  assert.match(script,/game\.completed=\[\.\.\.new Set\(\[\.\.\.game\.completed,3\]\)\]/);
+});
+
+test('Stage 3 supports pause and saves between stages without altering arcade API',()=>{
+  assert.match(script,/run\.until\+=delay;run\.spawnAt\+=delay/);
+  assert.match(script,/if\(phase!=='raccoons'\)hideChallenge\(\)/);
+  assert.match(script,/toStorage\(CHECKPOINT,\{\.\.\.game,stage:3,phase:'raccoonIntro'\}\)/);
+  assert.match(script,/toStorage\(CHECKPOINT,\{\.\.\.game,stage:4,phase:'trainTeaser'\}\)/);
+  assert.doesNotMatch(script,/fetch\(['"]\/api\/arcade/);
 });
