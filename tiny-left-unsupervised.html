@@ -264,7 +264,7 @@ function raccoonChoice(){phase='raccoonChoice';game.phase=phase;showPower(true);
  ['CHASE THEM LIKE A MENACE',()=>raccoonPlan('sprint')]
 ]);save()}
 function raccoonPlan(plan){game.choices.raccoonPlan=plan;if(plan==='nuggies'){earn(15);bubble('Tiny: Nobody resists my emergency nuggies.');game.influence.mo+=1}
- else if(plan==='cat'){game.influence.catalyst+=2;addScore(80);bubble('Cat: I accept no responsibility for my relatives.')}
+ else if(plan==='cat'){game.influence.catalyst+=2;game.autoClear++;addScore(80);bubble('Cat: I accept no responsibility for my relatives. But I’ll catch one.')}
  else{game.influence.baba+=2;addScore(180);bubble('Baba: THAT’S THE SPIRIT. RUN, TINY!')}
  save();setText('Catch them before they escape!','TAP the moving raccoons, or SWEEP LEFT / RIGHT. Avoid Baba’s fake hats!','INTERACTIVE CHASE');choices([['BEGIN THE CHASE',()=>startRaccoonWave(0),'gold']])}
 function raccoonArt(decoy=false){if(decoy)return '<span style="font-size:clamp(22px,3vw,35px)">🎩</span>';
