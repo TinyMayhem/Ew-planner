@@ -39,3 +39,14 @@ test('story failure never ends the run and arcade access stays isolated',()=>{
   assert.match(script,/setTimeout\(\(\)=>startDodge\(next\)/);
   assert.doesNotMatch(html,/SUPABASE_SECRET_KEY|UTW_SESSION_SECRET|\/api\/buddies/);
 });
+
+test('throne licking requires timing around Noosh’s unpredictable peeks',()=>{
+  assert.match(html,/id="nooshPeek"/);
+  assert.match(script,/function changeLook\(next/);
+  assert.match(script,/Math\.random\(\)/);
+  assert.match(script,/lastLickedWindow!==windowId/);
+  assert.match(script,/look==='away'/);
+  assert.match(script,/NOOSH IS COMING BACK/);
+  assert.match(script,/NOOSH IS WATCHING/);
+  assert.match(script,/function finishLick\(win\)/);
+});
