@@ -195,8 +195,8 @@ test('Stage 5 offers punch, dodge, sass and two-step combos with clear timing',(
 
 test('Baba fight supports powers, story consequences, saved checkpoint, and Stage 6 launch',()=>{
   assert.match(script,/phase==='fight'/);
-  assert.match(script,/phase==='fight'\)interact\?\.auto\?\.\(\)/);
-  assert.match(script,/phase==='fight'\)interact\?\.extend\?\.\(\)/);
+  assert.match(script,/phase==='fight'\|\|phase==='cleanup'\)interact\?\.auto\?\.\(\)/);
+  assert.match(script,/phase==='fight'\|\|phase==='cleanup'\)interact\?\.extend\?\.\(\)/);
   assert.match(script,/game\.completed,5/);
   assert.match(script,/stage:6,phase:'coverupTeaser'/);
   assert.match(script,/game\.completed\?\.includes\(4\)\)\{startStage5\(\)/);
