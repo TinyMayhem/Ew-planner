@@ -98,6 +98,73 @@
 @media(orientation:landscape) and (max-height:450px){.train-board{left:23%;top:33%;height:44%;width:54%}.train-brake{top:41%}.train-brake button{min-height:40px}.train-active .power-row{top:43%}}
 @media(prefers-reduced-motion:reduce){.train-car,.held-tequila{transition:none;animation:none}}
 
+
+/* Stage 4 v2: conductor-cabin point of view with a living boiler. */
+.train-board{left:22%;top:29%;width:56%;height:49%;border:5px solid #b88458;border-radius:17px 17px 7px 7px;background:#121b29;box-shadow:0 5px 0 #513247,0 10px 26px #000c,inset 0 0 0 3px #ffe3a280;isolation:isolate}
+.train-board:before{content:'';position:absolute;z-index:8;inset:0;pointer-events:none;border-radius:10px;box-shadow:inset 0 0 0 2px #ffe8c688,inset 11px 0 0 #3c2f37b0,inset -11px 0 0 #3c2f37b0}
+.train-board.cabin-shaking{animation:cabinJolt .33s linear}
+@keyframes cabinJolt{0%,100%{translate:0}25%{translate:-5px 2px}65%{translate:5px -2px}}
+.train-top{height:17%;background:linear-gradient(#573b48,#2b283b);justify-content:space-between;padding:0 4%;border-bottom:3px solid #e4ac6c}
+.cabin-window{position:absolute;inset:17% 0 18%;overflow:hidden;background:linear-gradient(#74a5c2 0%,#b4c8d0 35%,#f3d19e 52%,#729e91 53%,#4b726d 61%,#8c8581 62%,#555059 100%)}
+.cabin-window:before{content:'';position:absolute;top:22%;left:-10%;width:120%;height:48%;background:#4b747c;clip-path:polygon(0 80%,10% 42%,21% 68%,30% 36%,40% 76%,53% 15%,66% 60%,82% 26%,100% 80%,100% 100%,0 100%);opacity:.88;animation:landscapeDrift 8s ease-in-out infinite alternate}
+.cabin-window:after{content:'';position:absolute;top:45%;left:-5%;width:110%;height:22%;background:linear-gradient(#7d9c72,#3f655c);clip-path:polygon(0 45%,12% 8%,25% 42%,38% 10%,48% 48%,60% 4%,75% 36%,92% 0,100% 31%,100% 100%,0 100%);opacity:.95;animation:landscapeDrift 5s ease-in-out infinite alternate-reverse}
+@keyframes landscapeDrift{from{transform:translateX(-2%)}to{transform:translateX(2%)}}
+.cabin-cloud{position:absolute;z-index:1;top:9%;left:9%;font-size:clamp(12px,2.4vw,25px);opacity:.6;filter:blur(.3px);animation:cabinFloat 7s linear infinite}
+.cabin-cloud.second{left:67%;top:17%;animation-duration:9s;animation-delay:-3s}
+@keyframes cabinFloat{from{translate:-30% 0}to{translate:85% 0}}
+.cabin-perspective{position:absolute;inset:41% -4% 0;z-index:2;perspective:200px;pointer-events:none}
+.cabin-perspective .rail-bed{position:absolute;inset:0;background:repeating-linear-gradient(to bottom,#5d504d 0 7px,#b7aaa1 8px 10px,#554951 11px 24px);clip-path:polygon(49% 0,51% 0,104% 100%,-4% 100%);background-size:auto 24px;animation:railRush .45s linear infinite}
+@keyframes railRush{to{background-position:0 24px}}
+.cabin-perspective .rail-stripe{position:absolute;top:0;bottom:0;width:3px;background:linear-gradient(#eee4d9,#fff);filter:drop-shadow(2px 1px 1px #34313a);transform-origin:top center}
+.cabin-perspective .rail-stripe.one{left:49.2%;transform:skewX(-36deg)}
+.cabin-perspective .rail-stripe.two{left:49.6%;transform:skewX(-12deg)}
+.cabin-perspective .rail-stripe.three{left:50.4%;transform:skewX(12deg)}
+.cabin-perspective .rail-stripe.four{left:50.8%;transform:skewX(36deg)}
+.cabin-lanes{position:absolute;inset:39% 0 1%;z-index:3;pointer-events:none}
+.cabin-lane{position:absolute;inset:0;opacity:.82;border-bottom:5px solid #fff7}
+.cabin-lane[data-track="0"]{clip-path:polygon(49.1% 0,49.65% 0,32.8% 100%,0 100%)}
+.cabin-lane[data-track="1"]{clip-path:polygon(49.65% 0,50.35% 0,32.8% 100%,67.2% 100%)}
+.cabin-lane[data-track="2"]{clip-path:polygon(50.35% 0,50.9% 0,100% 100%,67.2% 100%)}
+.cabin-lane.danger{background:linear-gradient(#a42e3c15,#a42e3cbb);}
+.cabin-lane.safe{background:linear-gradient(#2d966918,#2db4896b)}
+.cabin-lane.chosen{filter:brightness(1.4);opacity:1;box-shadow:inset 0 -5px #fff}
+.cabin-labels{position:absolute;z-index:6;left:2%;right:2%;bottom:7%;display:grid;grid-template-columns:repeat(3,1fr);pointer-events:none;text-align:center;gap:2px}
+.cabin-labels span{font-weight:1000;font-size:clamp(8px,1.05vw,13px);color:#fff;filter:drop-shadow(0 1px 3px black)}
+.cabin-labels .danger{color:#ffd3d5}.cabin-labels .safe{color:#b2ffdf}
+.train-object{z-index:5;font-size:clamp(25px,3.7vw,51px);filter:drop-shadow(0 3px 6px #0009)}
+.train-object.overhead{z-index:5;left:50%;width:72%;min-width:0;border:3px solid #ffd2b5}
+.cabin-dash{position:absolute;inset:auto 0 0;height:19%;z-index:7;background:linear-gradient(#554052,#2a2535);border-top:4px solid #e5b47b;box-shadow:0 -5px 14px #211628ab;display:flex;align-items:center;justify-content:center;gap:3%;padding:0 3%}
+.cabin-wheel{font-size:clamp(19px,3vw,37px);transform:rotate(-12deg);filter:drop-shadow(0 2px 2px #000)}
+.cabin-pressure{flex:1;min-width:0;color:#fff6e6}
+.cabin-pressure-top{display:flex;justify-content:space-between;gap:5px;align-items:center;font-size:clamp(8px,.9vw,12px);font-weight:1000;white-space:nowrap}
+.cabin-pressure-track{height:clamp(9px,1.2vw,15px);background:#181824;border:1px solid #ffe5ba77;border-radius:12px;overflow:hidden;margin-top:2px}
+.cabin-pressure-track i{display:block;width:35%;height:100%;border-radius:10px;background:linear-gradient(90deg,#7aefad,#ffd77e);transition:width .12s linear,background-color .2s}
+.cabin-pressure-track i.hot{background:linear-gradient(90deg,#f8ae47,#ef475e)}
+.cabin-vent{border:2px solid #ffe39e;border-radius:7px;background:linear-gradient(#f1c86b,#d48a44);color:#402333;min-width:24%;height:85%;max-height:48px;font-size:clamp(9px,1.1vw,15px);font-weight:1000;touch-action:manipulation;padding:2px}
+.cabin-vent:active{background:#b6f4cd}.cabin-vent:disabled{opacity:.48}
+.cabin-steam{position:absolute;z-index:8;right:6%;bottom:18%;font-size:clamp(28px,6vw,65px);pointer-events:none;opacity:0}
+.cabin-steam.burst{animation:ventCloud .6s both}
+@keyframes ventCloud{0%{opacity:0;translate:0 15px;scale:.5}30%{opacity:.85}100%{opacity:0;translate:30px -38px;scale:1.4}}
+.cabin-crew{position:absolute;z-index:6;bottom:16%;width:17%;height:36%;pointer-events:none;overflow:hidden;filter:drop-shadow(0 3px 4px #0009);animation:crewBounce 1.3s ease-in-out infinite alternate}
+.cabin-crew.tiny{left:0}.cabin-crew.devi{right:0;animation-delay:-.6s}
+.cabin-crew svg{width:100%;height:145%;display:block;transform:scale(1.2);transform-origin:center top}
+@keyframes crewBounce{from{translate:0 0}to{translate:0 3px}}
+.train-board .train-car{display:none}
+.train-footer{height:8%;bottom:19%;z-index:6;font-size:clamp(8px,.95vw,12px);background:#1d3535bb;color:#dbffe7}
+.train-footer.duck{background:#704b27cc;color:#ffefba}
+.train-brake{top:38%}
+.train-active .power-row{top:39%}
+.train-active .char{opacity:.5;transform:scale(.77);transform-origin:bottom center}
+@media (orientation:landscape) and (max-height:450px){
+.train-board{left:22%;top:31%;width:56%;height:45%}
+.train-active .power-row{top:42%}
+.train-brake{top:39%}
+.cabin-dash{height:23%}.train-footer{bottom:23%;height:9%}
+.cabin-crew{height:37%;bottom:20%}
+.cabin-vent{min-height:28px}
+}
+@media(prefers-reduced-motion:reduce){.cabin-cloud,.cabin-window:before,.cabin-window:after,.cabin-perspective .rail-bed,.cabin-crew{animation:none}}
+
 </style>
 </head>
 <body>
@@ -114,7 +181,7 @@ const $=id=>document.getElementById(id);
 const SAVE='utw:tiny-unsupervised:prototype-save:v1',CHECKPOINT='utw:tiny-unsupervised:prototype-checkpoint:v1',ARCH='utw:tiny-unsupervised:prototype-archive:v1';
 const fromStorage=(key,def)=>{try{return JSON.parse(localStorage.getItem(key))||def}catch{return def}},toStorage=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));return true}catch{return false}};
 const blank=()=>({version:1,stage:1,phase:'opening',score:0,energy:0,choices:{},influence:{baba:0,noosh:0,catalyst:0,mo:0,savvy:0,devi:0},evidence:{throne:false,button:false,raccoons:false,train:false,clues:[]},achievements:[],outfit:'black',stageResults:{},completed:[],perfects:0,misses:0,shield:0,autoClear:0,rage:0,raccoonsCaught:0,raccoonsEscaped:0,raccoonDecoys:0,trainHits:0,trainSafe:0,trainBonus:0});
-let game=blank(),archive=fromStorage(ARCH,{achievements:[],clues:[],completed:[]}),phase='menu',dialogIndex=0,dialogDone=null,locked=false,activeTimer=null,activeFrame=null,expectedKey='',challengeStarted=0,round=0,promptUsed=false,interact=null,soundOn=true,paused=false,offTime=0,currentModal='menu',raccoonRun=null,raccoonRunId=0,trainRun=null,trainRunId=0,trainProp='bottle',trainPanicDeadline=0;
+let game=blank(),archive=fromStorage(ARCH,{achievements:[],clues:[],completed:[]}),phase='menu',dialogIndex=0,dialogDone=null,locked=false,activeTimer=null,activeFrame=null,expectedKey='',challengeStarted=0,round=0,promptUsed=false,interact=null,soundOn=true,paused=false,offTime=0,currentModal='menu',raccoonRun=null,raccoonRunId=0,trainRun=null,trainRunId=0,trainProp='bottle',trainPanicDeadline=0,trainPressure=37,trainLastVent=0;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function save(){toStorage(SAVE,game)}function saveArchive(){toStorage(ARCH,archive)}
 function addScore(amount){game.score=Math.max(0,game.score+Math.round(amount*(game.rage>0?2:1)));ui()}
@@ -397,7 +464,7 @@ function drawHeldTequila(){
  :'<svg viewBox="0 0 75 135"><rect x="29" y="5" width="18" height="21" rx="3" fill="#cea66a" stroke="#ecda9f" stroke-width="4"/><path d="M27 23H49V43Q64 48 63 64V116Q63 128 50 129H23Q12 129 12 116V64Q12 49 27 43Z" fill="#b5d7b5" stroke="#e9f8d7" stroke-width="5"/><rect x="18" y="67" width="40" height="43" rx="4" fill="#efd9a1" stroke="#855f57" stroke-width="3"/><text x="38" y="83" font-size="12" font-weight="900" text-anchor="middle" fill="#694b45">TINY</text><text x="38" y="96" font-size="11" font-weight="900" text-anchor="middle" fill="#694b45">TEQUILA</text><path d="M22 118H54" stroke="#e4bd6c" stroke-width="4"/></svg>';
  root.append(holder)
 }
-function startStage4(){hideChallenge();beginScene(4);phase='trainIntro';game.phase=phase;trainProp='bottle';setCharacters('tiny','devi');drawHeldTequila();bubble('Devi: Why do I have a feeling this is about to get expensive?');setText('The Unauthorized Train Ride','One raccoon stole the keys. Tiny and Devi have ended up in the cab of a very real train.','STAGE 4 • TINY + DEVI');save();playDialogue(script4,trainPlanChoice)}
+function startStage4(){hideChallenge();beginScene(4);trainPressure=37;trainLastVent=0;phase='trainIntro';game.phase=phase;trainProp='bottle';setCharacters('tiny','devi');drawHeldTequila();bubble('Devi: Why do I have a feeling this is about to get expensive?');setText('The Unauthorized Train Ride','One raccoon stole the keys. Tiny and Devi have ended up in the cab of a very real train.','STAGE 4 • TINY + DEVI');save();playDialogue(script4,trainPlanChoice)}
 function trainPlanChoice(){phase='trainChoice';game.phase=phase;setCharacters('tiny','devi');drawHeldTequila();showPower(true);setText('Who is driving this thing?','Pick a very questionable approach. The bottle stays sealed and out of the controls.','CHOOSE YOUR RAILWAY STRATEGY');bubble('Devi: I am going to regret this, affectionately.');choices([
  ['TINY TAKES THE WHEEL',()=>trainPlan('tiny'),'gold'],
  ['DEVI, READ THE SIGNALS',()=>trainPlan('devi')],
@@ -407,20 +474,53 @@ function trainPlan(plan){game.choices.trainPlan=plan;game.influence.devi+=plan==
  if(plan==='devi'){earn(15);bubble('Devi: Left is left. Right is right. Please remember that.');}
  else if(plan==='raccoon'){addScore(110);game.autoClear++;bubble('Tiny: He looks like he knows where he is going!');}
  else{addScore(140);bubble('Tiny: The conductor hat makes this OFFICIAL.');}
- save();setText('ALL ABOARD','Switch between three tracks to avoid visible obstacles. HOLD BRAKE to slow down; tap DUCK for low bridges.','HOW TO TRAIN WITHOUT A LICENCE');choices([['START THE TRAIN ▸',()=>startTrainHazard(0),'gold']])}
+ save();setText('ALL ABOARD','View three tracks through the cabin windshield. Switch tracks, DUCK under bridges, hold BRAKE, and VENT STEAM before boiler pressure maxes out.','HOW TO TRAIN WITHOUT A LICENCE');choices([['START THE TRAIN ▸',()=>startTrainHazard(0),'gold']])}
 function showTrainBoard(run,hazard){
  const board=$('trainBoard');board.classList.remove('hidden');
- board.setAttribute('aria-label',hazard.text+' Danger tracks: '+hazard.blocked.map(i=>['left','centre','right'][i]).join(', ')+'. '+(hazard.duck?'Duck before impact.':'Switch to green safe track.'));
- board.innerHTML='<div class="train-top"><span>🚂 <strong>OBSTACLE '+(run.index+1)+'/'+trainHazards.length+'</strong></span><span>'+hazard.name+'</span><span>⚡ <b id="trainSpeed">NORMAL</b></span></div><div class="train-rails" id="trainRails">'+['LEFT','CENTRE','RIGHT'].map((l,i)=>'<div class="train-track '+(hazard.blocked.includes(i)?'danger':'safe')+'" data-track="'+i+'"><span class="track-label">'+l+'</span><small>'+(hazard.blocked.includes(i)?'DANGER':'SAFE ✓')+'</small></div>').join('')+'</div><div class="train-object'+(hazard.duck?' overhead':'')+'" id="trainObject">'+hazard.icon+'</div><div class="train-car" id="trainCar">🚂</div><div class="train-footer'+(hazard.duck?' duck':'')+'">'+(hazard.duck?'⬇ LOW BRIDGE! DUCK AS IT ARRIVES!':'✅ MOVE TO A GREEN TRACK BEFORE IMPACT')+'</div>';
- $('trainBrakeWrap').classList.remove('hidden');renderTrainPosition(run)
+ board.setAttribute('aria-label',hazard.text+' Blocked: '+hazard.blocked.map(i=>['left','centre','right'][i]).join(', ')+'. Watch the boiler gauge and vent steam to prevent overheating.');
+ board.innerHTML=`<div class="train-top"><span>🚂 CABIN VIEW</span><span>${run.index+1}/${trainHazards.length} · ${hazard.name}</span><span id="trainSpeed">FAST</span></div>
+ <div class="cabin-window" aria-hidden="true"><div class="cabin-cloud">☁</div><div class="cabin-cloud second">☁</div><div class="cabin-perspective"><div class="rail-bed"></div><i class="rail-stripe one"></i><i class="rail-stripe two"></i><i class="rail-stripe three"></i><i class="rail-stripe four"></i></div><div class="cabin-lanes" id="trainRails">${['left','centre','right'].map((l,i)=>`<div class="cabin-lane ${hazard.blocked.includes(i)?'danger':'safe'}" data-track="${i}"></div>`).join('')}</div><div class="cabin-labels">${['LEFT','CENTRE','RIGHT'].map((l,i)=>`<span class="${hazard.blocked.includes(i)?'danger':'safe'}">${hazard.blocked.includes(i)?'✕':'✓'} ${l}</span>`).join('')}</div></div>
+ <div class="train-object${hazard.duck?' overhead':''}" id="trainObject">${hazard.icon}</div><div class="cabin-crew tiny">${character(game.outfit==='tan-bear'?'tiny-bear':'tiny')}</div><div class="cabin-crew devi">${character('devi')}</div><div class="train-footer${hazard.duck?' duck':''}">${hazard.duck?'LOW BRIDGE! DUCK WHEN CLOSE':'FOLLOW A GREEN TRACK · KEEP BOILER COOL'}</div>
+ <div class="cabin-dash"><span class="cabin-wheel">🛞</span><div class="cabin-pressure"><div class="cabin-pressure-top"><span>🔥 BOILER</span><span id="pressureLabel" aria-live="off">37%</span></div><div class="cabin-pressure-track" role="progressbar" aria-label="Boiler pressure" aria-valuemin="0" aria-valuemax="100" aria-valuenow="37" id="pressureMeter"><i id="pressureFill"></i></div></div><button type="button" class="cabin-vent" id="steamVent" aria-label="Vent steam to lower boiler pressure">💨 VENT STEAM</button></div><div class="cabin-steam" id="steamCloud" aria-hidden="true">💨</div>`;
+ $('steamVent').addEventListener('click',ventSteam);
+ $('trainBrakeWrap').classList.remove('hidden');renderTrainPosition(run);
 }
 function renderTrainPosition(run){if(!run)return;
- const car=$('trainCar');if(car)car.style.left=(16.666+run.lane*33.333)+'%';
- for(const el of document.querySelectorAll('#trainRails [data-track]'))el.classList.toggle('chosen',Number(el.dataset.track)===run.lane);
+ const lane=run.lane;
+ for(const el of document.querySelectorAll('#trainRails [data-track]'))el.classList.toggle('chosen',Number(el.dataset.track)===lane);
  const meter=$('trainBrakeFill');if(meter)meter.style.width=Math.round(run.brakeMeter)+'%';
  const amount=$('trainBrakeAmount');if(amount)amount.textContent=Math.round(run.brakeMeter);
  const brake=$('trainBrake');if(brake)brake.classList.toggle('engaged',run.brake&&run.brakeMeter>0);
  const speed=$('trainSpeed');if(speed)speed.textContent=run.brake&&run.brakeMeter>0?'BRAKING':'FAST';
+ renderTrainPressure();
+}
+function renderTrainPressure(){
+ const label=$('pressureLabel'),fill=$('pressureFill'),meter=$('pressureMeter'),vent=$('steamVent');
+ if(label)label.textContent=Math.round(trainPressure)+'%'+(trainPressure>=82?' ⚠':'');
+ if(fill){fill.style.width=Math.round(trainPressure)+'%';fill.classList.toggle('hot',trainPressure>=75)}
+ if(meter)meter.setAttribute('aria-valuenow',Math.round(trainPressure));
+ if(vent)vent.disabled=paused||trainPressure<25;
+}
+function ventSteam(){
+ if(phase!=='train'||paused||!trainRun||trainRun.resolved||trainPressure<25)return;
+ const now=performance.now();if(now-trainLastVent<900)return;
+ trainLastVent=now;const before=trainPressure;trainPressure=Math.max(10,trainPressure-39);
+ game.trainVents=(game.trainVents||0)+1;
+ if(before>=72){addScore(85);earn(5);notify('💨 PERFECT VENT! +85 CHAOS')}else notify('💨 Pressure released!');
+ if(game.trainVents%2===1)bubble(game.trainVents===1?'Devi: Finally. Someone found the steam valve.':'Tiny: IT IS A VERY DRAMATIC KETTLE.');
+ const cloud=$('steamCloud');if(cloud){cloud.classList.remove('burst');void cloud.offsetWidth;cloud.classList.add('burst')}
+ renderTrainPressure();audio('sneak');save();
+}
+function trainPressureTick(dt,braking){
+ trainPressure=Math.min(103,trainPressure+dt*(10.4+(trainRun?.index||0)*.33+(braking?6.5:0)));
+ if(trainPressure>=100){
+  trainPressure=44;game.trainSteamBlasts=(game.trainSteamBlasts||0)+1;game.misses++;
+  notify('💥 BOILER OVERHEATED! DEVI TO THE RESCUE');bubble('Devi: Tiny. We are operating a train, not a kettle.');
+  const b=$('trainBoard');if(b){b.classList.remove('cabin-shaking');void b.offsetWidth;b.classList.add('cabin-shaking')}
+  const cloud=$('steamCloud');if(cloud){cloud.classList.remove('burst');void cloud.offsetWidth;cloud.classList.add('burst')}
+  audio('oops');
+ }
+ renderTrainPressure();
 }
 function chooseTrainLane(i){if(phase!=='train'||paused||!trainRun)return;trainRun.lane=i;renderTrainPosition(trainRun);audio('sneak')}
 function duckTrain(){if(phase!=='train'||paused||!trainRun)return;trainRun.duckUntil=performance.now()+1600;notify('⬇ DUCK!');mark('⬇');audio('sneak')}
@@ -435,12 +535,12 @@ function startTrainHazard(index){
  showPower(true);const hazard=trainHazards[index];const run={id:++trainRunId,index,lane:(trainRun?.lane??1),progress:0,duration:Math.max(2.65,4.3-index*.19),brakeMeter:100,brake:false,duckUntil:0,skip:false,lastTime:performance.now(),resolved:false,extra:0};
  // Preserve the last chosen track between obstacles, even as the board is rebuilt.
  run.lane=Number.isInteger(game.choices.lastTrainLane)?game.choices.lastTrainLane:1;
- trainRun=run;setText('Switch tracks!','Green = clear, red = blocked. HOLD BRAKE to slow down. Low bridge? DUCK just before impact.','TRAIN DISASTER • '+(index+1)+'/'+trainHazards.length);
+ trainRun=run;setText('INSIDE THE CONDUCTOR CAB','Three tracks ahead! Find the green track, DUCK under low bridges, and VENT the boiler when it gets hot.','TRAIN DISASTER • '+(index+1)+'/'+trainHazards.length);
  bubble(hazard.text);showTrainBoard(run,hazard);trainButtons();
  interact={extend:()=>{run.progress=Math.max(0,run.progress-.3);notify('🥺 Extra time to dodge!')},auto:()=>{run.skip=true;notify('🦝 Raccoons cleared the tracks for you!')}};
  function frame(t){if(phase!=='train'||trainRun!==run||run.resolved)return;const dt=Math.min(.08,Math.max(0,(t-run.lastTime)/1000));run.lastTime=t;
-  if(!paused){const braking=run.brake&&run.brakeMeter>0;run.progress+=dt*(braking?.37:1)/run.duration;run.brakeMeter=clamp(run.brakeMeter+(braking?-35:17)*dt,0,100);if(run.brakeMeter<=0)run.brake=false;renderTrainPosition(run);
-   const obj=$('trainObject');if(obj){obj.style.top=(29+Math.min(1,run.progress)*49)+'%';obj.style.left=hazard.duck?'50%':(16.666+hazard.blocked[0]*33.333)+'%';obj.style.transform='translate(-50%,-50%) scale('+(0.65+run.progress*.56).toFixed(2)+')';}
+  if(!paused){const braking=run.brake&&run.brakeMeter>0;run.progress+=dt*(braking?.37:1)/run.duration;run.brakeMeter=clamp(run.brakeMeter+(braking?-35:17)*dt,0,100);if(run.brakeMeter<=0)run.brake=false;trainPressureTick(dt,braking);renderTrainPosition(run);
+   const obj=$('trainObject');if(obj){obj.style.top=(42+Math.min(1,run.progress)*27)+'%';const laneCentre=16.666+hazard.blocked[0]*33.333;obj.style.left=hazard.duck?'50%':(50+(laneCentre-50)*Math.min(1,.09+run.progress*.91))+'%';obj.style.transform='translate(-50%,-50%) scale('+(0.32+run.progress*1.26).toFixed(2)+')';}
    if(run.progress>=1){resolveTrainHazard(run,hazard);return}}
   activeFrame=requestAnimationFrame(frame)
  }
@@ -497,7 +597,7 @@ function stage4End(){hideChallenge();phase='stage4End';game.phase=phase;game.com
  bubble('Baba: YOU TWO ACTUALLY DROVE IT?! I am so proud.');setText('STAGE 4 COMPLETE','Baba appears at the station and demands a dramatic rematch. Tiny is already rolling up her sleeves.','NEXT STAGE • TINY VS BABA');
  toStorage(CHECKPOINT,{...game,stage:5,phase:'babaTeaser'});save();choices([['VIEW THE INCIDENT REPORT ▸',finishPrototype,'gold']])
 }
-function finishPrototype(){hideChallenge();phase='result';currentModal='result';$('gameplay').classList.add('hidden');const total=game.score,ach=archive.achievements.length,cl=archive.clues.length;showModal(`<div class="modal-kicker">UTW CHAOS ARCADE • PROTOTYPE COMPLETE</div><h1>INCIDENT REPORT</h1><p>Noosh was gone for approximately five minutes. The official report is already eleven pages long.</p><div class="stats"><div class="statbox"><b>${total.toLocaleString()}</b><small>CHAOS POINTS</small></div><div class="statbox"><b>${game.misses}</b><small>UNFORTUNATE INCIDENTS</small></div><div class="statbox"><b>${game.perfects}</b><small>SUCCESSFUL ESCAPES</small></div></div><p><b>Noosh's verdict:</b> “This is not a game. This is evidence.”</p><p>🥊 The next chapter: <b>Tiny vs Baba</b></p><p>🦝 Raccoons caught: <b>${game.raccoonsCaught}</b> • Escaped: <b>${game.raccoonsEscaped}</b> • Baba’s hats: <b>${game.raccoonDecoys}</b></p><p>🚂 Tracks cleared: <b>${game.trainSafe}/9</b> • Devi rescues: <b>${game.trainHits}</b> • Bonus routes: <b>${game.trainBonus}</b></p><div class="row"><button class="btn gold" id="againBtn">RESTART POOR DECISIONS</button><button class="btn alt" id="archiveBtn">INCIDENT ARCHIVES</button><button class="btn alt" id="menuBtn">MENU</button></div><p class="tooltip">Achievements: ${ach} • Clues discovered: ${cl} • Full story, Endless Mode and live leaderboards come later.</p>`);$('againBtn').onclick=()=>startNew();$('archiveBtn').onclick=()=>showArchive();$('menuBtn').onclick=()=>menu();}
+function finishPrototype(){hideChallenge();phase='result';currentModal='result';$('gameplay').classList.add('hidden');const total=game.score,ach=archive.achievements.length,cl=archive.clues.length;showModal(`<div class="modal-kicker">UTW CHAOS ARCADE • PROTOTYPE COMPLETE</div><h1>INCIDENT REPORT</h1><p>Noosh was gone for approximately five minutes. The official report is already eleven pages long.</p><div class="stats"><div class="statbox"><b>${total.toLocaleString()}</b><small>CHAOS POINTS</small></div><div class="statbox"><b>${game.misses}</b><small>UNFORTUNATE INCIDENTS</small></div><div class="statbox"><b>${game.perfects}</b><small>SUCCESSFUL ESCAPES</small></div></div><p><b>Noosh's verdict:</b> “This is not a game. This is evidence.”</p><p>🥊 The next chapter: <b>Tiny vs Baba</b></p><p>🦝 Raccoons caught: <b>${game.raccoonsCaught}</b> • Escaped: <b>${game.raccoonsEscaped}</b> • Baba’s hats: <b>${game.raccoonDecoys}</b></p><p>🚂 Tracks cleared: <b>${game.trainSafe}/9</b> • Devi rescues: <b>${game.trainHits}</b> • Bonus routes: <b>${game.trainBonus}</b> • Boiler meltdowns: <b>${game.trainSteamBlasts||0}</b></p><div class="row"><button class="btn gold" id="againBtn">RESTART POOR DECISIONS</button><button class="btn alt" id="archiveBtn">INCIDENT ARCHIVES</button><button class="btn alt" id="menuBtn">MENU</button></div><p class="tooltip">Achievements: ${ach} • Clues discovered: ${cl} • Full story, Endless Mode and live leaderboards come later.</p>`);$('againBtn').onclick=()=>startNew();$('archiveBtn').onclick=()=>showArchive();$('menuBtn').onclick=()=>menu();}
 function usePower(which){if(paused||!['sneak','lick','throneChoice','buttonChoice','panic','dodge','approach','raccoonChoice','raccoons','trainChoice','train','trainPanic'].includes(phase))return;const cost={puppy:30,raccoon:60,nuggie:100}[which];if(game.energy<cost)return;game.energy-=cost;if(which==='puppy'){if(phase==='panic'||phase==='dodge'||phase==='raccoons'||phase==='train'||phase==='trainPanic')interact?.extend?.();else{game.shield++;notify('🥺 One mistake will be forgiven.')}}if(which==='raccoon'){if(phase==='raccoons'||phase==='train')interact?.auto?.();else game.autoClear++;notify('🦝 Raccoon Army activated!');mark('🦝')}if(which==='nuggie'){game.rage=4;notify('🍗 DINO NUGGIE RAGE! Next three successes earn double points!');mark('🔥')}audio('power');ui();save()}
 function showModal(html){$('modalBody').innerHTML=html;$('modal').classList.remove('hidden');$('gameplay').classList.add('hidden')}
 function hideModal(){$('modal').classList.add('hidden');$('gameplay').classList.remove('hidden');ui()}
