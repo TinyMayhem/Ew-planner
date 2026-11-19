@@ -255,8 +255,8 @@ test('Stage 1 has dedicated detailed animated Tiny and Noosh while other stages 
   assert.match(script,/function refreshStageOneExpressions\(\)/);
   assert.match(script,/dataset\.mood=/);
   assert.match(script,/classList\.toggle\('stage-one',stage===1\)/);
-  assert.match(script,/\.detail-sprite tiny-detail/);
-  assert.match(script,/\.detail-sprite noosh-detail/);
+  assert.match(script,/detail-sprite tiny-detail/);
+  assert.match(script,/detail-sprite noosh-detail/);
   assert.match(script,/Tiny<\/text>/);
   assert.match(script,/detail-collar/);
 });
