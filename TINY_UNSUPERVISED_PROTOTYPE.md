@@ -1,63 +1,60 @@
-# Tiny: Left Unsupervised | Five playable stages
+# Tiny: Left Unsupervised | Complete six-stage story preview
 
-A standalone, public browser-game preview on the `feature/tiny-left-unsupervised-prototype-20261118` feature branch. **Not merged into main or linked from the live arcade.**
+**Status:** Six connected, playable story stages on a standalone Vercel preview branch. The draft PR has **not** been merged. The live UTW Arcade links and protected features remain unchanged.
 
-## Playable progression
+## Stages
 
-1. **The Throne Incident:** Noosh peeks back unpredictably; collect five separate licks while his back is turned.
-2. **DO NOT PRESS:** Branching choices, a timed panic decision, three clearly marked dodge lanes and visibly incoming obstacles.
-3. **Release the Raccoons:** Chase three waves of moving raccoons by tapping or sweeping; Baba's decoy hats, Cat's help, Mo's consequences, and the key clue.
-4. **Tiny & Devi's Unauthorized Train Ride:** A conductor-cabin view with a panoramic windshield looking out onto three perspective railway tracks, visible incoming obstacles, large LEFT/CENTRE/RIGHT controls, DUCK for low bridges, and hold-to-BRAKE to slow approaching hazards. Added a live BOILER PRESSURE gauge and tappable VENT STEAM button so players balance train driving and boiler pressure between incoming hazards. Braking increases the rate of pressure buildup. A high-pressure vent awards bonus points, while overheating produces a brief steam burst, cabin shake, Devi commentary and a comic penalty. After four obstacles, the raccoon changes railway signals, triggering a time-limited decision before the remaining hazards. Devi supports Tiny and catches mistakes without a game over.
+1. **The Throne Incident:** Sneak toward the throne and collect five licks while Noosh looks away. Timing is unpredictable, failure brings a comic consequence.
+2. **DO NOT PRESS:** Touch the red button, survive a surprise panic decision, and dodge five shuffled hazards with clearly marked safe lanes.
+3. **Release the Raccoons:** Catch 12 moving raccoons across three randomized waves. Avoid Baba's fake hats, uncover the train-key clue, and face Mo's judgment.
+4. **Tiny & Devi's Unauthorized Train Ride:** Look ahead through the conductor cabin windshield and switch among three tracks. Watch approaching objects, duck low bridges, hold the brake, and manage rising boiler pressure with the steam vent. Tequila bottle and empty shot glass appear as visual jokes, not gameplay or driving mechanics. Devi remains Tiny's copilot.
+5. **Tiny vs Baba:** 10 rounds of playful PUNCH, DODGE, and SASS challenges. The first four cues use simple actions, later rounds include two-step DODGE → PUNCH combos, and the finisher is last. The specific attack order changes with each run.
+6. **The Ultimate Cover-Up:** Timed, clickable evidence cleanup followed by Noosh's three untimed interrogation questions and Tiny's final defense. Sweep either side or tap individual objects to hide seven pieces of evidence, without accidentally hiding Noosh's trophy. Earlier choices, character influence, chaos score, cleanup results, and the final defense determine the outcome.
 
-5. **Tiny vs Baba:** Ten rounds of chibi sparring using clearly telegraphed PUNCH, DODGE, and SASS cues, with two-step DODGE → PUNCH combos, faster timers, streak bonuses, and funny bonks for mistakes instead of game over. Tiny's earned powers carry through the fight, with Raccoon Army distracting Baba, Puppy Eyes extending the timer, and Dino Nuggie Rage boosting points. An achievement and secret clue can be uncovered. Ends with Noosh asking why there is a boxing ring and a teaser for Stage 6.\n\nTiny boards with a **closed tequila bottle** and produces an **empty shot glass** in the midstage dialogue as visual gags. The bottle is put away for active driving, and no drinking-based gameplay or driving bonus is used.
+## Endings and archive
 
-## Controls
+Four normal outcomes:
+- The Chaos Queen
+- It Was Baba
+- Noosh's Favourite Menace
+- The Raccoon Uprising
 
-- Landscape mobile (fullscreen available); left, centre and right buttons, swipe sideways to change one track, swipe down or press DUCK for low bridges, hold BRAKE to slow the approaching object.
-- Desktop: left/right arrows or A/D move across tracks; down arrow or S ducks; hold Space to brake.
-- Red railway tracks are blocked; green tracks are clear. On overhead hazards all three tracks are blocked and DUCK is required.
-- Each hazard becomes faster. Failures trigger short cartoon consequences but the story continues.
-- Puppy Eyes (30) buys more reaction time, Raccoon Army (60) clears the current obstacle, and Dino Nuggie Rage (100) boosts earned chaos score.
-- Music and effects start after player interaction. Separate settings, fullscreen and pause/resume are provided.
+There is also a fifth **secret ending**, gated by clues collected during the story and a classified envelope found during Stage 6. Do not spoil the secret in user-facing copy.
 
-## Persistence and privacy
+Noosh's Incident Archives retain endings, achievements and clues in browser-local storage across story replays. Starting a new story resets the active score and checkpoints, but not the archive.
 
-- Local browser save/checkpoints after stages. Stage 3 checkpoint enters Stage 4; completed Stage 4 presents the incident report and a teaser for Tiny vs Baba.
-- Archive achievements and clues are local.
-- No access to private UTW member tools; no `/api/arcade` score posting. Current U-Dodge scoreboard is not reused.
+## Scoring and accessibility
 
-## Validation
+- **Consequences, not game over:** missed moves, escaped raccoons, failed cleaning attempts, and wrong dialogue choices continue the story with reduced points or increased suspicion.
+- Three earned Chaos Powers share a 100-point meter: Puppy Eyes (30), Raccoon Army (60), and Dino Nuggie Rage (100).
+- Landscape mobile-first with a fullscreen option, big on-screen controls, mouse/touch, and desktop keyboard support for applicable stages.
+- A pause button freezes timed raccoon/train/fight/cleanup mini-games. Important story choices and interrogation responses are untimed.
+- Original synthesized music/effects with user-initiated sound and mute/volume controls.
+- All characters use simplified prototype 2D SVG chibi artwork. Polished sprites based on Tiny's seven supplied character references remain to be added.
 
-- Chromium end-to-end playthrough tested at 780×360 and 844×390, including all nine train hazards, midstage panic, power meters, scene transitions and final report.
-- 1280×720 brake and pause checks passed: holding the brake slowed hazard progress, and pause froze the train clock. The new cabin view was checked at 780×360, 844×390 and 1280×720, with vent input, pressure buildup, and safe lane changes verified. An overheat case resets boiler pressure and displays Devi's reaction. Pause freezes pressure.
-- Intro, bottle, train track, shot-glass scene and ending screenshots inspected.
-- JavaScript syntax checked with Node `--check`; static tests in `tests/tiny-left-unsupervised.test.mjs` cover all four stages and no unauthorized score submissions.
-- Please still review in your mobile browser before production deployment.
+## Replay variation
 
-## Next
+The Stage 2 hazard order and approach directions, Stage 3 raccoon lanes/decoys/spawn timing, Stage 4 hazard positions and difficulty-aware sequence, and Stage 5 Baba moves are shuffled when entering their stages. The tutorial ramp, visible safe-lane cues, clue availability, and challenge quantities are preserved. A per-browser last-sequence record avoids immediate repeats.
 
-Stage 6 is The Ultimate Cover-Up with Noosh's interrogation, followed by endings and Endless Chaos Mode. Full-reference sprite polish and Tiny-specific shared leaderboards remain future work.
+## Technical boundaries
 
-## Stage 4 cabin redesign, based on gameplay feedback
+- Standalone file: `tiny-left-unsupervised.html`
+- Repo: `TinyMayhem/Ew-planner`
+- Preview feature branch: `feature/tiny-left-unsupervised-prototype-20261118`
+- No new server functions or access to protected Buddy Board, Train Desk or R4 records.
+- Scores and archives are browser-local. The existing `/api/arcade` endpoint is for U-Dodge and must not be reused until Tiny-specific validated backend scoring is designed.
+- Automatic checkpoints save completed stages in the same browser. Stage 6 completion reopens the ending report.
+- Full story replay is playable. Individual stage practice, shared rankings, and Noosh's Endless Patience survival mode remain future work.
 
-The original Stage 4 looked too much like a three-column obstacle quiz. The new version places players in the locomotive cabin with a forward-facing windshield, three receding perspective tracks, scenery, driver/codriver portraits and a control dashboard. Boiler pressure rises throughout the ride; venting it is the second interactive task during the interval before each obstacle. Bonus points for skillful high-pressure vents, harmless comedic consequences if pressure maxes out. Active driving and reaction timing remain readable. The tequila bottle and empty shot glass remain cutscene visual props only; no drinking mechanic is implemented.
+## Quality checks
 
-## Stage 4 character-overlap fix and Stage 5 QA
+- Six-stage source passes JavaScript compilation with a JS engine.
+- Stage 6 interaction flow was exercised with a simulated DOM: evidence was cleared, Noosh's three questions answered, a main ending unlocked and recorded in the archive. It completed without throwing exceptions.
+- The fight randomizer generated 65 valid, unique ten-move decks with beginner-friendly rounds and later combos.
+- All four main ending choices and the secret ending gate were checked programmatically.
+- Regression tests added under `tests/tiny-left-unsupervised.test.mjs`, `tests/tiny-randomized-stages.test.mjs`, and `tests/tiny-stage6.test.mjs`.
+- Earlier stages have undergone Chromium tests at landscape phone sizes, but **Stage 6 still requires hands-on mobile browser playtesting** before production release.
 
-- **Bug fixed:** Dialogue with a `tiny` speaker no longer defaults her right-hand companion to Baba. In Stage 4 it keeps Devi as the copilot; during cabin action the background portrait pair is hidden because the cockpit already draws Tiny and Devi.
-- **Stage 4 end:** Baba challenges them offscreen via station speakers. He is not visually introduced until entering Stage 5.
-- **Stage 5:** Mobile landscape screenshots inspected at 780×360 and 844×390. Browser playthrough tested 10 successful rounds, including timed dodge/punch combinations, as well as a deliberate wrong move, and a separate transition test showed Stage 5 completing with no game over. Source JavaScript parses with Node.
-- **Persistence:** Completion of Stage 4 now checkpoints the beginning of Stage 5; Stage 5 completion checkpoints the Stage 6 teaser. Existing U-Dodge server endpoints remain untouched.
-- Final character sprite art is still provisional; five endings, actual Stage 6, Endless Mode, and shared leaderboards are not yet implemented.
+## Next steps
 
-## Replay randomization update
-
-Repeat runs no longer use a fixed hazard script:
-
-- **Stage 2, Forbidden Button:** All five signature hazards still appear once, but their order changes each run. Sideways hazards may come from either side, with correct safe-lane indicators and action cues. A per-browser last-order signature prevents an identical hazard order in two consecutive playthroughs.
-- **Stage 3, Raccoon Chase:** Three waves still have exactly four real raccoons and one Baba hat decoy each. Raccoons now enter in randomized order, from randomized directions and rows, with small speed and arrival-time variations. Exactly one real raccoon carries the hidden train key, but the wave is no longer fixed. Character reactions and wave rewards stay consistent.
-- **Stage 4, Cabin Train:** The nine unique obstacles are shuffled in a difficulty-aware deck. The first two are single-track hazards, a duck lesson always appears in the first four, and later hazards include harder track combinations. Blocked tracks and safe bonus routes vary between plays, while the visible coloured track cues and text correctly match the current hazard.
-
-Randomization happens once per stage entry, not between individual button presses. Normal checkpoints and achievements are untouched, and this update adds no server API calls. Future Stage 6 and Endless Mode may extend the same fair-randomization system.
-
-The deterministic Node test `tests/tiny-randomized-stages.test.mjs` checks sixty layouts per stage for variation, valid input cues, fair difficulty, and preserved clue counts. The same generator logic was exercised for 75 runs in Chromium at mobile size with no browser errors.
+Review Stage 6 and its endings in the Vercel preview. Then improve chibi sprite fidelity, implement stage practice, add dedicated server-validated scoreboards and Endless Chaos mode, and finally connect the approved game to the public UTW Chaos Arcade. Keep this PR as a draft until gameplay is signed off.
