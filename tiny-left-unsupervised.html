@@ -693,7 +693,7 @@ function startRaccoonWave(wave){
  }
  function catchRaccoon(o,assisted=false){
   if(phase!=='raccoons'||raccoonRun!==run||o.caught||paused)return;
-  o.caught=true;const hole=run.cells[o.slot];netEffect(hole);clearCell(o);
+  o.caught=true;const hole=run.cells[o.slot];clearCell(o);netEffect(hole);
   if(o.decoy){run.decoys++;game.raccoonDecoys++;game.misses++;notify('🎩 BABA’S HAT! NOT A RACCOON!');mark('🎩');audio('oops')}
   else{
    run.caught++;game.raccoonsCaught++;addScore(o.key?320:170);earn(o.key?19:12);game.perfects++;
