@@ -4,11 +4,12 @@ import {stageForDate,stageRange,trainWarnings,isR4Train,addDays as trainAddDays}
 import {trainLabelForDate} from './r4-train-schedule.mjs';
 import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=ds-teams-v1-20261117';
 import {initConductorSearch} from './r4-conductor-search.mjs';
+import {initTrainHistoryChecker} from './r4-train-history-checker.mjs';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
 const state={data:null,week:'',season:'post-s5',trainStage:15,archiveImports:[],csvQueue:[],candidates:[],dsTeamResults:null};
-let csvBusy=false,nextCsvId=0,conductorSearch=null;
+let csvBusy=false,nextCsvId=0,conductorSearch=null,trainHistoryChecker=null;
 const text=(tag,content,cls)=>{const el=document.createElement(tag);if(content!==undefined&&content!==null)el.textContent=String(content);if(cls)el.className=cls;return el};
 const dateAdd=(s,days)=>new Date(Date.parse(s+'T00:00:00Z')+days*86400000).toISOString().slice(0,10);
 const serverToday=()=>{const d=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Noronha',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const v=Object.fromEntries(d.map(x=>[x.type,x.value]));return v.year+'-'+v.month+'-'+v.day};
@@ -690,7 +691,7 @@ function trainHistory(){
   const button=text('button','Remove mistaken assignment','stat-button');button.addEventListener('click',()=>{if(confirm('Delete this train assignment?'))action(()=>post({action:'delete_award',id:award.id}),'Assignment removed.')});row.append(button);root.append(row)
  }
 }
-function render(){if(!state.data)return;overview();archive();imports();memberFields();dsHistory();void dsTeamBoards();exceptionList();trainHistory();trainCalendar();candidates();eligibilityWarnings()}
+function render(){if(!state.data)return;overview();archive();imports();memberFields();dsHistory();void dsTeamBoards();exceptionList();trainHistory();trainCalendar();candidates();eligibilityWarnings();trainHistoryChecker?.refresh()}
 async function load(){
  const week=$('week').value;state.season=$('season').value;
  if(!validDate(week)||monday(week)!==week){notice('Select a Monday for the week.',true);return}
@@ -822,6 +823,7 @@ async function uploadCsvQueue(){
 }
 function wire(){
  conductorSearch=initConductorSearch({select:$('train-member'),input:$('train-member-search'),list:$('train-member-suggestions'),getAliases:aliases});
+ trainHistoryChecker=initTrainHistoryChecker({getMembers:members,getAliases:aliases});
  const today=serverToday(),week=monday(today);
  state.trainStage=stageForDate(today);for(let stage=7;stage<=30;stage++){const range=stageRange(stage);$('train-stage').append(new Option('Stage '+stage+' · '+range.start+' to '+range.end,stage))}$('train-stage').value=String(state.trainStage);
  $('week').value=week;$('ds-date').value=today;$('train-date').value=today;$('exception-start').value=today;$('exception-end').value=today;
