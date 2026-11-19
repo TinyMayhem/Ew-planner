@@ -25,21 +25,48 @@ test('Stage 5 move deck is varied, keeps beginner cues, two combos and final mov
  for(let i=1;i<orders.length;i++)assert.notEqual(orders[i],orders[i-1]);
 });
 
-test('Finale has visible evidence hunt, timer, a safe decoy and pauses correctly',()=>{
+test('Finale offers furniture search, spray bottle, wipe cloth, and timer that pauses',()=>{
  assert.match(html,/id="cleanupBoard"/);
  assert.match(html,/\.cleanup-board/);
- assert.match(html,/\.cover-item/);
+ assert.match(html,/\.room-prop/);
+ assert.match(html,/\.stain-target/);
+ assert.match(html,/\.stain-target\.foamy/);
+ assert.match(script,/function buildCleanupRoom\(\)/);
  assert.match(script,/function startCleanup\(plan\)/);
+ assert.match(script,/function searchCleanupSpot\(item,run\)/);
+ assert.match(script,/function tapCleanupStain\(item,run\)/);
+ assert.match(script,/function setCleanupTool\(mode\)/);
  assert.match(script,/function hideCoverItem\(item,run,assisted=false\)/);
- assert.match(script,/function sweepCover\(side\)/);
  assert.match(script,/function cleanupVerdict\(run\)/);
  assert.match(script,/run\.until\+=shift/);
  assert.match(script,/phase!=='cleanup'\|\|cleanupRun!==run/);
- assert.match(script,/item\.decoy/);
+ assert.match(script,/item\.kind==='decoy'/);
+ assert.match(script,/item\.kind==='stain'/);
  assert.match(script,/game\.coverupMissed=remaining\.length/);
- assert.match(script,/if\(remaining<=0\|\|run\.objects\.every/);
+ assert.match(script,/run\.objects\.every\(o=>o\.done\|\|o\.kind==='empty'/);
  assert.match(script,/clue\('sealed-order'\)/);
  assert.match(script,/if\(phase!=='raccoons'&&phase!=='train'&&phase!=='fight'&&phase!=='cleanup'\)/);
+});
+
+test('Seven tasks are randomized across eight pieces of furniture and three spray stains',()=>{
+ const code=source('const coverEvidence=[','const coverDialogue=[');
+ const shuffle=source('function mixDeck(', 'const dodgePrompts=[');
+ const gen=vm.runInNewContext(shuffle+'\n'+code+'\n'+source('function buildCleanupRoom(){','function startCleanup(plan){')+'\n({buildCleanupRoom})',
+  {Math});
+ const arrangements=new Set();
+ for(let i=0;i<65;i++){
+  const room=gen.buildCleanupRoom();
+  assert.equal(room.length,11);
+  assert.equal(room.filter(x=>x.kind==='evidence').length,4);
+  assert.equal(room.filter(x=>x.kind==='stain').length,3);
+  assert.equal(room.filter(x=>x.kind==='decoy').length,1);
+  assert.equal(room.filter(x=>x.kind==='empty').length,3);
+  assert.equal(room.filter(x=>x.clue).length,1);
+  const evidence=room.filter(x=>x.kind==='evidence');
+  assert.ok(evidence.every(x=>x.furniture));
+  arrangements.add(evidence.map(x=>x.furniture.id+':'+x.id).join('|'));
+ }
+ assert.ok(arrangements.size>20);
 });
 
 test('Noosh interrogation branches through three questions and five possible endings',()=>{
