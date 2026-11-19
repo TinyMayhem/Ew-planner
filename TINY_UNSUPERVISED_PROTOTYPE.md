@@ -64,3 +64,20 @@ Review Stage 6 and its endings in the Vercel preview. Then improve chibi sprite 
 The first Stage 6 version displayed all seven evidence objects openly and asked the player to tap/sweep them. That was too passive. The current version hides **four evidence objects** across **eight furniture hotspots** (curtains, vase, bookshelf, crate, rug, chair, portrait, trunk). The remaining hotspots are empty or contain an innocent trophy. The second tap bags discovered evidence. It also places **three separate stains** around the room. Players select **SPRAY BOTTLE**, tap a stain to create foam, then use **WIPE CLOTH** with a tap or swipe to clean it. Both tools are visible in the lower control bar, with the selected tool highlighted. A timer is still active and can be extended by Puppy Eyes; Raccoon Army can automatically clear one task. Story failure is still consequences-not-game-over. Evidence contents are randomly assigned to furniture on each visit; the same seven-task scoring is retained.
 
 Test status: 26 static/deterministic checks passed via JS harness. A simulated DOM end-to-end check verified discover→collect, spray→foam→wipe, trophy penalty, all seven tasks, classified clue, interrogation, ending archive, and report. **User mobile acceptance and visual polish are still pending.**
+
+## Spoiler-free how-to cards (all six stages)
+
+Each stage now opens with a brief, dismissible **QUICK HOW-TO** card. It gives a practical objective and relevant controls without announcing any surprises or story events:
+
+1. **Keep an Eye on Noosh:** move only when he looks away; freeze when he checks back.
+2. **Watch the Danger Lanes:** select the green safe lane; duck when all lanes are red.
+3. **Catch the Moving Raccoons:** tap moving targets or sweep a side; avoid fake hats.
+4. **Drive from the Conductor Cabin:** switch tracks, duck, brake and vent boiler pressure.
+5. **Read Baba's Next Move:** match punch/dodge/sass cues and perform combos in order.
+6. **Search, Hide, and Scrub:** find evidence at hiding places; spray and wipe dirt.
+
+Guides display once per stage per active story run and are skipped when that stage is re-entered with the guide already seen (including after a checkpoint reload). A new full story playthrough resets the per-run seen list; the card always has a single **GOT IT, LET'S PLAY** dismissal button. No extra page, backend call or leaderboard change is introduced.
+
+Validation: source compiles; 27 static/regression tests pass; a simulated DOM interaction confirmed the first stage's overlay, dismissal, second-stage overlay, Stage 6 overlay, and suppression on repeat visits.
+
+Note: The larger user-requested Stage 6 visual rework to place hidden objects and swipe-cleanable stains directly on the original throne scene, plus removal of misplaced final-interrogation floating speech bubbles, remains a **separate pending gameplay/art fix**. The current how-to addition does not claim those previous requests are completed.
