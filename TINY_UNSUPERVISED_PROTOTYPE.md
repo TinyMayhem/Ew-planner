@@ -24,3 +24,7 @@ The prototype was also run through an automated Chromium clickthrough for both s
 ## Future work
 
 The remaining four full-game stages, final five endings, Noosh's Patience survival mode, shared Tiny-specific leaderboards, full incident archive, and actual high-detail character sprites are deferred. Keep `main` untouched until the preview is approved.
+
+## Stage 2 visibility correction
+
+The initial dodge prompts listed object names but did not show where they were coming from. The revised prototype displays an animated incoming object in a three-lane danger scanner, clearly marking red blocked lanes and the green safe lane. Overhead chandelier and mop hazards block all three lanes and prompt a duck. The same three button controls and swipe gestures remain. The countdown is longer at first and gradually tightens over five obstacles. Mistakes show a comic collision result and the story continues. Puppy Eyes extends the running countdown, and Raccoon Army can still rescue the dodge.
