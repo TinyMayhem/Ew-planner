@@ -78,14 +78,19 @@ test('Stage 2 shows actual obstacle positions and safe lanes before dodge input'
   assert.match(script,/result\.textContent=hit\?/);
 });
 
-test('Stage 3 raccoons are visible targets with tappable collision tracking',()=>{
+test('Stage 3 shows nine whack-a-mole holes with independent touch netting',()=>{
   assert.match(html,/id="raccoonBoard"/);
   assert.match(html,/id="raccoonField"/);
-  assert.match(html,/\.raccoon-runner/);
+  assert.match(html,/\.mole-hole/);
   assert.match(script,/function raccoonArt\(/);
   assert.match(script,/function raccoonSweep\(/);
-  assert.match(script,/el\.addEventListener\('click'/);
-  assert.match(script,/if\(\(o\.dir===1&&o\.x>112\)\|\|\(o\.dir===-1&&o\.x< -12\)\)/);
+  assert.match(script,/hole\.addEventListener\('pointerdown'/);
+  assert.match(script,/hole\.addEventListener\('click'/);
+  assert.match(script,/function netEffect\(hole\)/);
+  assert.match(script,/const keyIndex=queue\.findIndex\(o=>o\.key\)/);
+  assert.match(script,/if\(next\.key\)/);
+  assert.match(script,/o\.key\?850/);
+  assert.match(script,/if\(now>=o\.endAt\)expire\(o\)/);
   assert.match(script,/raccoonWaveEnd\(wave,run\)/);
 });
 
@@ -102,6 +107,7 @@ test('Stage 3 failure produces Mo’s consequence rather than game over',()=>{
 
 test('Stage 3 supports pause and saves between stages without altering arcade API',()=>{
   assert.match(script,/run\.until\+=delay;run\.spawnAt\+=delay/);
+  assert.match(script,/o\.endAt\+=delay;o\.hopAt\+=delay/);
   assert.match(script,/if\(phase!=='raccoons'&&phase!=='train'&&phase!=='fight'&&phase!=='cleanup'\)hideChallenge\(\)/);
   assert.match(script,/toStorage\(CHECKPOINT,\{\.\.\.game,stage:3,phase:'raccoonIntro'\}\)/);
   assert.match(script,/toStorage\(CHECKPOINT,\{\.\.\.game,stage:4,phase:'trainTeaser'\}\)/);
