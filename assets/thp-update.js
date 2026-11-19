@@ -1,12 +1,6 @@
+import {powerFromInput,isImplicitMillions} from './thp-power.mjs';
 const $=id=>document.getElementById(id);
 const fmt=n=>Number(n).toLocaleString('en-CA');
-const parsePower=value=>{
- const m=String(value||'').replaceAll(',','').replace(/\s+/g,'').match(/^(\d+(?:\.\d{1,3})?)([kmb])?$/i);
- if(!m)return null;
- const factor=({k:1000,m:1e6,b:1e9})[String(m[2]||'').toLowerCase()]||1;
- const num=Number(m[1])*factor;
- return Number.isSafeInteger(Math.round(num))&&num>0&&Math.abs(Math.round(num)-num)<0.001?Math.round(num):null;
-};
 async function request(url,options={}){
  const res=await fetch(url,{credentials:'same-origin',cache:'no-store',...options});
  const data=await res.json().catch(()=>({}));
@@ -40,9 +34,9 @@ $('thp-gate-form').addEventListener('submit',async e=>{
 });
 for(const [id,preview] of [['thp-squad-power','thp-squad-preview'],['thp-hero-power','thp-hero-preview']]){
  $(id).addEventListener('input',()=>{
-  const raw=$(id).value,parsed=parsePower(raw);
+  const raw=$(id).value,parsed=powerFromInput(raw);
   $(preview).textContent=!raw?(id==='thp-squad-power'?'Example: 52.78M = 52,780,000':'Open Power Details → Hero Power, not overall commander power'):
-   parsed!==null?'Saved as '+fmt(parsed)+' power':'Please enter a valid amount like 52.78M';
+   parsed!==null?(isImplicitMillions(raw)?raw.trim()+' = '+fmt(parsed)+' power (millions)':'Saved as '+fmt(parsed)+' power'):'Please enter a valid amount like 52.78 or 52.78M';
  });
 }
 $('thp-proof').addEventListener('change',()=>{
@@ -79,8 +73,8 @@ $('thp-member-form').addEventListener('submit',async event=>{
  const form=event.currentTarget,button=$('thp-submit'),notice=$('thp-submit-status');
  notice.className='';notice.textContent='';
  const fd=new FormData(form);
- const hero=parsePower(fd.get('heroPower')),squad=parsePower(fd.get('squadPower'));
- if(hero===null||squad===null){notice.className='thp-error';notice.textContent='Check both power numbers. Use values like 52.78M.';return}
+ const hero=powerFromInput(fd.get('heroPower')),squad=powerFromInput(fd.get('squadPower'));
+ if(hero===null||squad===null){notice.className='thp-error';notice.textContent='Check both power numbers. Values like 58.02 and 159.98 are in millions.';return}
  if(!form.reportValidity())return;
  const img=$('thp-proof').files[0];
  if(img?.size>3145728){notice.className='thp-error';notice.textContent='Please choose a screenshot smaller than 3 MB.';return}
@@ -88,8 +82,8 @@ $('thp-member-form').addEventListener('submit',async event=>{
  try{
   const result=await request('/api/thp-update',{method:'POST',body:fd});
   form.reset();closeSuggestions();
-  $('thp-proof-preview').textContent='';$('thp-squad-preview').textContent='Example: 52.78M = 52,780,000';
-  $('thp-hero-preview').textContent='Power Details → Hero Power. Not overall commander power!';
+  $('thp-proof-preview').textContent='';$('thp-squad-preview').textContent='58.02 = 58,020,000. Decimals without M mean millions.';
+  $('thp-hero-preview').textContent='159.98 = 159,980,000. Use Hero Power, not total commander power.';
   notice.className='';notice.textContent='✓ '+result.message+' Your current tracker data stays unchanged until approved.';
   notice.scrollIntoView({behavior:'smooth',block:'nearest'});
  }catch(e){notice.className='thp-error';notice.textContent=e.message}
