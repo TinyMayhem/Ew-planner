@@ -49,3 +49,15 @@ The original Stage 4 looked too much like a three-column obstacle quiz. The new 
 - **Stage 5:** Mobile landscape screenshots inspected at 780×360 and 844×390. Browser playthrough tested 10 successful rounds, including timed dodge/punch combinations, as well as a deliberate wrong move, and a separate transition test showed Stage 5 completing with no game over. Source JavaScript parses with Node.
 - **Persistence:** Completion of Stage 4 now checkpoints the beginning of Stage 5; Stage 5 completion checkpoints the Stage 6 teaser. Existing U-Dodge server endpoints remain untouched.
 - Final character sprite art is still provisional; five endings, actual Stage 6, Endless Mode, and shared leaderboards are not yet implemented.
+
+## Replay randomization update
+
+Repeat runs no longer use a fixed hazard script:
+
+- **Stage 2, Forbidden Button:** All five signature hazards still appear once, but their order changes each run. Sideways hazards may come from either side, with correct safe-lane indicators and action cues. A per-browser last-order signature prevents an identical hazard order in two consecutive playthroughs.
+- **Stage 3, Raccoon Chase:** Three waves still have exactly four real raccoons and one Baba hat decoy each. Raccoons now enter in randomized order, from randomized directions and rows, with small speed and arrival-time variations. Exactly one real raccoon carries the hidden train key, but the wave is no longer fixed. Character reactions and wave rewards stay consistent.
+- **Stage 4, Cabin Train:** The nine unique obstacles are shuffled in a difficulty-aware deck. The first two are single-track hazards, a duck lesson always appears in the first four, and later hazards include harder track combinations. Blocked tracks and safe bonus routes vary between plays, while the visible coloured track cues and text correctly match the current hazard.
+
+Randomization happens once per stage entry, not between individual button presses. Normal checkpoints and achievements are untouched, and this update adds no server API calls. Future Stage 6 and Endless Mode may extend the same fair-randomization system.
+
+The deterministic Node test `tests/tiny-randomized-stages.test.mjs` checks sixty layouts per stage for variation, valid input cues, fair difficulty, and preserved clue counts. The same generator logic was exercised for 75 runs in Chromium at mobile size with no browser errors.
