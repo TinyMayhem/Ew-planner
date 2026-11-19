@@ -15,6 +15,7 @@ import {activeR4MemberOptions} from '../lib/r4-eligible-members.mjs';
 import {utwConfigured,utwScoreboard,utwWeeklyOverview} from '../lib/utw-scores.mjs';
 import {GET as runDuelBackupCron} from '../lib/r4-duel-backup.mjs';
 import {latestThpSnapshotDate} from '../assets/r4-thp-roles.mjs';
+import {trainHistoryRows,memberTrainHistory,compareTrainWait} from '../lib/train-history-checker.mjs';
 
 const HEADERS={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
 export const validThp=value=>Number.isSafeInteger(value)&&value>=0;
@@ -122,6 +123,29 @@ export async function GET(request){
     order:'started_at.desc',limit:'1'
    });
    return json({lastRun:runs[0]||null});
+  }
+  if(q.get('train_history_checker')==='1'){
+   const first=q.get('first'),second=q.get('second')||null,role=q.get('role')||'any';
+   if(!uuid(first)||(second&&!uuid(second))||(second&&first===second)||!['any','conductor','vip'].includes(role))
+    return json({error:'Choose one or two different members and a valid comparison role'},400);
+   const [members,aliases,awards,legacy]=await Promise.all([
+    list('utw_stat_members',{select:'id,display_name,archived_at',limit:'1000'}),
+    list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'5000'}),
+    list('utw_stat_awards',{select:'train_date,slot,source,member_id,vip_member_id',order:'train_date.desc',limit:'2000'}),
+    list('utw_stat_train_legacy',{select:'train_date,selection_label,source,driver_name,vip_name',order:'train_date.desc',limit:'2000'})
+   ]);
+   if(![members,aliases,awards,legacy].every(Array.isArray))
+    throw Error('Train archive is incomplete');
+   const lookup=new Map(members.map(m=>[m.id,m.display_name]));
+   if(!lookup.has(first)||(second&&!lookup.has(second)))return json({error:'Member no longer exists in Train Desk. Refresh the member list.'},404);
+   const today=latestThpSnapshotDate();
+   const combined=trainHistoryRows({awards,legacy,members,aliases});
+   const left={name:lookup.get(first),...memberTrainHistory({memberId:first,rows:combined.rows,today})};
+   const right=second?{name:lookup.get(second),...memberTrainHistory({memberId:second,rows:combined.rows,today})}:null;
+   return json({today,role,first:left,second:right,comparison:compareTrainWait(left,right,role),
+    earliestRecordedDate:combined.earliestRecordedDate,unlinkedLegacyCount:combined.unlinkedLegacyCount,
+    savedCount:awards.length,legacyCount:legacy.length,
+    explanation:'Historic spreadsheet and final R4 assignments; same-date R4 saves replace spreadsheet entries. Future planned records do not count toward the elapsed wait. An unresolved old nickname may not be linked.'});
   }
   if(q.get('member_thp')==='1'){
    const actor=await sessionUser(request);
