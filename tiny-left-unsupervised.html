@@ -1,0 +1,1498 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#211329">
+<meta name="description" content="Tiny: Left Unsupervised. A playable UTW Chaos Arcade story prototype.">
+<title>Tiny: Left Unsupervised | UTW Chaos Arcade</title>
+<style>
+:root{--pink:#ff83b6;--rose:#e9588f;--gold:#ffe09a;--ink:#fff2ee;--plum:#24152f;--pane:#2a1a37;--mint:#a9edd7;--bad:#ff7881;--text:#fff7f3;color-scheme:dark}*{box-sizing:border-box}html,body{height:100%;margin:0}body{overflow:hidden;background:#130f23;font:600 16px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--text);overscroll-behavior:none}button,input{font:inherit}button{cursor:pointer;touch-action:manipulation}button:disabled{opacity:.35;cursor:not-allowed}button:focus-visible,input:focus-visible{outline:3px solid #fff;outline-offset:2px}button:active:not(:disabled){transform:translateY(2px) scale(.98)}#app{height:100dvh;display:flex;align-items:center;justify-content:center;padding:max(4px,env(safe-area-inset-top)) max(5px,env(safe-area-inset-right)) max(5px,env(safe-area-inset-bottom)) max(5px,env(safe-area-inset-left));background:radial-gradient(circle at 30% 5%,#65304e,#23152d 54%,#100d1b)}.screen{position:relative;width:min(100%,calc(100dvh * 1.7778));height:min(100%,calc(100vw * .5625));aspect-ratio:16/9;border:2px solid #b68668;border-radius:16px;overflow:hidden;background:#25182b;box-shadow:0 14px 60px #0009,inset 0 0 0 4px #0003}.hidden{display:none!important}.scene{position:absolute;inset:0;overflow:hidden;background:linear-gradient(90deg,#42293d 0 8%,#724b58 8% 12%,transparent 12% 88%,#724b58 88% 92%,#42293d 92%),linear-gradient(#3c304f 0%,#69415d 58%,#45283f 59%,#a35b5a 60%,#5c2844 100%)}.scene:before{content:"";position:absolute;left:7%;right:7%;top:9%;height:48%;background:repeating-linear-gradient(90deg,transparent 0 17%,#ffe1a327 17% 17.3%,transparent 17.3% 25%),linear-gradient(90deg,transparent 10%,#8d516550 50%,transparent 90%);pointer-events:none}.scene:after{content:"";position:absolute;bottom:0;height:30%;left:0;right:0;background:repeating-linear-gradient(90deg,#ffffff0a 0 2px,transparent 2px 110px),linear-gradient(#c27778,#6c3454);clip-path:polygon(0 16%,100% 16%,100% 100%,0 100%);pointer-events:none}.castle-title{position:absolute;top:8%;left:50%;transform:translateX(-50%);font-family:Georgia,serif;font-weight:900;font-size:clamp(18px,3.2vw,48px);letter-spacing:.09em;color:#f7d79b;text-shadow:0 3px #4e1e39,0 0 22px #ffe09a88;white-space:nowrap;opacity:.52}.lamp{position:absolute;top:0;width:18px;height:80px;left:23%;background:linear-gradient(#d8aa6f,#e6b978);transform:scale(.55);transform-origin:top}.lamp:after{content:'✦';position:absolute;top:63px;left:-27px;font-size:66px;color:#ffebba;text-shadow:0 0 34px #f6c25b}.lamp.r{left:77%}.scene.train-room{background:linear-gradient(#22314f,#6b3964 60%,#9b6676 61%,#412e46)}.scene.train-room:before{opacity:.3}.sparkles{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 16% 28%,#fff7 0 2px,transparent 3px),radial-gradient(circle at 76% 40%,#fff8 0 2px,transparent 3px),radial-gradient(circle at 51% 11%,#ffdba8 0 3px,transparent 4px)}.throne{position:absolute;left:50%;top:43%;width:21%;height:41%;transform:translate(-50%,-30%);z-index:1;filter:drop-shadow(0 12px 2px #100b1655)}.throne .back{position:absolute;left:12%;width:76%;height:76%;border:10px ridge #eab866;background:radial-gradient(circle at 50% 45%,#ef6b84,#9d163c 65%,#6b1234);border-radius:38% 38% 9% 9%;box-shadow:inset 0 0 0 4px #7f162d,0 0 24px #ffd77966}.throne .back:after{content:'♛';position:absolute;left:50%;top:14%;transform:translateX(-50%);font-size:clamp(18px,3vw,42px);color:#ffbfce}.throne .seat{position:absolute;bottom:11%;left:6%;width:88%;height:24%;border:7px ridge #e9bb63;border-radius:20%;background:linear-gradient(#ff9cac,#ab214b);box-shadow:0 9px 0 #9a663c}.throne .leg{position:absolute;bottom:0;height:20%;width:14%;background:#d4a054;border-radius:6px}.throne .leg.l{left:10%}.throne .leg.r{right:10%}.throne.wet .seat:after{content:'💦';position:absolute;inset:0;text-align:center;font-size:28px}.button-pedestal{position:absolute;left:50%;top:50%;transform:translate(-50%,-12%) scale(.8);z-index:2;width:25%;height:32%;animation:pedestalIn .5s ease-out forwards}.pedestal{position:absolute;bottom:0;left:20%;width:60%;height:50%;background:linear-gradient(90deg,#51425c,#d3a6c0,#51425c);clip-path:polygon(14% 0,86% 0,100% 100%,0 100%);border-bottom:9px solid #37233d}.danger-button{position:absolute;top:4%;left:25%;width:50%;height:47%;border-radius:50%;background:radial-gradient(circle at 36% 22%,#ffc2ba,#ff535f 45%,#af081b 75%);border:10px solid #f1ca81;box-shadow:0 8px 0 #6d2f47,0 0 42px #ff4f6777}.danger-button.pressed{animation:buttonFlash .23s 3}.warning-label{position:absolute;bottom:5%;left:0;right:0;text-align:center;font-size:clamp(9px,1.35vw,18px);color:#fff0ca;text-shadow:0 2px 2px #231725}.crate{position:absolute;right:9%;bottom:23%;font-size:clamp(34px,7.5vw,84px);transform:rotate(-8deg);filter:drop-shadow(0 5px 6px #1c101d);z-index:3}.crate.jitter{animation:shake .24s infinite}.char{position:absolute;z-index:3;bottom:9%;width:clamp(105px,20%,260px);height:clamp(145px,80%,410px);display:flex;align-items:end;justify-content:center;pointer-events:none;transition:left .5s ease,right .5s ease,opacity .22s,transform .28s}.char svg{width:100%;max-height:100%;overflow:visible;filter:drop-shadow(0 11px 3px #1e0e2680);animation:bob 2s ease-in-out infinite}.char.left{left:9%}.char.right{right:8%}.char.nudge{animation:shimmy .35s}.char.hit svg{animation:shake .16s 4}.char.whoosh{transform:translateX(14%) rotate(10deg)}.char.right.whoosh{transform:translateX(-14%) rotate(-10deg)}.char.gone{opacity:0;transform:translateY(70%)}.action-mark{position:absolute;z-index:4;top:24%;left:50%;transform:translateX(-50%);font-size:clamp(32px,7vw,90px);opacity:0;pointer-events:none;text-shadow:0 3px 14px #200d30}.action-mark.show{opacity:1;animation:pop .4s both}.hud{position:absolute;top:0;left:0;right:0;z-index:8;display:flex;gap:1%;align-items:center;padding:1.2% 2%;background:linear-gradient(#18101ad9,#1b12228a);border-bottom:1px solid #ffebc044}.hud .logo{font-size:clamp(9px,1.35vw,17px);font-weight:1000;color:#ffcf88;white-space:nowrap}.chip{background:#251429dd;border:1px solid #edbb9b55;border-radius:8px;padding:.3em .65em;font-size:clamp(10px,1.3vw,16px);white-space:nowrap}.chip strong{color:#ffe7a2}.energy-mini{flex:1;min-width:70px;max-width:180px}.energy-mini b{font-size:clamp(9px,1.25vw,14px)}.bar{height:7px;background:#140f1f;border-radius:20px;overflow:hidden;outline:1px solid #dba8b766;margin-top:3px}.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#df60ad,#ffd0d7);transition:width .3s}.icon-btn{border:1px solid #ffffff55;border-radius:8px;color:#fff6ed;background:#341d3a;min-width:32px;min-height:31px}.hud-spacer{flex:1}.bubble{position:absolute;z-index:6;top:18%;left:23%;width:54%;min-height:14%;padding:1.35% 2%;background:#fff9e8;color:#38253c;border:3px solid #44273b;border-radius:18px;box-shadow:0 7px 0 #210b256b;text-align:center;font-size:clamp(14px,2.25vw,30px);font-weight:900;line-height:1.25}.bubble:after{content:"";position:absolute;bottom:-16px;left:30%;border:8px solid transparent;border-top-color:#fff9e8}.bubble em{color:#a44568;font-style:normal}.name-tag{position:absolute;z-index:4;bottom:13%;font-weight:900;font-size:clamp(10px,1.45vw,20px);background:#1d112add;border:1px solid #ffffff77;border-radius:20px;padding:4px 14px}.name-tag.left{left:13%}.name-tag.right{right:12%}.panel{position:absolute;bottom:0;left:0;right:0;z-index:7;min-height:20%;background:linear-gradient(#22152cf5,#21152dfb);border-top:3px solid #f4c992;display:flex;align-items:center;gap:1.2%;padding:1.25% 2.5%;box-shadow:0 -6px 30px #140b1b8a}.panel .story{flex:1;min-width:0}.eyebrow{font-size:clamp(8px,1.1vw,13px);letter-spacing:.15em;color:#ffbbdd;text-transform:uppercase;font-weight:900}.story h2,.story p{margin:0}.story h2{font:900 clamp(14px,2.3vw,28px)/1.15 Georgia,serif;color:#ffe0a0}.story p{font-size:clamp(10px,1.4vw,17px);opacity:.9}.controls{display:flex;align-items:stretch;justify-content:flex-end;gap:8px;flex-wrap:wrap;max-width:63%}.btn{border:2px solid #ffda9e;background:linear-gradient(#e95f9e,#9a3376);color:#fff7f4;padding:.6em 1.1em;border-radius:13px;box-shadow:0 4px 0 #552246;font-weight:900;font-size:clamp(11px,1.45vw,18px);white-space:normal;min-width:90px;max-width:240px;text-align:center}.btn.alt{background:linear-gradient(#62577c,#373255);border-color:#c4acc6}.btn.gold{background:linear-gradient(#f9d386,#c08b3e);border-color:#fff4ba;color:#39213b}.btn.small{min-width:0;padding:.35em .65em;font-size:clamp(9px,1.1vw,14px)}.power-row{position:absolute;left:2%;bottom:22%;z-index:7;display:flex;gap:8px}.power{border:1px solid #ffc7de;background:#291531e8;border-radius:10px;color:#fff;font-size:clamp(9px,1.15vw,14px);font-weight:900;padding:5px 9px;box-shadow:0 3px 0 #130b17;min-height:28px}.power b{color:#ffd68b}.power:disabled{opacity:.35}.note{position:absolute;top:12%;right:2%;z-index:5;background:#201627cf;border-radius:9px;padding:5px 10px;font-size:clamp(10px,1.2vw,15px);color:#fef1d0}.challenge{position:absolute;z-index:6;left:30%;top:43%;width:40%;background:#22152de8;border:2px solid #ffcb9a;border-radius:14px;padding:1.2% 2%;text-align:center;box-shadow:0 6px 40px #110715aa}.challenge h3{margin:0 0 5px;font-size:clamp(15px,2.25vw,27px);color:#ffe1a0}.challenge p{margin:0 0 7px;font-size:clamp(10px,1.25vw,16px)}.timing-track{height:20px;border-radius:12px;background:linear-gradient(90deg,#9b455b 0 37%,#70e5ac 37% 63%,#9b455b 63%);position:relative;outline:2px solid #fff9}.timing-track .needle{position:absolute;left:0;top:-4px;height:28px;width:6px;background:#fff;box-shadow:0 0 9px #fff;border-radius:3px;transform:translateX(-50%)}.challenge .stat{color:#ffbad5;font-weight:900}.timer{color:#ff8592;font-size:clamp(26px,5vw,54px);font-weight:1000;line-height:1}.toast{position:absolute;z-index:20;top:13%;left:50%;transform:translateX(-50%);padding:10px 18px;background:#381d38eb;border:2px solid #ffd298;border-radius:12px;color:#fff;text-align:center;max-width:85%;font-weight:900;font-size:clamp(12px,1.6vw,20px);box-shadow:0 4px 30px #12071b99;animation:pop .28s}.modal{position:absolute;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;background:#110e20e8;padding:4%}.modal-card{width:min(90%,650px);max-height:92%;overflow:auto;scrollbar-width:thin;background:linear-gradient(#492d51,#231c34);border:3px solid #ffdba1;border-radius:22px;padding:3% 4%;box-shadow:0 20px 65px #0008;text-align:center}.modal-card h1{font:900 clamp(27px,5.4vw,65px)/1.03 Georgia,serif;margin:5px 0;color:#ffd9a1;text-shadow:0 3px #6c3d53}.modal-card h2{font:900 clamp(20px,3.3vw,34px)/1.1 Georgia,serif;margin:5px 0 10px;color:#ffe4a8}.modal-card p{margin:10px auto;max-width:560px;font-size:clamp(12px,1.5vw,18px)}.modal-card .btn{margin:7px}.modal-kicker{color:#fcb0d5;font-size:clamp(10px,1.5vw,16px);letter-spacing:.18em;font-weight:1000}.row{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0}.statbox{border:1px solid #ffffff42;border-radius:10px;background:#170e2488;padding:10px}.statbox b{display:block;font-size:clamp(19px,3vw,31px);color:#ffe39b}.statbox small{font-size:11px;color:#eecfd9}.archive-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:left;margin:15px auto;max-width:540px}.archive-item{background:#21152d;border:1px solid #ffffff44;padding:10px;border-radius:10px;font-size:clamp(10px,1.3vw,16px)}.volume-label{display:flex;gap:10px;justify-content:center;align-items:center;margin:12px}input[type=range]{accent-color:#ff8eba}.rotate{display:none;position:fixed;inset:0;z-index:99;background:#24152f;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:28px}.rotate h2{font:900 30px Georgia;color:#ffdb9d}.rotate span{font-size:55px}.confetti{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden}.confetti i{position:absolute;top:-10%;left:var(--x);background:var(--c);height:11px;width:7px;animation:fall var(--d) linear infinite;transform:rotate(var(--r))}.tooltip{font-size:clamp(9px,1.2vw,15px);opacity:.8;margin-top:6px}.stage-label{position:absolute;top:10%;left:2%;font-size:clamp(8px,1vw,15px);color:#ffecc3;background:#29152abd;padding:4px 9px;border-radius:8px;z-index:4}.btn:active{box-shadow:0 1px 0 #552246}#gameplay{position:absolute;inset:0}@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}@keyframes shimmy{0%,100%{transform:rotate(0)}25%{transform:rotate(8deg)}75%{transform:rotate(-8deg)}}@keyframes shake{0%,100%{transform:translate(0)}25%{transform:translate(7px,-3px)}75%{transform:translate(-6px,3px)}}@keyframes pop{0%{transform:translateX(-50%) scale(.5);opacity:0}80%{transform:translateX(-50%) scale(1.1)}100%{transform:translateX(-50%) scale(1);opacity:1}}@keyframes fall{to{transform:translateY(700px) rotate(800deg)}}@keyframes pedestalIn{from{opacity:0;transform:translate(-50%,30%) scale(.4)}to{opacity:1;transform:translate(-50%,-12%) scale(.8)}}@keyframes buttonFlash{50%{filter:brightness(2)}}@media(orientation:portrait) and (max-width:900px){.rotate{display:flex}}@media(orientation:landscape) and (max-height:500px){.screen{width:100%;height:100%;aspect-ratio:auto}.controls{max-width:68%}.panel .story{max-width:38%}.btn{min-width:76px}.char{width:17%;height:73%}}@media(max-height:450px){.modal-card{padding:1.5% 3%}.modal-card h1{font-size:clamp(24px,4.3vw,45px)}.modal-card p{margin:6px auto;font-size:clamp(10px,1.4vw,15px)}.modal-card .btn{margin:3px;padding:.36em .8em}.stats{margin:7px 0}.statbox{padding:6px}.hud{padding:.5% 1%}.panel{padding:.6% 1.2%;min-height:21%}.bubble{top:16%}.char{bottom:11%;height:75%}.power-row{bottom:23%}.btn{padding:.42em .8em}.challenge{top:39%}.story p{font-size:11px}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+.noosh-peek{position:absolute;z-index:6;top:12%;right:-2%;height:47%;width:23%;pointer-events:none;transform:translateX(105%) rotate(10deg);transition:transform .22s ease-out,filter .22s ease-out;filter:drop-shadow(0 8px 12px #160b1ab0)}.noosh-peek svg{width:100%;height:100%;display:block;animation:none}.noosh-peek.watching{transform:translateX(0%) rotate(-7deg)}.noosh-peek.warning{transform:translateX(65%) rotate(-9deg);filter:drop-shadow(0 0 17px #ff9c54)}.noosh-peek.away{transform:translateX(105%) rotate(12deg)}.guard-challenge{top:44%;left:31%;width:38%}.guard-indicator{display:block;border:2px solid #eecb9c;border-radius:10px;background:#4e2b45;padding:5px 8px;margin:5px 0;font-size:clamp(12px,1.6vw,20px);font-weight:1000}.guard-indicator.safe{background:#1d624b;border-color:#a9f9b5;color:#f1fff5}.guard-indicator.risky{background:#67451c;border-color:#ffe08b;color:#fff0b7}.guard-indicator.danger{background:#822c45;border-color:#ff9c9c;color:#fff}.guard-info{font-size:clamp(10px,1.2vw,16px);color:#fff5e9}.guard-hint{font-size:clamp(9px,1.05vw,13px);color:#ffd8bd}@media (max-height:430px){.guard-challenge{top:42%;padding:.8% 1.4%}.guard-challenge h3{font-size:clamp(12px,2vw,22px);margin-bottom:2px}.guard-indicator{margin:3px 0;padding:3px 6px}}
+
+/* Stage 2: actual visible hazard positions instead of a text-only guessing game. */
+.dodge-board{position:absolute;z-index:6;left:26%;top:34%;width:47%;height:43%;border:3px solid #ffe7ad;border-radius:12px;background:#140d23f5;box-shadow:0 5px 24px #090514dd,0 0 0 2px #fff2 inset;overflow:hidden;pointer-events:none}
+.dodge-heading{height:20%;display:flex;justify-content:center;align-items:center;gap:6px;padding:2px 5px;background:#3a1b35;color:#fff0ba;font-weight:1000;font-size:clamp(10px,1.45vw,17px);letter-spacing:.035em;text-shadow:0 1px 2px #000}
+.dodge-heading strong{color:#fff}
+.dodge-lanes{position:absolute;inset:20% 3% 19%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+.dodge-lane{display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:4px 2px;border:2px solid #c5b7cd;border-radius:6px;background:#382e48;min-width:0;overflow:hidden}
+.dodge-lane.danger{background:repeating-linear-gradient(135deg,#95293f 0 12px,#6d2039 12px 23px);border-color:#ff969d;box-shadow:inset 0 0 12px #2b0a19}
+.dodge-lane.safe{background:linear-gradient(#1b6b50,#163e40);border-color:#93ffd0;box-shadow:inset 0 0 18px #9efbd62c}
+.dodge-lane b{font-size:clamp(9px,1.3vw,15px);color:#fff;letter-spacing:.06em}
+.dodge-lane small{font-size:clamp(8px,1.18vw,13px);font-weight:1000;color:#fff;background:#7c2538dd;border-radius:3px;padding:1px 4px}
+.dodge-lane.safe small{background:#064f33;color:#d6ffe8}
+.dodge-object{position:absolute;z-index:4;left:50%;top:38%;transform:translate(-50%,-50%) scale(1);display:flex;flex-direction:column;align-items:center;min-width:21%;padding:0 6px;filter:drop-shadow(0 3px 4px #000a);transition:none;white-space:nowrap}
+.dodge-object.side-left{left:19%}.dodge-object.side-right{left:81%}.dodge-object.overhead{left:50%;min-width:87%;border-top:5px solid #ffb0b0;border-bottom:5px solid #ffb0b0;background:#7a243da8;border-radius:8px}
+.dodge-object .dodge-emoji{display:block;font-size:clamp(33px,5vw,70px);line-height:1.04;text-shadow:0 0 11px #ffe7ab}
+.dodge-object .dodge-object-label{font-size:clamp(9px,1.2vw,14px);font-weight:1000;background:#fff5d6;color:#381a2c;border-radius:5px;padding:1px 5px;text-shadow:none}
+.dodge-footer{position:absolute;bottom:0;left:0;right:0;height:19%;display:flex;align-items:center;justify-content:center;background:#213326;color:#bcffe0;font-weight:1000;font-size:clamp(9px,1.36vw,16px);letter-spacing:.03em}
+.dodge-footer.duck{background:#3e3820;color:#fff3b7}
+.dodge-timer{left:75.5%;top:37%;width:22%;padding:.6% .8%;z-index:7;background:#241628f2}
+.dodge-timer h3{font-size:clamp(12px,1.45vw,19px);margin:0}
+.dodge-timer .timer{font-size:clamp(24px,4.1vw,45px)}
+.dodge-timer p{font-size:clamp(9px,1.05vw,13px);margin:2px 0}
+.dodge-timer .dodge-progress{height:7px;background:#55405f;border-radius:8px;margin:5px 0;overflow:hidden}
+.dodge-timer .dodge-progress i{display:block;height:100%;background:#ffb36d;width:100%}
+.dodge-result{position:absolute;inset:34% 0 auto;z-index:8;text-align:center;background:#152e2de6;border:2px solid #b6ffe3;color:#e7fff8;font-size:clamp(18px,2.8vw,32px);font-weight:1000;padding:3px}
+.dodge-result.hit{background:#68253be8;border-color:#ffacac;color:#fff1c4}
+@media(orientation:landscape) and (max-height:450px){.dodge-board{left:26%;top:33%;width:47%;height:43%}.dodge-timer{top:36%;left:75%;width:23%;padding:.45%}.dodge-lane{padding:2px}.dodge-object .dodge-emoji{font-size:clamp(29px,5vw,52px)}.dodge-heading{height:20%}.dodge-timer .timer{font-size:clamp(23px,4vw,32px)}}
+
+/* Stage 3: real visible moving raccoons, large touch targets, a playable net sweep. */
+.raccoon-active .power-row{left:1%;top:42%;bottom:auto;flex-direction:column;gap:4px;width:20%}.raccoon-active .power{font-size:clamp(8px,1.1vw,13px);padding:4px;min-height:24px}
+.scene.raccoon-room{background:linear-gradient(90deg,#253b38 0 10%,#37574b 10% 16%,transparent 16% 84%,#37574b 84% 90%,#253b38 90%),linear-gradient(#253d45 0%,#43565b 56%,#685061 57%,#473247 100%)}
+.scene.raccoon-room:before{background:repeating-linear-gradient(90deg,#e7d6aa27 0 1px,transparent 2px 70px),linear-gradient(#6caa9952,#24474466)}
+.raccoon-board{position:absolute;z-index:7;left:23%;top:34%;width:54%;height:43%;background:#141e29f5;border:3px solid #f7d69f;box-shadow:0 6px 20px #130a22bb,0 0 0 2px #e7f7d21e inset;border-radius:13px;overflow:hidden;touch-action:pan-y}
+.raccoon-heading{position:absolute;top:0;left:0;right:0;height:20%;min-height:23px;display:flex;align-items:center;justify-content:space-around;gap:4px;color:#fff2cc;font-size:clamp(10px,1.3vw,16px);font-weight:900;background:#343047;border-bottom:2px solid #f8d7ab;padding:0 2%}
+.raccoon-heading strong{color:#bdf9d3}
+.raccoon-field{position:absolute;left:2%;right:2%;top:22%;height:66%;overflow:hidden;isolation:isolate;border-radius:6px;background:repeating-linear-gradient(to bottom,#243c4199 0 calc(33.33% - 2px),#f1d6a64f calc(33.33% - 2px) 33.33%)}
+.raccoon-field:before{content:'🦝       🦝       🦝';position:absolute;left:4%;right:4%;top:36%;opacity:.14;white-space:pre;letter-spacing:2vw;text-align:center;font-size:clamp(12px,1.7vw,20px);pointer-events:none}
+.raccoon-runner{position:absolute;translate:-50% -50%;width:clamp(34px,4.7vw,58px);height:clamp(34px,4.7vw,58px);border:2px solid #ffefcf;border-radius:44%;background:linear-gradient(145deg,#d2e5dd,#78949c);box-shadow:0 5px 0 #192633,0 0 10px #c9fbe655;display:grid;place-items:center;padding:1px;cursor:pointer;touch-action:manipulation;animation:raccoonBob .48s ease-in-out infinite alternate;z-index:2}
+.raccoon-runner svg{width:100%;height:100%;display:block;pointer-events:none}
+.raccoon-runner.decoy{background:linear-gradient(#bd6980,#653d61);border-color:#ffb2c0}
+.raccoon-runner.key-carrier{box-shadow:0 0 0 3px #ffe09a,0 0 16px #ffe09a}
+.raccoon-runner .key{position:absolute;right:-9px;top:-8px;font-size:clamp(14px,2.2vw,25px);transform:rotate(-15deg);pointer-events:none}
+.raccoon-footer{position:absolute;bottom:0;left:0;right:0;height:12%;min-height:17px;background:#24413e;color:#e0ffe3;text-align:center;font-size:clamp(9px,1.2vw,14px);font-weight:900;display:grid;place-items:center;letter-spacing:.025em}
+.raccoon-net{position:absolute;inset:22% auto 12% 0;width:50%;border:3px dashed #bdf9d355;background:#bdf9d322;pointer-events:none;opacity:0;z-index:4}
+.raccoon-net.right{left:50%}.raccoon-net.show{opacity:1;animation:netPulse .28s ease-out}
+@keyframes netPulse{from{background:#bdf9d399}to{background:#bdf9d311}}
+@keyframes raccoonBob{from{transform:translateY(-2px) rotate(-5deg)}to{transform:translateY(2px) rotate(5deg)}}
+@media (orientation:landscape) and (max-height:450px){.raccoon-board{left:23%;top:33%;width:54%;height:45%}.raccoon-heading{min-height:20px}.raccoon-footer{min-height:14px}}
+
+
+/* Stage 4: visible three-track railway. Red means blocked, mint means clear. */
+.scene.railway-room{background:linear-gradient(125deg,#18283f 0%,#32516a 32%,#554d72 60%,#7f527b 100%)}
+.scene.railway-room:before{background:repeating-linear-gradient(90deg,#fce6b31b 0 3px,transparent 3px 70px),linear-gradient(#23395770,#684f7260)}
+.train-active .power-row{left:1%;top:41%;bottom:auto;flex-direction:column;gap:4px;width:19%}
+.train-active .power{font-size:clamp(8px,1.1vw,13px);padding:4px;min-height:24px}
+.train-active .controls{max-width:68%;gap:3px}
+.train-active .controls .btn{min-width:clamp(52px,7.5vw,97px);max-width:110px;padding:.42em .55em;font-size:clamp(10px,1.2vw,16px)}
+.train-board{position:absolute;z-index:7;left:24%;top:32%;width:53%;height:45%;border:3px solid #ffe1a9;border-radius:13px;background:#122235ee;box-shadow:0 8px 28px #0a0f23c9;overflow:hidden;touch-action:none}
+.train-top{position:absolute;inset:0 0 auto;height:21%;background:#40314f;display:flex;align-items:center;justify-content:space-around;padding:0 5px;gap:4px;font-size:clamp(9px,1.17vw,16px);font-weight:900;color:#fff4ca;border-bottom:2px solid #f6dca2;z-index:3}
+.train-top strong{color:#c4ffdb}
+.train-rails{position:absolute;inset:21% 1% 15%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px}
+.train-track{position:relative;display:flex;align-items:center;flex-direction:column;justify-content:flex-start;min-width:0;border:2px solid #a4acb9;border-radius:4px;background:repeating-linear-gradient(to bottom,#4c4c57 0 8px,#8b7a7a 8px 10px,#4b4d5c 10px 20px);overflow:hidden}
+.train-track:after{position:absolute;content:'';inset:0 23%;border-left:4px solid #e5dde0aa;border-right:4px solid #e5dde0aa;pointer-events:none}
+.train-track.danger{background:repeating-linear-gradient(135deg,#a12c49 0 13px,#682b47 13px 24px);border-color:#ff9aa2}
+.train-track.safe{background:repeating-linear-gradient(to bottom,#265a5b 0 13px,#3c7170 13px 20px);border-color:#a9ffcd}
+.train-track.chosen{box-shadow:inset 0 0 0 3px #fff7c1,0 0 11px #ffe0a6}
+.train-track .track-label{font-size:clamp(8px,1.13vw,13px);font-weight:1000;color:#fff;z-index:1;background:#172431bc;padding:0 4px;border-radius:3px}
+.train-track small{z-index:1;background:#24352fdd;color:#c9ffe6;border-radius:3px;font-size:clamp(7px,.92vw,11px);padding:0 3px}
+.train-track.danger small{background:#662339;color:#ffe0e5}
+.train-object{position:absolute;z-index:3;transform:translate(-50%,-50%);font-size:clamp(26px,4.5vw,58px);line-height:1.1;pointer-events:none;text-shadow:0 4px 8px #0009,0 0 12px #ffe4a466}
+.train-object.overhead{background:#c1485cd5;border:3px solid #ffe7a9;border-radius:9px;left:50%!important;width:88%;text-align:center;font-size:clamp(26px,4.2vw,54px)}
+.train-car{position:absolute;z-index:5;bottom:9%;left:50%;transform:translateX(-50%);transition:left .12s ease-out;font-size:clamp(32px,5vw,64px);filter:drop-shadow(0 5px 1px #041420);pointer-events:none}
+.train-footer{position:absolute;inset:auto 0 0;height:15%;display:flex;justify-content:center;align-items:center;font-size:clamp(8px,1.12vw,13px);font-weight:900;letter-spacing:.02em;background:#143d37;color:#d7ffe4}
+.train-footer.duck{background:#5d442a;color:#fff4cc}
+.train-brake{position:absolute;z-index:8;top:39%;left:79%;width:19%;display:grid;gap:5px;justify-items:stretch}
+.train-brake button{color:#fff0d8;background:linear-gradient(#a34e55,#65304b);border:2px solid #ffcfa7;border-radius:11px;min-height:48px;font-size:clamp(12px,1.6vw,18px);font-weight:900;touch-action:none;box-shadow:0 3px 0 #241225}
+.train-brake button:active,.train-brake button.engaged{background:#3b907c;color:white}
+.train-brake label{text-align:center;background:#151725dc;border:1px solid #f4ca9b;border-radius:7px;padding:3px;color:#f9d9ab;font-size:clamp(8px,1.1vw,13px)}
+.train-brake-meter{height:8px;border-radius:6px;background:#332332;overflow:hidden;border:1px solid #edd6b5}
+.train-brake-meter i{display:block;width:100%;height:100%;background:#9deac6}
+.train-incident{position:absolute;z-index:7;inset:39% 7% auto;border-radius:10px;border:3px solid #ffe9ac;padding:7px;background:#25483fea;color:#eaffea;font-size:clamp(16px,2.4vw,29px);font-weight:1000;text-align:center}
+.train-incident.hit{background:#7e2742ee;border-color:#ffacbb;color:#fff1e9}
+.held-tequila{position:absolute;z-index:4;left:78%;bottom:26%;width:clamp(22px,26%,58px);height:clamp(52px,35%,99px);transform:rotate(19deg);filter:drop-shadow(0 4px 6px #15111a);animation:drinkProp .9s ease-in-out infinite alternate;pointer-events:none}
+.held-tequila.shot{width:clamp(26px,24%,50px);height:clamp(29px,21%,56px);bottom:33%;left:80%}
+.held-tequila svg{width:100%;height:100%}
+@keyframes drinkProp{from{transform:rotate(11deg)}to{transform:rotate(23deg)}}
+@media(orientation:landscape) and (max-height:450px){.train-board{left:23%;top:33%;height:44%;width:54%}.train-brake{top:41%}.train-brake button{min-height:40px}.train-active .power-row{top:43%}}
+@media(prefers-reduced-motion:reduce){.train-car,.held-tequila{transition:none;animation:none}}
+
+
+/* Stage 4 v2: conductor-cabin point of view with a living boiler. */
+.train-board{left:22%;top:29%;width:56%;height:49%;border:5px solid #b88458;border-radius:17px 17px 7px 7px;background:#121b29;box-shadow:0 5px 0 #513247,0 10px 26px #000c,inset 0 0 0 3px #ffe3a280;isolation:isolate}
+.train-board:before{content:'';position:absolute;z-index:8;inset:0;pointer-events:none;border-radius:10px;box-shadow:inset 0 0 0 2px #ffe8c688,inset 11px 0 0 #3c2f37b0,inset -11px 0 0 #3c2f37b0}
+.train-board.cabin-shaking{animation:cabinJolt .33s linear}
+@keyframes cabinJolt{0%,100%{translate:0}25%{translate:-5px 2px}65%{translate:5px -2px}}
+.train-top{height:17%;background:linear-gradient(#573b48,#2b283b);justify-content:space-between;padding:0 4%;border-bottom:3px solid #e4ac6c}
+.cabin-window{position:absolute;inset:17% 0 18%;overflow:hidden;background:linear-gradient(#74a5c2 0%,#b4c8d0 35%,#f3d19e 52%,#729e91 53%,#4b726d 61%,#8c8581 62%,#555059 100%)}
+.cabin-window:before{content:'';position:absolute;top:22%;left:-10%;width:120%;height:48%;background:#4b747c;clip-path:polygon(0 80%,10% 42%,21% 68%,30% 36%,40% 76%,53% 15%,66% 60%,82% 26%,100% 80%,100% 100%,0 100%);opacity:.88;animation:landscapeDrift 8s ease-in-out infinite alternate}
+.cabin-window:after{content:'';position:absolute;top:45%;left:-5%;width:110%;height:22%;background:linear-gradient(#7d9c72,#3f655c);clip-path:polygon(0 45%,12% 8%,25% 42%,38% 10%,48% 48%,60% 4%,75% 36%,92% 0,100% 31%,100% 100%,0 100%);opacity:.95;animation:landscapeDrift 5s ease-in-out infinite alternate-reverse}
+@keyframes landscapeDrift{from{transform:translateX(-2%)}to{transform:translateX(2%)}}
+.cabin-cloud{position:absolute;z-index:1;top:9%;left:9%;font-size:clamp(12px,2.4vw,25px);opacity:.6;filter:blur(.3px);animation:cabinFloat 7s linear infinite}
+.cabin-cloud.second{left:67%;top:17%;animation-duration:9s;animation-delay:-3s}
+@keyframes cabinFloat{from{translate:-30% 0}to{translate:85% 0}}
+.cabin-perspective{position:absolute;inset:41% -4% 0;z-index:2;perspective:200px;pointer-events:none}
+.cabin-perspective .rail-bed{position:absolute;inset:0;background:repeating-linear-gradient(to bottom,#5d504d 0 7px,#b7aaa1 8px 10px,#554951 11px 24px);clip-path:polygon(49% 0,51% 0,104% 100%,-4% 100%);background-size:auto 24px;animation:railRush .45s linear infinite}
+@keyframes railRush{to{background-position:0 24px}}
+.cabin-perspective .rail-stripe{position:absolute;top:0;bottom:0;width:3px;background:linear-gradient(#eee4d9,#fff);filter:drop-shadow(2px 1px 1px #34313a);transform-origin:top center}
+.cabin-perspective .rail-stripe.one{left:49.2%;transform:skewX(-36deg)}
+.cabin-perspective .rail-stripe.two{left:49.6%;transform:skewX(-12deg)}
+.cabin-perspective .rail-stripe.three{left:50.4%;transform:skewX(12deg)}
+.cabin-perspective .rail-stripe.four{left:50.8%;transform:skewX(36deg)}
+.cabin-lanes{position:absolute;inset:39% 0 1%;z-index:3;pointer-events:none}
+.cabin-lane{position:absolute;inset:0;opacity:.82;border-bottom:5px solid #fff7}
+.cabin-lane[data-track="0"]{clip-path:polygon(49.1% 0,49.65% 0,32.8% 100%,0 100%)}
+.cabin-lane[data-track="1"]{clip-path:polygon(49.65% 0,50.35% 0,32.8% 100%,67.2% 100%)}
+.cabin-lane[data-track="2"]{clip-path:polygon(50.35% 0,50.9% 0,100% 100%,67.2% 100%)}
+.cabin-lane.danger{background:linear-gradient(#a42e3c15,#a42e3cbb);}
+.cabin-lane.safe{background:linear-gradient(#2d966918,#2db4896b)}
+.cabin-lane.chosen{filter:brightness(1.4);opacity:1;box-shadow:inset 0 -5px #fff}
+.cabin-labels{position:absolute;z-index:6;left:2%;right:2%;bottom:7%;display:grid;grid-template-columns:repeat(3,1fr);pointer-events:none;text-align:center;gap:2px}
+.cabin-labels span{font-weight:1000;font-size:clamp(8px,1.05vw,13px);color:#fff;filter:drop-shadow(0 1px 3px black)}
+.cabin-labels .danger{color:#ffd3d5}.cabin-labels .safe{color:#b2ffdf}
+.train-object{z-index:5;font-size:clamp(25px,3.7vw,51px);filter:drop-shadow(0 3px 6px #0009)}
+.train-object.overhead{z-index:5;left:50%;width:72%;min-width:0;border:3px solid #ffd2b5}
+.cabin-dash{position:absolute;inset:auto 0 0;height:19%;z-index:7;background:linear-gradient(#554052,#2a2535);border-top:4px solid #e5b47b;box-shadow:0 -5px 14px #211628ab;display:flex;align-items:center;justify-content:center;gap:3%;padding:0 3%}
+.cabin-wheel{font-size:clamp(19px,3vw,37px);transform:rotate(-12deg);filter:drop-shadow(0 2px 2px #000)}
+.cabin-pressure{flex:1;min-width:0;color:#fff6e6}
+.cabin-pressure-top{display:flex;justify-content:space-between;gap:5px;align-items:center;font-size:clamp(8px,.9vw,12px);font-weight:1000;white-space:nowrap}
+.cabin-pressure-track{height:clamp(9px,1.2vw,15px);background:#181824;border:1px solid #ffe5ba77;border-radius:12px;overflow:hidden;margin-top:2px}
+.cabin-pressure-track i{display:block;width:35%;height:100%;border-radius:10px;background:linear-gradient(90deg,#7aefad,#ffd77e);transition:width .12s linear,background-color .2s}
+.cabin-pressure-track i.hot{background:linear-gradient(90deg,#f8ae47,#ef475e)}
+.cabin-vent{border:2px solid #ffe39e;border-radius:7px;background:linear-gradient(#f1c86b,#d48a44);color:#402333;min-width:24%;height:85%;max-height:48px;font-size:clamp(9px,1.1vw,15px);font-weight:1000;touch-action:manipulation;padding:2px}
+.cabin-vent:active{background:#b6f4cd}.cabin-vent:disabled{opacity:.48}
+.cabin-steam{position:absolute;z-index:8;right:6%;bottom:18%;font-size:clamp(28px,6vw,65px);pointer-events:none;opacity:0}
+.cabin-steam.burst{animation:ventCloud .6s both}
+@keyframes ventCloud{0%{opacity:0;translate:0 15px;scale:.5}30%{opacity:.85}100%{opacity:0;translate:30px -38px;scale:1.4}}
+.cabin-crew{position:absolute;z-index:6;bottom:16%;width:17%;height:36%;pointer-events:none;overflow:hidden;filter:drop-shadow(0 3px 4px #0009);animation:crewBounce 1.3s ease-in-out infinite alternate}
+.cabin-crew.tiny{left:0}.cabin-crew.devi{right:0;animation-delay:-.6s}
+.cabin-crew svg{width:100%;height:145%;display:block;transform:scale(1.2);transform-origin:center top}
+@keyframes crewBounce{from{translate:0 0}to{translate:0 3px}}
+.train-board .train-car{display:none}
+.train-footer{height:8%;bottom:19%;z-index:6;font-size:clamp(8px,.95vw,12px);background:#1d3535bb;color:#dbffe7}
+.train-footer.duck{background:#704b27cc;color:#ffefba}
+.train-brake{top:38%}
+.train-active .power-row{top:39%}
+.train-active .char{opacity:.5;transform:scale(.77);transform-origin:bottom center}
+@media (orientation:landscape) and (max-height:450px){
+.train-board{left:22%;top:31%;width:56%;height:45%}
+.train-active .power-row{top:42%}
+.train-brake{top:39%}
+.cabin-dash{height:23%}.train-footer{bottom:23%;height:9%}
+.cabin-crew{height:37%;bottom:20%}
+.cabin-vent{min-height:28px}
+}
+@media(prefers-reduced-motion:reduce){.cabin-cloud,.cabin-window:before,.cabin-window:after,.cabin-perspective .rail-bed,.cabin-crew{animation:none}}
+
+
+/* Stage 5: a theatrical little sparring match, no real injuries or game-overs. */
+.fight-room{background:radial-gradient(ellipse at 50% 55%,#b77396aa,transparent 60%),linear-gradient(#413657 0%,#77527c 51%,#e7a1a5 52%,#4c304f 100%)!important}
+.fight-room:before{content:'★  UTW SPARRING CLUB  ★';position:absolute;z-index:1;left:27%;right:27%;top:23%;height:10%;border:3px solid #ffe8ae;border-radius:50%;background:#613250;color:#ffe8ae;display:grid;place-items:center;text-align:center;font-weight:1000;letter-spacing:.08em;font-size:clamp(9px,1.8vw,23px);transform:rotate(-3deg)}
+.fight-room:after{content:'';z-index:1;position:absolute;left:13%;right:13%;bottom:14%;height:19%;background:repeating-linear-gradient(90deg,#ffffff13 0 4px,transparent 4px 18px),linear-gradient(#e2a0ad,#7c425e);border:6px solid #f2c98a;border-radius:50%;box-shadow:0 8px 0 #542a45}
+.fight-active .char{z-index:4;bottom:18%;height:54%;width:19%;opacity:1;transform:none;filter:drop-shadow(0 5px 4px #1d1222bb)}
+.fight-active .char.left{left:12%}.fight-active .char.right{right:12%}
+.fight-active .char.fight-strike{animation:fightStrike .36s ease-out}
+.fight-active .char.fight-flinch{animation:fightFlinch .45s ease-out}
+.fight-active .char.fight-duck{animation:fightDuck .5s ease-out}
+@keyframes fightStrike{0%{translate:0}45%{translate:24% -5px;rotate:-7deg}100%{translate:0;rotate:0}}
+@keyframes fightFlinch{0%,100%{translate:0}30%{translate:-6% 2px;rotate:6deg}65%{translate:5% -3px;rotate:-3deg}}
+@keyframes fightDuck{0%,100%{scale:1}38%{scale:1 .66;translate:0 22px}}
+.fight-active .power-row{bottom:24%;left:1%;flex-direction:column;width:17%;gap:3px}
+.fight-active .power{font-size:clamp(8px,1vw,14px);padding:4px;min-height:24px}
+.fight-active .controls{max-width:51%;gap:5px}
+.fight-active .controls .btn{min-width:clamp(60px,9vw,126px);font-size:clamp(10px,1.5vw,17px)}
+.fight-board{position:absolute;z-index:7;top:32%;left:33%;width:34%;height:24%;border:3px solid #ffe2a8;border-radius:13px;background:linear-gradient(#43284eea,#201a35f2);box-shadow:0 8px 24px #120c20ba,inset 0 0 0 2px #ffffff1c;text-align:center;display:flex;flex-direction:column;justify-content:space-around;align-items:stretch;gap:3px;padding:5px 12px;color:#fff4df}
+.fight-board .fight-count{display:flex;justify-content:space-between;align-items:center;gap:5px;font-size:clamp(8px,1vw,13px);font-weight:1000;color:#ffe5ad}
+.fight-board .fight-cue{font-size:clamp(12px,1.7vw,25px);font-weight:1000;line-height:1.05;text-shadow:0 2px 3px #000;text-wrap:balance}
+.fight-board .fight-help{font-size:clamp(9px,1.2vw,15px);color:#f9d9e3;font-weight:800}
+.fight-board .fight-clock{height:8px;width:100%;border-radius:9px;background:#190f2b;border:1px solid #fff5d36a;overflow:hidden}
+.fight-board .fight-clock i{display:block;width:100%;height:100%;background:linear-gradient(90deg,#ef78af,#ffe2a0);transition:width .08s linear}
+.fight-board .fight-result{position:absolute;inset:-1px;z-index:9;border-radius:10px;display:grid;place-items:center;text-align:center;font-size:clamp(15px,2.2vw,31px);font-weight:1000;background:#392c54f5;border:3px solid #ffe4ad;animation:fightResultIn .24s ease-out}
+.fight-board .fight-result.bad{background:#7b2945f5}
+@keyframes fightResultIn{from{scale:.85;opacity:0}to{scale:1;opacity:1}}
+.fight-patience{position:absolute;z-index:7;top:57%;left:34%;width:32%;border-radius:8px;background:#23152ddc;padding:4px 7px;border:1px solid #ffe3a084}
+.fight-patience-title{display:flex;justify-content:space-between;font-size:clamp(8px,1vw,12px);font-weight:950;color:#ffe7b5}
+.fight-patience-meter{height:8px;background:#140d21;border-radius:9px;overflow:hidden}
+.fight-patience-meter i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#f1c063,#e873b3);transition:width .28s ease}
+.fight-active .name-tag{bottom:17%}
+@media(orientation:landscape) and (max-height:450px){
+ .fight-board{top:34%;left:33%;height:23%;width:34%;padding:3px 7px}
+ .fight-patience{top:59%;left:34%}
+ .fight-active .char{height:53%;bottom:19%;width:20%}
+ .fight-active .power-row{bottom:auto;top:42%}
+ .fight-active .controls .btn{padding:4px 8px;min-height:29px}
+}
+@media(prefers-reduced-motion:reduce){.fight-active .char.fight-strike,.fight-active .char.fight-flinch,.fight-active .char.fight-duck{animation:none}}
+/* The cabin actors replace, rather than duplicate, the external character portraits. */
+.train-active.cabin-driving > .char,.train-active.cabin-driving > .name-tag{opacity:0!important;visibility:hidden;pointer-events:none}
+
+
+/* Stage 6: timed evidence hunt, deliberately scaled for mobile landscape. */
+.coverup-room{background:linear-gradient(#3d2d50,#69415d 59%,#8e5164 60%,#422136 100%)}
+.coverup-room .castle-title{color:#ffdb9e;opacity:.72}
+.coverup-active .char{width:17%;height:65%;bottom:18%}
+.coverup-active .bubble{top:17%;left:4%;max-width:22%;font-size:clamp(9px,1.4vw,15px)}
+.cleanup-board{position:absolute;z-index:7;top:17%;left:24%;width:52%;height:57%;border:3px solid #eac58a;border-radius:15px;background:linear-gradient(155deg,#543e57f7,#2e273df5);box-shadow:0 8px 26px #100f23ba,inset 0 0 0 2px #ffffff1b;overflow:hidden}
+.cleanup-top{position:absolute;top:1%;left:3%;right:3%;height:17%;display:flex;justify-content:space-between;align-items:center;gap:7px;font-size:clamp(9px,1.2vw,15px);color:#ffe5af;z-index:3}
+.cleanup-top strong{color:#fff;font-size:1.08em}
+.cleanup-clock{color:#ffcf8a;font-variant-numeric:tabular-nums}
+.cleanup-progress{position:absolute;left:3%;right:3%;top:17%;height:5px;border-radius:5px;background:#230f27;overflow:hidden}
+.cleanup-progress i{display:block;width:100%;height:100%;background:linear-gradient(90deg,#a8efd1,#ffd78a,#f47c88);transform-origin:left center}
+.cover-item{position:absolute;width:23%;height:20%;padding:2px 3px;border:2px solid #f3d8a1;border-radius:9px;background:linear-gradient(#764a63,#4a304e);box-shadow:0 3px 7px #0008;color:#fffaf1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;z-index:3;animation:evidenceJiggle 1.3s ease-in-out infinite alternate}
+.cover-item .emoji{font-size:clamp(17px,3.1vw,35px);line-height:1}
+.cover-item small{font-size:clamp(7px,.84vw,11px);font-weight:900;line-height:1.03}
+.cover-item.decoy{border-color:#aab7d2;filter:saturate(.7)}
+.cover-item:active{background:#a65d72}
+.cover-item.cleared{animation:none;opacity:0;transform:scale(.5);pointer-events:none;transition:opacity .25s,transform .25s}
+.cleanup-footer{position:absolute;bottom:1%;left:2%;right:2%;height:13%;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,.99vw,13px);font-weight:950;color:#e9ddff;background:#24172eb8;border-radius:6px;text-align:center;z-index:2}
+@keyframes evidenceJiggle{from{rotate:-3deg}to{rotate:3deg}}
+.coverup-active .power-row{bottom:24%}
+.coverup-active .controls{max-width:74%;gap:4px}
+.coverup-active .panel .story{max-width:27%}
+.coverup-active .controls .btn{font-size:clamp(9px,1.12vw,14px);min-width:96px;max-width:155px;padding:5px 8px;border-radius:9px}
+@media(max-height:450px){.cleanup-board{top:21%;height:50%}.cover-item{height:20%}.coverup-active .bubble{top:19%;font-size:10px}.coverup-active .controls .btn{min-height:30px;padding:4px 7px}.coverup-active .char{bottom:20%;height:58%}}
+@media(prefers-reduced-motion:reduce){.cover-item{animation:none}}
+
+
+/* Stage 6 revision: discover evidence under furniture, then spray and wipe marks */
+.cleanup-board{left:19%;width:63%;height:58%;background:linear-gradient(#65485c 0 59%,#a76b67 60%,#6f414c 100%);border-color:#ffe0a2}
+.cleanup-board:before{content:"";position:absolute;z-index:0;inset:20% 0 0;background:repeating-linear-gradient(90deg,#ffffff11 0 2px,transparent 2px 24%),linear-gradient(#88657e88 0 47%,#f3ad6f22 48%);pointer-events:none}
+.cleanup-board:after{content:"";position:absolute;z-index:1;left:0;right:0;top:65%;height:4%;background:#ffe2ab44;pointer-events:none}
+.cleanup-top{z-index:6;top:0;left:2%;right:2%;height:18%;font-size:clamp(8px,1.15vw,15px);gap:3px}
+.cleanup-top>span{white-space:nowrap}
+.cleanup-progress{z-index:6;top:18%;left:2%;right:2%}
+.room-prop,.stain-target{position:absolute;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:11px;touch-action:manipulation;transition:transform .17s,opacity .2s,background .15s}
+.room-prop{width:22%;height:22%;border:2px solid #f8dfb4;background:linear-gradient(#73546bbb,#42273eec);box-shadow:0 3px 8px #201120ad;color:#fff4e1;padding:2px;gap:0}
+.room-prop .emoji{font-size:clamp(18px,2.5vw,31px);line-height:1}
+.room-prop small{font-size:clamp(7px,.92vw,11px);line-height:1.05;font-weight:900;text-align:center}
+.room-prop:active,.stain-target:active{transform:scale(.94)}
+.room-prop.discovered{border-color:#b8ffd8;background:linear-gradient(#477460,#294a47);box-shadow:0 0 11px #7cffe47c}
+.room-prop.discovered.decoy{border-color:#ffd085;background:linear-gradient(#775c42,#4b3442)}
+.room-prop.searched{opacity:.4;border-style:dashed}
+.room-prop.cleared{opacity:.23;transform:scale(.83);pointer-events:none}
+.stain-target{width:26%;height:17%;border:2px dashed #f4c597;background:radial-gradient(ellipse,#70544ddd 18%,#5b3d5b8f 50%,#ffffff00 72%);color:#ffedcb;font-weight:900;gap:0;font-size:clamp(9px,1vw,13px);touch-action:none}
+.stain-target .emoji{font-size:clamp(17px,2vw,25px);line-height:1}
+.stain-target small{font-size:clamp(7px,.86vw,10px);line-height:1}
+.stain-target.foamy{border-color:#c2fff7;background:repeating-radial-gradient(circle at 35% 30%,#e5ffffdd 0 5px,#b1dbef9e 6px 11px,#7faac07d 12px 17px);color:#152e43;animation:foamJiggle .38s ease-in-out infinite alternate}
+.stain-target.cleared{opacity:.15;pointer-events:none;transform:scale(.8)}
+@keyframes foamJiggle{from{filter:brightness(.9)}to{filter:brightness(1.25)}}
+.cleanup-footer{height:9%;bottom:0;left:2%;right:2%;border-radius:5px;font-size:clamp(8px,.9vw,12px);pointer-events:none;z-index:5}
+.cleanup-tool-tag{position:absolute;z-index:6;right:1%;bottom:1%;height:8%;color:#ffe5a1;background:#30203abf;border-radius:5px;padding:1px 6px;font-size:clamp(8px,1vw,12px);font-weight:900}
+.coverup-active .controls .btn.tool-selected{background:linear-gradient(#5ac6ab,#266b6d);color:#fff;border-color:#d8fff4;box-shadow:0 0 12px #81ffe591}
+.coverup-active .controls{max-width:72%;gap:4px}
+.coverup-active .controls .btn{min-width:93px;max-width:150px;padding:5px 7px}
+@media(max-height:450px){.cleanup-board{top:20%;height:51%;left:20%;width:62%}.room-prop{height:22%}.room-prop .emoji{font-size:17px}.stain-target{height:17%}.cleanup-footer{display:none}.cleanup-tool-tag{bottom:1%;font-size:8px}}
+@media(prefers-reduced-motion:reduce){.stain-target.foamy{animation:none}}
+
+
+/* Brief, first-time instructions before each stage. No story spoilers. */
+.guide-goal{font-weight:950;color:#ffe8b6;font-size:clamp(13px,1.7vw,20px)}
+.guide-controls{background:#24182f;border:1px solid #fbdca387;border-radius:12px;padding:10px 14px;max-width:520px;margin:11px auto;font-size:clamp(12px,1.45vw,17px);line-height:1.4}
+@media(max-height:450px){.guide-controls{padding:5px 9px;margin:5px auto}.guide-goal{font-size:clamp(12px,1.5vw,16px)}}
+
+
+/* Stage 6 is the original throne hall, not a grid of labeled furniture cards. */
+.coverup-active .bubble{display:none!important}
+.coverup-active #throne{filter:drop-shadow(0 13px 8px #21122699)}
+.coverup-active #throne.wet .seat:after{display:none}
+.coverup-active .cleanup-board{position:absolute;inset:11% 0 22%;height:67%;width:100%;z-index:7;overflow:hidden;background:transparent;border:0;border-radius:0;box-shadow:none;touch-action:manipulation}
+.coverup-active .cleanup-board:before,.coverup-active .cleanup-board:after{display:none}
+.coverup-active .cleanup-top{position:absolute;top:0;left:24%;right:24%;width:52%;height:11%;background:#241a2de8;border:1px solid #ffdfb8;border-radius:11px;display:flex;align-items:center;justify-content:space-evenly;z-index:9;font-size:clamp(9px,1.2vw,15px);color:#ffefdb}
+.coverup-active .cleanup-progress{top:11%;left:29%;right:29%;z-index:9;height:4px}
+.coverup-active .cleanup-tool-tag,.coverup-active .cleanup-footer{display:none}
+.coverup-active .panel .story{max-width:31%}
+.coverup-active .controls{max-width:69%;gap:6px}
+.coverup-active .controls .btn{min-width:110px;max-width:160px}
+.coverup-active .power-row{left:1%;top:38%;bottom:auto;z-index:8;display:flex;flex-direction:column;width:14%;gap:4px}.coverup-active .power-row .power{font-size:clamp(8px,1vw,13px);padding:3px 5px}
+.throne-search-prop{position:absolute;z-index:1;display:grid;place-items:center;pointer-events:none;filter:drop-shadow(0 4px 4px #1d1020a6);user-select:none;font-size:clamp(21px,3.5vw,46px);opacity:.92}
+.throne-search-prop.curtain{top:15%;height:65%;width:13%;background:repeating-linear-gradient(90deg,#763d62,#ae6880 20%,#663653 36%);border-inline:4px solid #d8a66a;border-radius:0 0 45% 6%;box-shadow:inset 8px 0 #e5b07566}
+.throne-search-prop.curtain.right{border-radius:0 0 6% 45%}
+.throne-search-prop.frame{background:#60394f;border:7px ridge #c39152;border-radius:3px;padding:8px;box-shadow:0 5px 12px #120b17b3}
+.throne-search-prop.rug{background:repeating-linear-gradient(60deg,#a1435e,#a1435e 18px,#e5ad78 21px,#732f51 25px);border:4px solid #e9c58d;border-radius:50%;opacity:.86}
+.throne-search-prop.table{background:linear-gradient(#7a3e44 0 30%,#bc8156 31% 42%,#442a3e 44%);border-radius:40% 40% 8px 8px;box-shadow:0 3px 8px #1b1120ba}
+.throne-search-prop.crate{background:linear-gradient(130deg,#8d573c,#58372e);border:5px ridge #c19c62;border-radius:5px}
+.throne-search-prop.cushion{background:radial-gradient(#e8939c,#a13d65);border:4px solid #ecc49c;border-radius:45%;transform:rotate(-16deg)}
+.throne-search-prop.garland{opacity:.7;letter-spacing:8px}
+.throne-clue{position:absolute;z-index:6;width:clamp(42px,5.4vw,72px);height:clamp(39px,5.2vw,66px);border:0;background:transparent;padding:0;display:grid;place-items:center;cursor:pointer;touch-action:manipulation;filter:drop-shadow(0 2px 2px #260e23ae);transition:transform .16s,opacity .18s}
+.throne-clue .glyph{display:block;font-size:clamp(19px,2.3vw,33px);line-height:1;transform:rotate(var(--tilt,0deg))}
+.throne-clue:active{transform:scale(1.18)}
+.throne-clue.cleared{opacity:0;transform:scale(.35);pointer-events:none}
+.throne-clue.decoy .glyph{font-size:clamp(21px,2.6vw,35px)}
+.throne-stain{position:absolute;z-index:8;width:clamp(39px,5.5vw,75px);height:clamp(33px,5.4vw,64px);border:0;background:transparent;display:grid;place-items:center;padding:0;cursor:pointer;touch-action:none}
+.throne-stain .smear{font-size:clamp(24px,3.1vw,39px);transform:rotate(-12deg);filter:drop-shadow(0 2px 3px #2612259c);opacity:1;transition:opacity .13s}
+.throne-stain.foamy{background:radial-gradient(ellipse,#e9fbffd9 3%,#98d9ebcd 45%,#ffffff00 77%);border-radius:50%}
+.throne-stain.foamy .smear{filter:grayscale(.4);opacity:.4}
+.throne-stain .foam{position:absolute;inset:2px;display:none;place-items:center;font-size:clamp(19px,2.5vw,31px);pointer-events:none}
+.throne-stain.foamy .foam{display:grid}
+.throne-stain.cleared{opacity:0;pointer-events:none;transform:scale(.3);transition:opacity .25s,transform .25s}
+.throne-cleanup-net{position:absolute;left:0;top:0;z-index:8;pointer-events:none;font-size:clamp(20px,3vw,40px);opacity:0;transform:translate(-50%,-50%) scale(.6)}
+.throne-cleanup-net.show{opacity:1;animation:netPop .32s ease-out forwards}
+@keyframes netPop{from{opacity:1;transform:translate(-50%,-50%) scale(.5)}to{opacity:0;transform:translate(-50%,-70%) scale(1.4)}}
+@media(max-height:450px){.coverup-active .cleanup-board{inset:10% 0 21%;height:69%;width:100%}.coverup-active .cleanup-top{top:0;height:13%;left:26%;right:26%;width:48%;font-size:9px}.coverup-active .controls .btn{min-width:92px;font-size:11px}.coverup-active .panel .story{max-width:31%}}
+
+
+/* Pop-up net-catching: independent holes support multiple simultaneous fingers. */
+.raccoon-board{left:20%;top:27%;width:60%;height:51%;background:linear-gradient(#3c4d46,#254044);border:3px solid #efcd96}
+.raccoon-field{left:2%;right:2%;top:20%;height:71%;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:1px;background:radial-gradient(ellipse at center,#658e6b,#284d57 80%);overflow:hidden}
+.raccoon-field:before{display:none}
+.mole-hole{position:relative;width:100%;height:100%;border:1px solid #ffffff18;border-radius:0;background:radial-gradient(ellipse 46% 24% at 50% 72%,#131b25 10%,#26312e 90%,transparent 100%);display:grid;place-items:center;overflow:hidden;touch-action:manipulation;padding:0;cursor:pointer;color:#fff4de}
+.mole-hole:after{content:"";position:absolute;left:12%;right:12%;height:17%;bottom:4%;background:#7b664b;border:2px solid #ad9765;border-radius:50%;pointer-events:none;z-index:4}
+.mole-hole .pop-body{position:absolute;z-index:3;width:clamp(33px,5.2vw,66px);height:clamp(33px,5.2vw,66px);top:4%;left:50%;transform:translateX(-50%) translateY(102%);opacity:0;pointer-events:none}
+.mole-hole.active .pop-body{opacity:1;transform:translateX(-50%) translateY(0);animation:popUp .2s ease-out}
+.mole-hole .pop-body svg{width:100%;height:100%;pointer-events:none}
+.mole-hole .pop-body.key{filter:drop-shadow(0 0 7px #f6df77)}
+.mole-hole .pop-body.key:after{content:'🔑';position:absolute;top:-4px;right:-5px;font-size:clamp(14px,1.8vw,22px)}
+.mole-hole .pop-body.decoy{font-size:clamp(26px,3vw,38px)}
+.mole-hole:active .pop-body{transform:translateX(-50%) translateY(3px) scale(.9)}
+.net-swoosh{position:absolute;z-index:9;left:50%;top:18%;transform:translate(-50%,-20%) rotate(-28deg);width:clamp(40px,6vw,75px);height:clamp(40px,6vw,75px);pointer-events:none;animation:netWhack .33s ease-out forwards}
+.net-swoosh svg{width:100%;height:100%;filter:drop-shadow(0 2px 3px #0008)}
+@keyframes popUp{from{transform:translateX(-50%) translateY(100%)}to{transform:translateX(-50%) translateY(0)}}
+.raccoon-countdown{position:absolute;z-index:12;left:2%;right:2%;top:20%;height:71%;display:grid;place-items:center;border-radius:9px;background:#1b2939d9;border:2px solid #ffdaa3;color:#fff3cb;font-size:clamp(38px,7vw,88px);font-weight:1000;text-shadow:0 4px 0 #30182e,0 0 18px #fae0a1;pointer-events:none;animation:countdownPulse .25s ease-out}
+.raccoon-countdown.go{background:#174e43c9;color:#cdffe8}
+@keyframes countdownPulse{from{transform:scale(.94);opacity:.8}to{transform:scale(1);opacity:1}}
+@media(max-height:450px){.raccoon-countdown{top:22%;height:67%;font-size:clamp(32px,6.6vw,58px)}}
+@keyframes netWhack{0%{opacity:1;transform:translate(-50%,-70%) rotate(-55deg) scale(1.3)}50%{opacity:1;transform:translate(-50%,0) rotate(-12deg)}100%{opacity:0;transform:translate(-50%,-5%) rotate(10deg) scale(.85)}}
+.raccoon-footer{font-size:clamp(9px,1.1vw,14px)}
+@media(max-height:450px){.raccoon-board{left:20%;top:29%;width:60%;height:49%}.raccoon-field{top:22%;height:67%}.mole-hole .pop-body{width:clamp(33px,5vw,42px);height:clamp(33px,5vw,42px)}}
+@media(prefers-reduced-motion:reduce){.mole-hole.active .pop-body,.net-swoosh{animation:none}}
+
+
+/* Stage 6 evidence checklist: shows what to find without showing where. */
+.evidence-inventory{position:absolute;z-index:11;top:15%;left:24%;width:52%;min-height:8%;display:flex;gap:4px;align-items:center;justify-content:center;pointer-events:none}
+.evidence-target{display:flex;align-items:center;justify-content:center;gap:3px;flex:1;min-width:0;border:1px solid #e8bf90a9;border-radius:7px;background:#2c203be7;color:#fff3dd;white-space:nowrap;font-size:clamp(8px,1.04vw,12px);font-weight:950;line-height:1.1;padding:5px 2px;transition:background .2s,opacity .2s}
+.evidence-target.found{background:#285f51e8;color:#e4fff6;border-color:#92ffcf}
+.throne-clue.hint{border:2px dashed #ffe7a4;border-radius:50%;background:radial-gradient(circle,#ffe7887b,transparent 75%);animation:cluePulse .65s ease-in-out infinite alternate;filter:drop-shadow(0 0 13px #ffdc88)}
+@keyframes cluePulse{from{transform:scale(.9)}to{transform:scale(1.17)}}
+.evidence-found-pop{position:absolute;z-index:12;pointer-events:none;color:#194836;font-size:clamp(11px,1.35vw,17px);font-weight:1000;background:#c4ffe1;border:2px solid #f5fff9;border-radius:9px;padding:4px 8px;white-space:nowrap;box-shadow:0 3px 9px #11241bb5;animation:foundRise 1.2s ease-out forwards}
+@keyframes foundRise{0%{opacity:0;transform:translateY(10px) scale(.7)}20%{opacity:1;transform:translateY(0) scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-30px)}}
+@media(max-height:450px){.evidence-inventory{top:16%;left:25%;width:50%;gap:2px}.evidence-target{font-size:8px;padding:3px 1px;border-radius:5px}}
+@media(prefers-reduced-motion:reduce){.throne-clue.hint,.evidence-found-pop{animation:none}}
+
+/* Detailed art pass, isolated to Stage 1. Animated SVG art stays crisp on mobile. */
+.scene.stage-one{background:linear-gradient(90deg,#2d2038 0 10%,#815768 10% 12%,transparent 12% 88%,#815768 88% 90%,#2d2038 90%),radial-gradient(ellipse at 50% 35%,#bd8384 0,#694456 55%,#34263f 100%)}
+.scene.stage-one:before{background:repeating-linear-gradient(90deg,transparent 0 20%,#f9d1a729 20% 20.25%,transparent 20.4% 25%),linear-gradient(0deg,#e9b66b11,#efbe8d2f);top:9%;height:56%}
+.scene.stage-one:after{background:repeating-linear-gradient(90deg,#ffd18e0c 0 2px,transparent 2px 95px),linear-gradient(#aa6068,#5d2f4b);border-top:4px solid #d8a468}
+.stage-one-decor{display:none;position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.stage-one .stage-one-decor{display:block}
+.palace-curtain{position:absolute;top:15%;width:13%;height:66%;background:repeating-linear-gradient(90deg,#5a233c 0 11%,#8e3655 18% 26%,#4e1f3a 40% 48%);border-left:6px solid #d6a86c;border-right:6px solid #d6a86c;box-shadow:inset 18px 0 24px #ffe4ad19,0 10px 15px #160b2185}
+.palace-curtain.left{left:0;border-radius:0 0 38% 0}.palace-curtain.right{right:0;border-radius:0 0 0 38%}
+.palace-drape{position:absolute;top:12%;left:13%;right:13%;height:12%;border-top:8px double #efc67e;border-radius:42% 42% 0 0;box-shadow:0 -9px 20px #ffda9c19}
+.palace-banner{position:absolute;top:19%;width:8%;height:29%;border:4px solid #e1ae64;background:linear-gradient(#8f294a,#5d1c40);clip-path:polygon(0 0,100% 0,100% 90%,50% 100%,0 90%);display:grid;place-items:center;font-size:clamp(17px,2.6vw,31px);color:#ffe2ae;text-shadow:0 1px 4px #160b24}
+.palace-banner.left{left:17%}.palace-banner.right{right:17%}
+.palace-candles{position:absolute;top:35%;left:27%;display:flex;gap:12px;align-items:end}
+.palace-candles.right{left:auto;right:27%}
+.palace-candles i{display:block;position:relative;width:6px;height:34px;border-radius:2px;background:linear-gradient(90deg,#cfa96e,#fff5cf,#cfa96e);box-shadow:0 0 8px #ffd78c80}
+.palace-candles i:nth-child(2){height:45px}.palace-candles i:nth-child(3){height:29px}
+.palace-candles i:before{content:"";position:absolute;left:-3px;top:-14px;width:12px;height:16px;border-radius:60% 40% 55% 50%;background:radial-gradient(ellipse,#fffbb2,#ffa84b 65%,transparent 80%);filter:drop-shadow(0 0 8px #ffdf93);animation:flameFlicker 1.3s ease-in-out infinite alternate}
+.palace-carpet{position:absolute;left:26%;right:26%;bottom:-4%;height:34%;background:linear-gradient(90deg,#edbd72 0 2%,#882a48 3% 97%,#edbd72 98%);clip-path:polygon(35% 0,65% 0,100% 100%,0 100%);box-shadow:0 0 15px #f3b05f55}
+.scene.stage-one .throne{filter:drop-shadow(0 15px 8px #190c2c9c) drop-shadow(0 0 12px #e6b46e55)}
+.scene.stage-one .throne .back{border-width:12px;border-color:#f4c879;box-shadow:inset 0 0 0 5px #81223c,0 0 34px #ffbd6799}
+.stage-one .char.left{left:7.5%;height:76%;width:21%;bottom:15%}
+.stage-one .char.right{right:7.5%;height:73%;width:21%;bottom:15%}
+.stage-one .char svg.detail-sprite{max-height:100%;width:100%;overflow:visible;animation:detailBreathe 3s ease-in-out infinite;filter:drop-shadow(0 8px 9px #230e2899)}
+.stage-one .char svg.detail-sprite .detail-bow{transform-origin:120px 90px;animation:bowSway 2.9s ease-in-out infinite alternate}
+.stage-one .char svg.detail-sprite .detail-face-hair{transform-origin:140px 70px;animation:bowSway 4s ease-in-out infinite alternate}
+.stage-one .char svg.detail-sprite .detail-ear.right{transform-origin:192px 95px;animation:earTwitch 5.5s ease-in-out infinite}
+.stage-one .char svg.detail-sprite .detail-eyes{transform-origin:140px 159px;animation:detailBlink 5.8s ease-in-out infinite}
+.stage-one .char.right svg.detail-sprite .detail-eyes{animation-delay:1.8s}
+.stage-one .char[data-mood="startled"] .tiny-detail .detail-mouth-normal,.stage-one .char[data-mood="startled"] .tiny-detail .detail-mouth-sly{display:none}
+.stage-one .char:not([data-mood="startled"]) .tiny-detail .detail-mouth-gasp{display:none}
+.stage-one .char[data-mood="sly"] .tiny-detail .detail-mouth-normal{display:none}
+.stage-one .char:not([data-mood="sly"]) .tiny-detail .detail-mouth-sly{display:none}
+.noosh-detail .detail-mouth-gasp{display:none}
+.stage-one .char[data-mood="startled"] .noosh-detail .detail-mouth-gasp{display:block}
+.stage-one .char[data-mood="startled"] .noosh-detail .detail-brows{transform:translateY(-9px)}
+.stage-one .char.nudge svg.detail-sprite{animation:detailSass .45s ease-in-out}
+.stage-one .char.hit svg.detail-sprite{animation:detailSass .25s 3}
+.scene.stage-one .noosh-peek svg.detail-sprite{width:100%;height:100%;filter:drop-shadow(0 8px 5px #170e26b0)}
+.scene.stage-one .noosh-peek.watching .detail-brows{transform:translateY(5px)}
+.scene.stage-one .noosh-peek.warning .detail-ear{animation:earTwitch .4s ease-in-out}
+.scene.stage-one .noosh-peek.away .detail-eyes{opacity:.7}
+@keyframes flameFlicker{0%{transform:translateY(2px) rotate(-8deg);opacity:.7}100%{transform:translateY(-2px) rotate(7deg);opacity:1}}
+@keyframes detailBreathe{0%,100%{transform:translateY(0) rotate(-.5deg)}50%{transform:translateY(-4px) rotate(.5deg)}}
+@keyframes bowSway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(3deg)}}
+@keyframes earTwitch{0%,91%,100%{transform:rotate(0)}93%{transform:rotate(-8deg)}96%{transform:rotate(4deg)}}
+@keyframes detailBlink{0%,42%,45%,100%{transform:scaleY(1)}43%,44%{transform:scaleY(.09)}}
+@keyframes detailSass{0%,100%{transform:rotate(0)}35%{transform:rotate(-7deg)}70%{transform:rotate(6deg)}}
+@media(max-height:450px){.stage-one .char.left{left:7%;height:57%;bottom:21%;width:20%}.stage-one .char.right{right:7%;height:57%;bottom:21%;width:20%}.palace-banner{top:25%;height:22%}.palace-candles{top:39%}}
+@media(prefers-reduced-motion:reduce){.stage-one .char svg.detail-sprite,.stage-one .char svg.detail-sprite .detail-bow,.stage-one .char svg.detail-sprite .detail-face-hair,.stage-one .char svg.detail-sprite .detail-ear,.stage-one .char svg.detail-sprite .detail-eyes,.palace-candles i:before{animation:none!important}}
+
+</style>
+</head>
+<body>
+<div id="app"><main class="screen" id="screen" aria-label="Tiny: Left Unsupervised arcade game">
+ <div id="gameplay" class="hidden"><div class="scene" id="scene"><div class="stage-one-decor" aria-hidden="true"><div class="palace-carpet"></div><div class="palace-curtain left"></div><div class="palace-curtain right"></div><div class="palace-drape"></div><div class="palace-banner left">♛</div><div class="palace-banner right">♛</div><div class="palace-candles"><i></i><i></i><i></i></div><div class="palace-candles right"><i></i><i></i><i></i></div></div><div class="lamp"></div><div class="lamp r"></div><div class="castle-title">UTW PALACE OF QUESTIONABLE DECISIONS</div><div class="sparkles"></div><div class="throne" id="throne"><div class="back"></div><div class="seat"></div><div class="leg l"></div><div class="leg r"></div></div><div class="button-pedestal hidden" id="pedestal"><div class="pedestal"></div><div class="danger-button" id="dangerButton"></div><div class="warning-label">DO NOT PRESS</div></div><div class="crate hidden" id="crate">🦝📦</div><div class="noosh-peek hidden" id="nooshPeek" aria-hidden="true"></div><div class="confetti hidden" id="confetti"></div></div>
+ <header class="hud"><span class="logo">🎀 TINY <small>LEFT UNSUPERVISED</small></span><span class="chip" id="stageChip">STAGE 1</span><span class="chip">CHAOS <strong id="score">0</strong></span><div class="energy-mini"><b>⚡ <span id="energy">0</span>/100</b><div class="bar"><i id="energyFill"></i></div></div><div class="hud-spacer"></div><button class="icon-btn" id="pauseBtn" aria-label="Pause">Ⅱ</button><button class="icon-btn" id="soundBtn" aria-label="Sound settings">♫</button><button class="icon-btn" id="fullBtn" aria-label="Fullscreen">⛶</button></header>
+ <span class="stage-label" id="stageLabel">THE THRONE INCIDENT</span><div class="bubble" id="bubble" aria-live="polite">Five minutes. What could possibly go wrong?</div><div class="char left" id="leftChar"></div><div class="char right" id="rightChar"></div><span class="name-tag left" id="leftName">TINY</span><span class="name-tag right" id="rightName">BABA</span><div class="action-mark" id="actionMark">💥</div><div class="dodge-board hidden" id="dodgeBoard" role="group" aria-label="Incoming obstacles and safe lanes"></div><div class="raccoon-board hidden" id="raccoonBoard" aria-label="Raccoon net game: tap popping-up raccoons in individual holes, avoid hats"><div class="raccoon-heading"><span>🦝 <strong id="raccoonCount">0 / 12</strong></span><span>ESCAPED <strong id="raccoonEscaped">0</strong></span><span>⏱ <strong id="raccoonClock">0</strong></span></div><div class="raccoon-field" id="raccoonField"></div><div class="raccoon-countdown hidden" id="raccoonCountdown" role="status" aria-live="polite">3</div><div class="raccoon-net" id="raccoonNet"></div><div class="raccoon-footer">TAP EACH RACCOON WITH YOUR NET • CATCH TWO AT ONCE • AVOID 🎩</div></div><div class="cleanup-board hidden" id="cleanupBoard" role="group" aria-label="Search the throne room for scattered evidence and scrub stains on the throne"></div><div class="fight-board hidden" id="fightBoard" role="group" aria-label="Baba and Tiny cartoon sparring challenge"></div><div class="fight-patience hidden" id="fightPatience" aria-label="Baba composure"><div class="fight-patience-title"><span>😎 BABA’S COMPOSURE</span><span id="fightComposureLabel">100%</span></div><div class="fight-patience-meter"><i id="fightComposureBar"></i></div></div><div class="train-board hidden" id="trainBoard" role="group" aria-label="Railway: red tracks are blocked, green tracks are safe"></div><div class="train-brake hidden" id="trainBrakeWrap"><button id="trainBrake" type="button">✋ HOLD BRAKE</button><label>BRAKE <span id="trainBrakeAmount">100</span>%</label><div class="train-brake-meter"><i id="trainBrakeFill"></i></div></div><div class="challenge hidden" id="challenge"></div><div class="power-row hidden" id="powerRow"><button class="power" id="puppy" title="Puppy Eyes costs 30">🥺 Puppy Eyes <b>30</b></button><button class="power" id="raccoon" title="Raccoon Army costs 60">🦝 Raccoons <b>60</b></button><button class="power" id="nuggie" title="Dino Nuggie Rage costs 100">🍗 Nuggie Rage <b>100</b></button></div><div class="note hidden" id="note"></div><footer class="panel"><div class="story"><div class="eyebrow" id="panelKicker">THE ADVENTURE BEGINS</div><h2 id="panelTitle">Five Minutes Unsupervised</h2><p id="panelText">Tiny has promised to behave.</p></div><div class="controls" id="controls"><button class="btn gold" id="continueBtn">CONTINUE</button></div></footer></div>
+ <div class="modal" id="modal"><div class="modal-card" id="modalBody"></div></div>
+ <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+</main></div><div class="rotate"><span>📱↻</span><h2>Turn your phone sideways!</h2><p>Tiny needs room to cause problems.</p><small>Landscape mode works best. Fullscreen is available inside the game.</small></div>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id);
+const SAVE='utw:tiny-unsupervised:prototype-save:v1',CHECKPOINT='utw:tiny-unsupervised:prototype-checkpoint:v1',ARCH='utw:tiny-unsupervised:prototype-archive:v1';
+const fromStorage=(key,def)=>{try{return JSON.parse(localStorage.getItem(key))||def}catch{return def}},toStorage=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));return true}catch{return false}};
+const blank=()=>({version:1,stage:1,phase:'opening',score:0,energy:0,choices:{},influence:{baba:0,noosh:0,catalyst:0,mo:0,savvy:0,devi:0},evidence:{throne:false,button:false,raccoons:false,train:false,clues:[]},achievements:[],outfit:'black',stageResults:{},completed:[],perfects:0,misses:0,shield:0,autoClear:0,rage:0,raccoonsCaught:0,raccoonsEscaped:0,raccoonDecoys:0,trainHits:0,trainSafe:0,trainBonus:0,fightWins:0,fightBonks:0,fightCombos:0,seenGuides:[],coverupHidden:0,coverupMissed:0,coverupDecoys:0,coverupTrust:0,endingId:null});
+let game=blank(),archive=fromStorage(ARCH,{achievements:[],clues:[],completed:[]}),phase='menu',dialogIndex=0,dialogDone=null,locked=false,activeTimer=null,activeFrame=null,expectedKey='',challengeStarted=0,round=0,promptUsed=false,interact=null,soundOn=true,paused=false,offTime=0,currentModal='menu',raccoonRun=null,raccoonRunId=0,trainRun=null,trainRunId=0,trainProp='bottle',trainPanicDeadline=0,trainPressure=37,trainLastVent=0,fightRun=null,fightRunId=0,fightBeat=0,fightStreak=0,fightSequence=null,cleanupRun=null,cleanupRunId=0;
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+function save(){toStorage(SAVE,game)}function saveArchive(){toStorage(ARCH,archive)}
+function addScore(amount){game.score=Math.max(0,game.score+Math.round(amount*(game.rage>0?2:1)));ui()}
+function earn(amount){game.energy=clamp(game.energy+amount,0,100);ui()}
+function ui(){$('score').textContent=game.score.toLocaleString();$('energy').textContent=game.energy;$('energyFill').style.width=game.energy+'%';$('stageChip').textContent='STAGE '+game.stage;$('stageLabel').textContent=({1:'THE THRONE INCIDENT',2:'DO NOT PRESS',3:'RELEASE THE RACCOONS',4:'TINY & DEVI: TRAIN CHAOS',5:'TINY VS BABA: THE SHOWDOWN',6:'THE ULTIMATE COVER-UP'})[game.stage]||'NEXT DISASTER';for(const [id,cost] of [['puppy',30],['raccoon',60],['nuggie',100]])$(id).disabled=game.energy<cost||paused}
+function notify(s,duration=1600){const t=$('toast');t.textContent=s;t.classList.remove('hidden');clearTimeout(t._hide);t._hide=setTimeout(()=>t.classList.add('hidden'),duration)}
+function achievement(id,label){if(!archive.achievements.includes(id)){archive.achievements.push(id);saveArchive();notify('🏆 Achievement: '+label,2100)}if(!game.achievements.includes(id))game.achievements.push(id)}
+function clue(id){if(!archive.clues.includes(id)){archive.clues.push(id);saveArchive();notify('🔎 A suspicious clue was archived!',1900)}if(!game.evidence.clues.includes(id))game.evidence.clues.push(id)}
+function button(label,fn,kind=''){let b=document.createElement('button');b.className='btn '+kind;b.textContent=label;b.addEventListener('click',()=>{if(locked||paused)return;audio('tap');fn()});return b}
+function choices(options){const c=$('controls');c.replaceChildren();options.forEach(([label,fn,kind])=>c.append(button(label,fn,kind||'')))}
+// Explain the controls before each stage without disclosing upcoming story events.
+// Each card appears once per stage per story run, including resumed checkpoints.
+const stageGuides={
+ 1:{title:'Keep an Eye on Noosh',icon:'👀',goal:'Time your actions while Noosh is looking away.',controls:'Watch for the safe moment, then tap. Freeze when he checks back.'},
+ 2:{title:'Watch the Danger Lanes',icon:'↔️',goal:'Avoid the incoming objects before they reach Tiny.',controls:'Go toward the GREEN safe lane. If every lane is red, DUCK.'},
+ 3:{title:'Net the Popping Raccoons',icon:'🦝',goal:'Catch raccoons as they pop out of their holes.',controls:'After the 3, 2, 1, GO! countdown, tap raccoons with your net, even two at once. Avoid hats and watch for the hopping key-carrier.'},
+ 4:{title:'Drive from the Conductor Cabin',icon:'🚂',goal:'Keep the train moving without hitting blocked tracks.',controls:'Switch to a clear track, DUCK under low hazards, hold BRAKE to slow down, and VENT when pressure rises.'},
+ 5:{title:'Read Baba’s Next Move',icon:'🥊',goal:'Match the cue before the countdown ends.',controls:'Choose PUNCH, DODGE, or SASS. For two-move combos, tap the actions in order.'},
+ 6:{title:'Find the Evidence, Clean the Throne',icon:'🧴',goal:'Find four things that prove what happened: raccoon fur, train keys, boxing gloves, and a sealed letter.',controls:'Tap the four small objects to hide them. Leave Noosh’s trophy alone! Then SPRAY the throne stains and WIPE with your finger. Use HINT if you get stuck.'}
+};
+function showStageGuide(stage){
+ const guide=stageGuides[stage];if(!guide)return;
+ if(!Array.isArray(game.seenGuides))game.seenGuides=[];
+ if(game.seenGuides.includes(stage))return;
+ game.seenGuides.push(stage);save();
+ showModal('<div class="modal-kicker">STAGE '+stage+' • QUICK HOW-TO</div>'+
+  '<h2>'+guide.icon+' '+guide.title+'</h2>'+
+  '<p class="guide-goal">'+guide.goal+'</p><p class="guide-controls">'+guide.controls+'</p>'+
+  '<p class="tooltip">No spoilers. The rest is yours to discover.</p>'+
+  '<button class="btn gold" id="guideContinue">GOT IT • LET’S PLAY ▸</button>');
+ const proceed=$('guideContinue');if(proceed)proceed.onclick=()=>hideModal();
+}
+
+function setText(title,body,kicker='A TERRIBLE IDEA'){$('panelTitle').textContent=title;$('panelText').textContent=body;$('panelKicker').textContent=kicker}
+function refreshStageOneExpressions(){
+ if(game.stage!==1)return;
+ const line=($('bubble').textContent||'');
+ const mood=/caught|WHAT|Are you|NOOSH|I CAN SEE|CLICK|alarm/i.test(line)?'startled':
+  /Stealth|MASTERPIECE|scientific|inspection|throne|nobody|behave|responsible/i.test(line)?'sly':'normal';
+ const left=$('leftChar'),right=$('rightChar');
+ left.dataset.mood=left.dataset.actor==='tiny'?mood:'normal';
+ right.dataset.mood=right.dataset.actor==='noosh'&&/WHAT|CAUGHT|ARE YOU/i.test(line)?'startled':'normal';
+}
+function bubble(s){$('bubble').textContent=s;refreshStageOneExpressions()}
+function showPower(on){$('powerRow').classList.toggle('hidden',!on);ui()}
+function hideChallenge(){cleanupRun=null;cleanupRunId++;$('cleanupBoard').classList.add('hidden');$('cleanupBoard').replaceChildren();cancelAnimationFrame(activeFrame);clearInterval(activeTimer);clearTimeout(activeTimer);activeFrame=null;activeTimer=null;$('challenge').classList.add('hidden');$('challenge').classList.remove('guard-challenge','dodge-timer');$('challenge').replaceChildren();$('dodgeBoard').classList.add('hidden');$('dodgeBoard').replaceChildren();$('nooshPeek').className='noosh-peek hidden';$('raccoonBoard').classList.add('hidden');$('raccoonField').replaceChildren();raccoonRun=null;raccoonRunId++;$('trainBoard').classList.add('hidden');$('trainBoard').replaceChildren();$('fightBoard').classList.add('hidden');$('fightBoard').replaceChildren();$('fightPatience').classList.add('hidden');$('gameplay').classList.remove('cabin-driving');fightRun=null;fightRunId++;$('trainBrakeWrap').classList.add('hidden');trainRun=null;trainRunId++;interact=null}
+function mark(s){const el=$('actionMark');el.textContent=s;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),670)}
+function react(id){const el=$(id);el.classList.remove('nudge');void el.offsetWidth;el.classList.add('nudge')}
+function setCharacters(l='tiny',r='baba'){$('leftChar').innerHTML=character(l==='tiny'&&game.outfit==='tan-bear'?'tiny-bear':l);$('rightChar').innerHTML=character(r);$('leftChar').dataset.actor=l;$('rightChar').dataset.actor=r;$('leftName').textContent=l.toUpperCase();$('rightName').textContent=r.toUpperCase();$('rightChar').classList.remove('gone');$('leftChar').classList.remove('gone');drawHeldTequila();refreshStageOneExpressions()}
+function beginScene(stage){game.stage=stage;$('scene').classList.toggle('stage-one',stage===1);$('gameplay').classList.toggle('stage-one',stage===1);game.phase=stage===1?'opening':stage===2?'buttonIntro':stage===3?'raccoonIntro':stage===4?'trainIntro':stage===5?'fightIntro':'coverupIntro';$('scene').classList.toggle('train-room',stage===2);$('scene').classList.toggle('raccoon-room',stage===3);$('scene').classList.toggle('railway-room',stage===4);$('scene').classList.toggle('fight-room',stage===5);$('scene').classList.toggle('coverup-room',stage===6);document.querySelector('.castle-title').textContent=stage===4?'UTW RAILWAY OF TERRIBLE IDEAS':stage===5?'UTW OFFICIAL SPARRING CLUB':stage===6?'UTW INCIDENT CONTROL':'UTW PALACE OF QUESTIONABLE DECISIONS';$('gameplay').classList.toggle('raccoon-active',stage===3);$('gameplay').classList.toggle('train-active',stage===4);$('gameplay').classList.toggle('fight-active',stage===5);$('gameplay').classList.toggle('coverup-active',stage===6);$('throne').classList.toggle('hidden',stage!==1&&stage!==6);$('pedestal').classList.toggle('hidden',stage!==2);$('crate').classList.toggle('hidden',stage!==3);$('crate').classList.toggle('jitter',stage===3);$('throne').classList.toggle('wet',Boolean(game.evidence.throne));$('challenge').classList.add('hidden');$('nooshPeek').className='noosh-peek hidden';$('note').classList.add('hidden');$('confetti').classList.add('hidden');showPower(false);setCharacters();ui();save();showStageGuide(stage)}
+const script1=[['Noosh','Tiny. I am leaving for FIVE minutes. Please behave.','noosh'],['Tiny','I am a responsible and entirely trustworthy individual.','tiny'],['Savvy','*The longest sigh in UTW history.*','savvy'],['Baba','Don’t worry, Noosh. I’ll watch her.','baba'],['Noosh','That is literally what I’m worried about.','noosh'],['Tiny','So... nobody is guarding the throne?','tiny'],['Baba','You’re thinking what I’m thinking.','baba']];
+const script3=[['Tiny','Okay, who opened the raccoon enclosure?','tiny'],['Baba','Technically the button did. I merely encouraged it.','baba'],['Catalyst','Those are my cousins. They do this.','catalyst'],['Mo','Tiny. The corner. NOW.','mo'],['Savvy','*SIGH.*','savvy'],['Tiny','WAIT. ONE OF THEM HAS THE TRAIN KEYS!','tiny']];
+const script2=[['Baba','That noise was... probably normal.','baba'],['Tiny','Why is there a button under the throne?','tiny'],['Baba','Only one way to find out.','baba'],['Tiny','It specifically says DO NOT PRESS.','tiny'],['Baba','Those sound like suggestions to me.','baba']];
+function playDialogue(lines,done){phase='dialogue';game.phase='dialogue';dialogIndex=0;dialogDone=done;showPower(true);showLine(lines);function showLine(rows){const step=()=>{if(dialogIndex>=rows.length){dialogDone?.();return}const [speaker,text,key]=rows[dialogIndex++];bubble(speaker+': '+text);setText(speaker,text,'UTW INCIDENT IN PROGRESS');if(key==='noosh')setCharacters('tiny','noosh');else if(key==='savvy')setCharacters('tiny','savvy');else if(key==='mo')setCharacters('tiny','mo');else if(key==='catalyst')setCharacters('tiny','catalyst');else if(key==='devi')setCharacters('tiny','devi');else if(key==='baba')setCharacters('tiny','baba');else if(key==='tiny'&&game.stage===4)setCharacters('tiny','devi');choices([['NEXT ▸',step,'gold']])};step()}}
+function opening(){beginScene(1);setText('Five Minutes Unsupervised','A completely innocent adventure about to go very wrong.','STAGE 1 • THE THRONE INCIDENT');playDialogue(script1,approachChoice)}
+function approachChoice(){phase='approach';game.phase='approach';setCharacters('tiny','baba');bubble('Baba: That throne looks suspiciously unlicked.');setText('Approach the throne','Choose how Tiny sneaks toward the forbidden royal furniture.','MAKE YOUR FIRST BAD DECISION');choices([['TIPTOE',()=>approach('tiptoe')],['WALK LIKE YOU OWN IT',()=>approach('swagger')],['BABA, DISTRACT THEM',()=>approach('baba'),'gold']]);save()}
+function approach(v){game.choices.approach=v;game.influence.baba+=v==='baba'?2:1;if(v==='tiptoe'){bubble('Tiny: Stealth mode activated.');addScore(50)}else if(v==='swagger'){bubble('Baba: The confidence. The audacity.');addScore(120);game.evidence.throne=true}else{bubble('Baba: LOOK OVER THERE! A RESPONSIBLE ADULT!');addScore(90);earn(12)}react('leftChar');audio('sneak');save();setTimeout(()=>sneakRound(0),550)}
+function sneakRound(n){hideChallenge();phase='sneak';game.phase='sneak';round=n;showPower(true);$('challenge').classList.remove('hidden');bubble(['Tiny: Step one. Be invisible.','Tiny: Step two. Remain a ghost.','Tiny: Step three. Avoid consequences.'][n]);setText('Sneak to the throne','Tap SNEAK NOW when the moving marker hits the green zone.','SKILL CHALLENGE • '+(n+1)+'/3');const ch=$('challenge');ch.innerHTML='<h3>👣 SNEAKING '+(n+1)+'/3</h3><p>Hit the green zone!</p><div class="timing-track"><span class="needle" id="needle"></span></div><p class="stat" id="timingResult">Watch the marker move...</p>';let origin=performance.now();let pulse=0;function frame(t){pulse=(Math.sin((t-origin)/330)+1)/2;if($('needle'))$('needle').style.left=pulse*100+'%';activeFrame=requestAnimationFrame(frame)}activeFrame=requestAnimationFrame(frame);choices([['SNEAK NOW',()=>{let good=pulse>.37&&pulse<.63;if(game.autoClear>0){good=true;game.autoClear--;notify('🦝 The raccoons create a distraction!')}hideChallenge();if(good){addScore(170);earn(16);game.perfects++;bubble('Tiny: Nobody saw a thing.');mark('✨');audio('success');if(n===2)achievement('ghost','Suspiciously Sneaky')}else{game.misses++;game.evidence.throne=true;bubble(['Baba: That floorboard had it coming.','Savvy: *SIGH*','Tiny: I meant to do that.'][n]);mark('💥');audio('oops')}save();setTimeout(()=>n<2?sneakRound(n+1):throneChoice(),520)},'gold']])}
+function throneChoice(){phase='throneChoice';game.phase='throneChoice';bubble('Baba: The throne is RIGHT THERE.');setText('The final temptation','Do you really want to lick the throne?','A QUESTION WITH AN OBVIOUS ANSWER');choices([['LICK IT!',()=>startLick('direct'),'gold'],['INSPECT THE CREST',()=>{clue('royal-crest');game.choices.crest=true;addScore(60);bubble('Tiny: A tiny engraved paw print... suspicious.');setText('The royal crest','An unusual symbol is hidden beneath the crown.','HIDDEN DETAIL DISCOVERED');choices([['OKAY, NOW LICK IT',()=>startLick('inspect'),'gold']])}],['BLAME BABA FIRST',()=>startLick('blame')]]);save()}
+function startLick(how){
+ game.choices.lick=how;
+ hideChallenge();
+ phase='lick';game.phase='lick';game.evidence.throne=true;
+ showPower(true);setCharacters('tiny','baba');
+ const peek=$('nooshPeek');peek.innerHTML=character('noosh');peek.className='noosh-peek watching';
+ const panel=$('challenge');panel.className='challenge guard-challenge';
+ panel.innerHTML='<h3>👅 OPERATION: STEALTH LICK</h3><span id="guardStatus" class="guard-indicator danger" role="status">👀 NOOSH IS WATCHING</span><div class="guard-info"><b id="lickCount">0</b>/5 secret licks · <b id="lickClock">27.0</b>s left</div><div id="guardHint" class="guard-hint">Wait until Noosh turns away. He keeps checking!</div>';
+ bubble(how==='blame'?'Tiny: Baba is legally responsible for this.':'Baba: Wait until Noosh looks away. Then GO!');
+ setText('Don’t get caught licking!','Noosh keeps peeking back. Wait until he looks away, then steal ONE lick before his next check.','STEALTH CHALLENGE • 5 SAFE WINDOWS');
+ let licks=0,look='watching',windowId=0,lastLickedWindow=-1,lastPress=0;
+ let remain=27,lastTick=performance.now(),nextSwitch=lastTick+950;
+ const safeDelay=()=>1400+Math.random()*750;
+ const watchDelay=()=>850+Math.random()*550;
+ const warningDelay=()=>540+Math.random()*180;
+ choices([['WAIT FOR NOOSH…',attemptLick,'gold']]);
+ const action=$('controls').firstElementChild;action.id='lickAction';
+ function redraw(){
+   $('lickCount').textContent=licks;
+   $('lickClock').textContent=Math.max(0,remain).toFixed(1);
+   const status=$('guardStatus'),hint=$('guardHint');
+   const ready=look==='away'&&lastLickedWindow!==windowId;
+   status.className='guard-indicator '+(look==='away'?'safe':look==='warning'?'risky':'danger');
+   status.textContent=look==='away'?'✅ NOOSH LOOKED AWAY!':look==='warning'?'⚠️ NOOSH IS COMING BACK!':'👀 NOOSH IS WATCHING';
+   hint.textContent=ready?'NOW! One sneaky lick before he comes back.':look==='away'?'Already licked this opening. Wait for his next check.':look==='warning'?'FREEZE! He is about to peek.':'Do NOT lick while Noosh is staring at you.';
+   action.disabled=look==='away'&&!ready;
+   action.textContent=ready?'LICK 👅 NOW!':look==='away'?'WAIT FOR NEXT OPENING':look==='warning'?'LICK? (RISKY)':'LICK? (NOOSH SEES YOU)';
+ }
+ function changeLook(next,now=performance.now()){
+   look=next;
+   peek.className='noosh-peek '+next;
+   if(next==='away'){windowId++;nextSwitch=now+safeDelay();}
+   else if(next==='warning'){nextSwitch=now+warningDelay();audio('sneak');}
+   else nextSwitch=now+watchDelay();
+   redraw();
+ }
+ function safeLick(){
+   lastLickedWindow=windowId;licks++;
+   addScore(90);earn(4);react('leftChar');mark('💦');audio('success');
+   bubble(['Tiny: A completely legitimate inspection.','Baba: One more for scientific accuracy.','Tiny: Stealth is my middle name.','Baba: Noosh has no idea.','Tiny: MASTERPIECE.'][licks-1]);
+   if(game.rage>0)game.rage--;
+   if(licks>=5){finishLick(true);return;}
+   save();redraw();
+ }
+ function attemptLick(){
+   if(phase!=='lick'||paused)return;
+   const now=performance.now();if(now-lastPress<240)return;lastPress=now;
+   if(look==='away'){
+     if(lastLickedWindow!==windowId)safeLick();
+     return;
+   }
+   if(game.autoClear>0){
+     game.autoClear--;notify('🦝 Raccoons distract Noosh!');changeLook('away');safeLick();save();return;
+   }
+   if(game.shield>0){
+     game.shield--;notify('🥺 Puppy Eyes worked. Noosh gives a warning.');
+     bubble('Noosh: Do not make me say it twice.');audio('oops');save();return;
+   }
+   game.misses++;
+   game.influence.noosh+=1;
+   game.evidence.throne=true;
+   bubble(['Noosh: TINY. I CAN SEE YOU.','Tiny: That was a quality-control test!','Noosh: Are you LICKING the throne?!'][game.misses%3]);
+   mark('🚨');audio('alarm');
+   notify('👀 CAUGHT! Noosh is not amused.');
+   save();
+ }
+ function finishLick(win){
+   if(phase!=='lick')return;
+   hideChallenge();peek.className='noosh-peek hidden';
+   $('throne').classList.add('wet');
+   if(win){addScore(250);earn(20);game.perfects++;achievement('throne','Throne Inspector');bubble('Tiny: Noosh didn’t see a thing. Mostly.');}
+   else{game.misses++;achievement('cleanup','Janitorial Staff');bubble('Noosh: You were supposed to be behaving!');mark('🧹');}
+   audio(win?'success':'oops');save();
+   setText('A suspicious CLICK...','The throne has activated something underneath it.','THIS WILL NOT END WELL');
+   choices([['WHAT WAS THAT?',()=>stage1End(),'gold']]);
+ }
+ redraw();
+ activeTimer=setInterval(()=>{
+   if(phase!=='lick'||paused)return;
+   const now=performance.now();remain-=Math.max(0,now-lastTick)/1000;lastTick=now;
+   if(remain<=0){finishLick(false);return;}
+   if(now>=nextSwitch){changeLook(look==='watching'?'away':look==='away'?'warning':'watching',now);}
+   $('lickClock').textContent=Math.max(0,remain).toFixed(1);
+ },60);
+}
+
+function stage1End(){hideChallenge();phase='stage1End';game.phase='stage1End';$('pedestal').classList.remove('hidden');$('throne').classList.add('hidden');game.completed=[...new Set([...game.completed,1])];game.stageResults[1]={score:game.score,misses:game.misses};achievement('unsupervised','Five Minutes Unsupervised');toStorage(CHECKPOINT,{...game,stage:2,phase:'buttonIntro'});bubble('Tiny: Oh. There’s a giant red button.');setText('Stage 1 Complete!','Naturally, this can only end well. Checkpoint saved.','DISASTER LEVEL INCREASED');mark('❗');save();choices([['STAGE 2: DO NOT PRESS ▸',startStage2,'gold']])}
+function startStage2(){dodgeSequence=buildDodgeSequence();beginScene(2);bubble('Baba: I have absolutely no regrets.');setText('DO NOT PRESS','A mysterious button has appeared beneath the throne.','STAGE 2 • FORBIDDEN BUTTON');save();playDialogue(script2,buttonChoice)}
+function buttonChoice(){phase='buttonChoice';game.phase='buttonChoice';showPower(true);bubble('Tiny: Somebody should definitely investigate this.');setText('How should Tiny investigate?','All answers are technically terrible.','THE BIG RED BUTTON');choices([['POKE IT',()=>buttonDecision('poke'),'gold'],['USE MY ELBOW',()=>buttonDecision('elbow')],['MAKE BABA DO IT',()=>buttonDecision('baba')]]);save()}
+function buttonDecision(choice){game.choices.button=choice;game.influence.baba+=choice==='baba'?3:1;addScore(choice==='baba'?100:140);earn(12);bubble(choice==='baba'?'Baba: Wait, why am I suddenly responsible?':choice==='elbow'?'Tiny: Technically, my finger never touched it.':'Tiny: Just a tiny little poke.');mark('🔴');$('dangerButton').classList.add('pressed');audio('alarm');save();setText('ALARM! ALARM!','The button has activated something VERY expensive.','PANIC DECISION INCOMING');setTimeout(()=>panicChoice(),650)}
+function panicChoice(){phase='panic';game.phase='panic';promptUsed=false;let timeLeft=3,limit=performance.now()+3000;showPower(true);bubble('🚨 NOOSH WILL BE BACK ANY SECOND!');$('challenge').classList.remove('hidden');setText('Panic Decision!','Choose an excuse before the timer expires.','THINK FAST!');const draw=()=>$('challenge').innerHTML='<h3>🚨 PANIC DECISION</h3><div class="timer">'+Math.max(0,timeLeft).toFixed(1)+'</div><p>NOOSH IS COMING</p>';draw();activeTimer=setInterval(()=>{if(paused)return;timeLeft=(limit-performance.now())/1000;draw();if(timeLeft<=0){hideChallenge();game.misses++;game.choices.panic='freeze';bubble('Tiny: I HAVE NO IDEA WHAT TO DO.');mark('💦');save();startDodge(0)}},60);choices([['HIDE THE SIGN',()=>panicResult('hide')],['BLAME BABA',()=>panicResult('blame')],['RUN!',()=>panicResult('run'),'gold']]);interact={extend:()=>{limit+=3000;notify('🥺 Noosh hesitates. +3 seconds!')}}}
+function panicResult(which){if(phase!=='panic')return;hideChallenge();game.choices.panic=which;if(which==='hide')game.evidence.button=true;if(which==='blame')game.influence.baba+=2;addScore(180);earn(10);game.perfects++;bubble({hide:'Tiny: If there is no warning sign, there is no crime.',blame:'Baba: I DID NOT AGREE TO THIS.',run:'Tiny: STRATEGIC RETREAT!'}[which]);audio('success');save();setTimeout(()=>startDodge(0),600)}
+// A visible three-lane scanner. The incoming prop is animated in the danger zone.
+// Unlike the original text-only prompt, the safe movement can be inferred from the screen.
+// Replay variation: sample a fresh balanced deck for each stage, retaining only the
+// previous order signature to prevent the exact same round sequence twice.
+function mixDeck(items){const result=items.slice();for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]]}return result}
+function freshDeck(deck,key,identify){const store='utw:tiny:previous-deck:v1:'+key,previous=fromStorage(store,'');
+ const signature=()=>deck.map(identify).join('|');
+ if(previous===signature()&&deck.length>1){[deck[0],deck[1]]=[deck[1],deck[0]]}
+ toStorage(store,signature());return deck}
+let dodgeSequence=null;
+function buildDodgeSequence(){
+ const sequence=freshDeck(mixDeck(dodgePrompts),'dodge',h=>h.name);
+ // Move sideways obstacles to a different approach side on every run.
+ return sequence.map(h=>{if(h.from==='overhead')return {...h};
+ const from=Math.random()<.5?'left':'right',correct=from==='left'?'RIGHT':'LEFT';
+ return {...h,from,correct,message:h.name+' COMING FROM THE '+from.toUpperCase()+'!'}
+ });
+}
+const dodgePrompts=[
+ {icon:'💡',name:'CHANDELIER',message:'THE CHANDELIER IS FALLING!',correct:'DUCK',from:'overhead'},
+ {icon:'🪣',name:'BUCKET',message:'BUCKET COMING FROM THE RIGHT!',correct:'LEFT',from:'right'},
+ {icon:'🚨',name:'ALARM CART',message:'ALARM CART FROM THE LEFT!',correct:'RIGHT',from:'left'},
+ {icon:'🧹',name:'FLYING MOP',message:'THE MOP IS SWEEPING OVERHEAD!',correct:'DUCK',from:'overhead'},
+ {icon:'📦',name:'CRATE',message:'MYSTERY CRATE ON THE RIGHT!',correct:'LEFT',from:'right'}
+];
+function showDodgeLanes(hazard){
+ const duck=hazard.correct==='DUCK';
+ const blocked=duck?['left','center','right']:hazard.from==='left'?['left','center']:['center','right'];
+ const position=hazard.from==='overhead'?'overhead':hazard.from==='left'?'side-left':'side-right';
+ const board=$('dodgeBoard');board.classList.remove('hidden');
+ board.setAttribute('aria-label',hazard.message+'. '+(duck?'All lanes blocked by overhead hazard. Duck.':'Danger in '+blocked.join(' and ')+' lanes. Safe lane: '+hazard.correct.toLowerCase()+'.'));
+ const lanes=['left','center','right'].map(lane=>{
+  const danger=blocked.includes(lane);
+  return '<div class="dodge-lane '+(danger?'danger':'safe')+'"><b>'+lane.toUpperCase()+'</b><small>'+(danger?'DANGER':'SAFE ✓')+'</small></div>';
+ }).join('');
+ board.innerHTML='<div class="dodge-heading">⚠ INCOMING <strong>'+hazard.name+'</strong></div><div class="dodge-lanes">'+lanes+'</div><div class="dodge-object '+position+'" id="fallingObject" aria-hidden="true"><span class="dodge-emoji">'+hazard.icon+'</span><span class="dodge-object-label">'+hazard.name+'</span></div><div class="dodge-footer'+(duck?' duck':'')+'">'+(duck?'⬇ DUCK! IT COVERS EVERY LANE':'✅ OPEN LANE: '+hazard.correct+' ◀▶')+'</div>';
+}
+function startDodge(index){
+ if(!dodgeSequence)dodgeSequence=buildDodgeSequence();
+ if(index>=dodgeSequence.length){stage2End();return}
+ phase='dodge';game.phase='dodge';hideChallenge();showPower(true);
+ setCharacters('tiny',index%2?'savvy':'baba');round=index;
+ const hazard=dodgeSequence[index],correct=hazard.correct;
+ let duration=[4.4,4.1,3.8,3.6,3.4][index],deadline=performance.now()+duration*1000;
+ expectedKey=correct;promptUsed=false;
+ setText('Dodge the incoming object!','WATCH THE LANES: red = danger, green = safe. If all lanes are red, DUCK!','REFLEX CHALLENGE • '+(index+1)+'/'+dodgeSequence.length);
+ bubble(hazard.message);showDodgeLanes(hazard);
+ const challenge=$('challenge');challenge.className='challenge dodge-timer';
+ challenge.innerHTML='<h3>⚠ LOOK OUT!</h3><div class="timer" id="dodgeClock">'+duration.toFixed(1)+'</div><div class="dodge-progress"><i id="dodgeProgress"></i></div><p>SWIPE OR TAP!</p>';
+ choices([['◀ LEFT',()=>resolveDodge('LEFT')],['▼ DUCK',()=>resolveDodge('DUCK'),'gold'],['RIGHT ▶',()=>resolveDodge('RIGHT')]]);
+ // Render once, then move the actual object towards the collision line.
+ const draw=()=>{
+  const remaining=Math.max(0,(deadline-performance.now())/1000),progress=Math.min(1,1-remaining/duration);
+  const clock=$('dodgeClock'),progressBar=$('dodgeProgress'),obstacle=$('fallingObject');
+  if(clock)clock.textContent=remaining.toFixed(1);
+  if(progressBar)progressBar.style.width=((1-progress)*100).toFixed(1)+'%';
+  if(obstacle){obstacle.style.top=(34+progress*40)+'%';obstacle.style.transform='translate(-50%,-50%) scale('+(0.84+progress*.35).toFixed(2)+')';}
+  if(remaining<=0)resolveDodge('TIMEOUT');
+ };
+ draw();activeTimer=setInterval(()=>{if(!paused)draw()},40);
+ interact={extend:()=>{if(promptUsed)return;duration+=1.5;deadline+=1500;notify('🥺 +1.5 seconds to dodge')},auto:()=>resolveDodge(correct)};
+}
+function resolveDodge(choice){
+ if(phase!=='dodge'||promptUsed)return;
+ promptUsed=true;clearInterval(activeTimer);activeTimer=null;
+ let hit=choice===expectedKey;
+ if(game.autoClear>0){hit=true;game.autoClear--;notify('🦝 Raccoon distraction saved you!')}
+ if(!hit&&game.shield>0){hit=true;game.shield--;notify('🥺 Puppy Eyes prevented a penalty!')}
+ const board=$('dodgeBoard');
+ if(!board.classList.contains('hidden')){
+  const result=document.createElement('div');result.className='dodge-result'+(hit?'':' hit');
+  result.textContent=hit?'✨ SAFE! NICE DODGE!':'💥 BONK! TRY THE NEXT ONE!';board.append(result);
+ }
+ if(hit){addScore(180);earn(14);game.perfects++;mark('✨');bubble('Tiny: I AM THE DEFINITION OF GRACE.');audio('success');if(round===4)achievement('dodge','The Uncatchable Menace')}
+ else{game.misses++;game.evidence.button=true;mark('💥');bubble(['Savvy: *Sighs even more loudly.*','Tiny: I meant to do that!','Baba: ...That was impressive, actually.'][round%3]);react('leftChar');audio('oops')}
+ if(game.rage>0)game.rage--;save();
+ const next=round+1;
+ setTimeout(()=>{if(!paused&&phase==='dodge')startDodge(next)},720)
+}
+function stage2End(){hideChallenge();phase='stage2End';game.phase=phase;game.completed=[...new Set([...game.completed,2])];game.stageResults[2]={score:game.score,misses:game.misses};$('crate').classList.remove('hidden');$('crate').classList.add('jitter');bubble('Tiny: ...Why is that crate MOVING?');setText('THE RACCOONS ARE FREE','The button opened the enclosure. Something just ran away with the train keys.','STAGE 2 COMPLETE');mark('🦝');achievement('button','Definitely Should Not Have Pressed It');if(game.misses===0)achievement('flawless','Absolutely No Regrets');toStorage(CHECKPOINT,{...game,stage:3,phase:'raccoonIntro'});save();choices([['STAGE 3: RELEASE THE RACCOONS ▸',startStage3,'gold']])}
+
+function startStage3(){raccoonLayout=buildRaccoonLayout();hideChallenge();beginScene(3);bubble('Tiny: Those are NOT trained security raccoons.');setCharacters('tiny','catalyst');setText('Release the Raccoons','Tiny accidentally unleashed an army of tiny bandits. One stole the train keys.','STAGE 3 • RACCOON RECAPTURE');save();playDialogue(script3,raccoonChoice)}
+function raccoonChoice(){phase='raccoonChoice';game.phase=phase;showPower(true);setCharacters('tiny','catalyst');bubble('Cat: Relax, darlin’. My cousins like a good chase.');setText('How should Tiny catch them?','Each plan changes how fast the raccoons run and how everyone reacts.','QUESTIONABLE RACCOON STRATEGY');choices([
+ ['BRIBE WITH DINO NUGGIES',()=>raccoonPlan('nuggies'),'gold'],
+ ['CAT, CALL YOUR COUSINS',()=>raccoonPlan('cat')],
+ ['CHASE THEM LIKE A MENACE',()=>raccoonPlan('sprint')]
+]);save()}
+function raccoonPlan(plan){game.choices.raccoonPlan=plan;if(plan==='nuggies'){earn(15);bubble('Tiny: Nobody resists my emergency nuggies.');game.influence.mo+=1}
+ else if(plan==='cat'){game.influence.catalyst+=2;game.autoClear++;addScore(80);bubble('Cat: I accept no responsibility for my relatives. But I’ll catch one.')}
+ else{game.influence.baba+=2;addScore(180);bubble('Baba: THAT’S THE SPIRIT. RUN, TINY!')}
+ save();setText('Catch them before they escape!','TAP the moving raccoons, or SWEEP LEFT / RIGHT. Avoid Baba’s fake hats!','INTERACTIVE CHASE');choices([['BEGIN THE CHASE',()=>startRaccoonWave(0),'gold']])}
+function raccoonArt(decoy=false){if(decoy)return '<span style="font-size:clamp(22px,3vw,35px)">🎩</span>';
+ return `<svg viewBox="0 0 70 65" aria-hidden="true"><path d="M13 27L10 7Q13 0 25 13L45 13Q56 1 61 8L58 29" fill="#8898a4" stroke="#32404b" stroke-width="4"/><ellipse cx="35" cy="35" rx="29" ry="27" fill="#aab8bd" stroke="#354653" stroke-width="3"/><path d="M8 30Q16 19 35 23Q54 19 62 30Q58 48 35 45Q11 48 8 30Z" fill="#3e4856"/><ellipse cx="24" cy="35" rx="7" ry="5" fill="#151b25"/><ellipse cx="47" cy="35" rx="7" ry="5" fill="#151b25"/><path d="M35 44L28 48L35 52L42 48Z" fill="#30343a"/><path d="M27 55Q35 59 43 55" fill="none" stroke="#3c3b3b" stroke-width="2"/></svg>`}
+const raccoonWaves=[
+ [{row:0,dir:1},{row:2,dir:-1},{row:1,dir:1,decoy:true},{row:1,dir:-1},{row:0,dir:-1}],
+ [{row:1,dir:-1},{row:0,dir:1,decoy:true},{row:2,dir:1},{row:0,dir:-1},{row:1,dir:1}],
+ [{row:2,dir:1},{row:0,dir:-1},{row:1,dir:1,key:true},{row:2,dir:-1,decoy:true},{row:0,dir:1}]
+];
+let raccoonLayout=null;
+function buildRaccoonLayout(){
+ const waves=raccoonWaves.map(template=>{
+  const rows=mixDeck([0,1,2,Math.floor(Math.random()*3),Math.floor(Math.random()*3)]);
+  return mixDeck(template.map((c,i)=>({...c,row:rows[i],dir:Math.random()<.5?-1:1,key:false})));
+ });
+ // Exactly one train key, carried by a real raccoon in any of the three waves.
+ const wave=waves[Math.floor(Math.random()*waves.length)],real=wave.filter(o=>!o.decoy);
+ real[Math.floor(Math.random()*real.length)].key=true;
+ const store='utw:tiny:previous-raccoon-layout:v1',signature=()=>waves.map(w=>w.map(o=>o.row+':'+o.dir+':'+(o.decoy?'H':o.key?'K':'R')).join(',')).join('|');
+ if(signature()===fromStorage(store,'')){waves[0][0].dir*=-1}
+ toStorage(store,signature());return waves;
+}
+function startRaccoonWave(wave){
+ hideChallenge();phase='raccoons';game.phase=phase;round=wave;showPower(true);
+ setCharacters('tiny',wave===0?'catalyst':wave===1?'mo':'savvy');
+ const speedScale=game.choices.raccoonPlan==='nuggies'?.86:game.choices.raccoonPlan==='sprint'?1.16:1;
+ const field=$('raccoonField'),board=$('raccoonBoard');board.classList.remove('hidden');
+ const config=(raccoonLayout||(raccoonLayout=buildRaccoonLayout()))[wave];
+ const queue=config.map(o=>({...o}));
+ // The key carrier always pops alongside another raccoon, never alone.
+ const keyIndex=queue.findIndex(o=>o.key);
+ if(keyIndex>=0&&keyIndex>2){const [key]=queue.splice(keyIndex,1);queue.splice(1,0,key)}
+ // Countdown and GO are excluded from the playable clock, including after a pause.
+ const readyAt=performance.now(),countdownUntil=readyAt+3000,goUntil=countdownUntil+650;
+ const run={id:++raccoonRunId,objects:[],queue,next:0,spawnAt:goUntil+280,last:readyAt,
+  wave,caught:0,missed:0,decoys:0,complete:false,until:goUntil+17000,netAt:-Infinity,cells:[],popCount:0,
+  countdownUntil,goUntil,countdownDisplay:null};
+ raccoonRun=run;
+ $('raccoonCount').textContent=game.raccoonsCaught+' / 12';$('raccoonEscaped').textContent=game.raccoonsEscaped;
+ const countdown=$('raccoonCountdown');countdown.classList.remove('hidden','go');countdown.textContent='3';
+ $('raccoonClock').textContent='READY';
+ bubble(["Cat: Net ready. Those bandits are everywhere!","Mo: BOTH HANDS, TINY. DON'T LET THEM ESCAPE.","Savvy: *A sigh audible across three alliances.*"][wave]);
+ setText('NET THE POPPING RACCOONS','Tap them the moment they pop up! You can catch two at the same time. The one holding a key hops quickly. Avoid Baba’s hats.','RACCOON NET • WAVE '+(wave+1)+'/3');
+ choices([]);
+ for(let i=0;i<9;i++){
+  const hole=document.createElement('button');hole.className='mole-hole';hole.type='button';
+  hole.setAttribute('aria-label','Empty raccoon hole '+(i+1));hole.dataset.slot=String(i);hole.current=null;
+  hole.addEventListener('pointerdown',e=>{if(hole.current&&!paused){e.preventDefault();catchRaccoon(hole.current)}});
+  hole.addEventListener('click',()=>{if(hole.current&&!paused)catchRaccoon(hole.current)});
+  field.append(hole);run.cells.push(hole);
+ }
+ function clearCell(o){const hole=run.cells[o.slot];if(hole?.current===o){hole.current=null;hole.classList.remove('active');hole.innerHTML='';hole.setAttribute('aria-label','Empty raccoon hole '+(o.slot+1))}}
+ function display(o,slot){
+  if(o.slot!==undefined)clearCell(o);
+  const hole=run.cells[slot];hole.current=o;o.slot=slot;hole.classList.add('active');
+  hole.setAttribute('aria-label',o.decoy?'Baba’s hat decoy':o.key?'FAST key raccoon! Tap to net it!':'Raccoon! Tap to net it!');
+  hole.innerHTML='<span class="pop-body'+(o.key?' key':'')+(o.decoy?' decoy':'')+'">'+raccoonArt(o.decoy)+'</span>'
+ }
+ function spawn(o,now){
+  const free=run.cells.map((h,i)=>h.current===null?i:-1).filter(i=>i>=0);
+  if(!free.length)return false;
+  const slot=free[Math.floor(Math.random()*free.length)];
+  const obj={...o,slot:undefined,caught:false,active:true,start:now,
+   endAt:now+(o.key?2500:o.decoy?2000:Math.max(2300,2800-wave*120))/speedScale,
+   hopAt:now+800+Math.random()*180};
+  run.objects.push(obj);display(obj,slot);return true
+ }
+ function expire(o){
+  if(o.caught)return;o.caught=true;clearCell(o);
+  if(!o.decoy){run.missed++;game.raccoonsEscaped++;game.misses++;game.evidence.raccoons=true;
+   $('raccoonEscaped').textContent=game.raccoonsEscaped;mark('💨')}
+ }
+ function popNext(now){
+  if(!run.queue.length)return;
+  const next=run.queue.shift();
+  if(!spawn(next,now)){run.queue.unshift(next);return}
+  // A second raccoon appears during the key-carrier's short window.
+  if(next.key){
+   const companion=run.queue.findIndex(x=>!x.decoy&&!x.key);
+   if(companion>=0){const [mate]=run.queue.splice(companion,1);spawn(mate,now)}
+   notify('🔑 KEY RACCOON! TWO TARGETS AT ONCE!');
+  }
+  run.next++;run.spawnAt=now+(940+Math.random()*240)/speedScale
+ }
+ function frame(now){
+  if(phase!=='raccoons'||raccoonRun!==run||run.complete)return;
+  if(paused){const delay=Math.max(0,now-run.last);run.until+=delay;run.spawnAt+=delay;run.countdownUntil+=delay;run.goUntil+=delay;
+   for(const o of run.objects)if(!o.caught){o.endAt+=delay;o.hopAt+=delay}
+   run.last=now;activeFrame=requestAnimationFrame(frame);return}
+  run.last=now;
+  // Visible 3, 2, 1, GO! at the beginning of every wave. No hazards spawn before GO.
+  if(now<run.countdownUntil){
+   const value=String(Math.max(1,Math.ceil((run.countdownUntil-now)/1000)));
+   if(run.countdownDisplay!==value){countdown.textContent=value;run.countdownDisplay=value;audio('tap')}
+   activeFrame=requestAnimationFrame(frame);return
+  }
+  if(now<run.goUntil){
+   if(run.countdownDisplay!=='GO!'){countdown.textContent='GO!';countdown.classList.add('go');run.countdownDisplay='GO!';audio('success')}
+   activeFrame=requestAnimationFrame(frame);return
+  }
+  countdown.classList.add('hidden');
+  if(run.queue.length&&now>=run.spawnAt)popNext(now);
+  for(const o of run.objects){
+   if(o.caught)continue;
+   if(o.key&&now>=o.hopAt){
+    const free=run.cells.map((h,i)=>h.current===null?i:-1).filter(i=>i>=0);
+    if(free.length){display(o,free[Math.floor(Math.random()*free.length)]);o.hopAt=now+780+Math.random()*200}
+   }
+   if(game.autoClear>0&&!o.decoy){game.autoClear--;catchRaccoon(o,true);notify('🦝 Raccoon Army netted one!')}
+   if(now>=o.endAt)expire(o)
+  }
+  $('raccoonClock').textContent=Math.max(0,(run.until-now)/1000).toFixed(1)+'s';
+  if((run.queue.length===0&&run.objects.every(o=>o.caught))||now>run.until){
+   if(now>run.until)for(const o of run.objects)if(!o.caught)expire(o);
+   raccoonWaveEnd(wave,run);return
+  }
+  activeFrame=requestAnimationFrame(frame)
+ }
+ function netEffect(hole){
+  if(!hole)return;
+  const flash=document.createElement('span');flash.className='net-swoosh';flash.setAttribute('aria-hidden','true');
+  flash.innerHTML='<svg viewBox="0 0 65 70"><path d="M42 43L63 66" stroke="#ad7b4c" stroke-width="8" stroke-linecap="round"/>'+
+   '<ellipse cx="29" cy="28" rx="25" ry="24" fill="#b9fff43a" stroke="#f4ebce" stroke-width="5"/>'+
+   '<path d="M10 14L50 42M6 28L38 49M21 5L52 28M48 10L11 42M36 4L6 30M53 25L24 52" stroke="#e0fef0" stroke-width="2" fill="none"/></svg>';
+  hole.append(flash);setTimeout(()=>flash.remove(),360)
+ }
+ function catchRaccoon(o,assisted=false){
+  if(phase!=='raccoons'||raccoonRun!==run||o.caught||paused||performance.now()<run.goUntil)return;
+  o.caught=true;const hole=run.cells[o.slot];clearCell(o);netEffect(hole);
+  if(o.decoy){run.decoys++;game.raccoonDecoys++;game.misses++;notify('🎩 BABA’S HAT! NOT A RACCOON!');mark('🎩');audio('oops')}
+  else{
+   run.caught++;game.raccoonsCaught++;addScore(o.key?320:170);earn(o.key?19:12);game.perfects++;
+   if(game.rage>0)game.rage--;
+   if(o.key){clue('raccoon-key');game.choices.foundKey=true;notify('🔑 YOU NETTED THE FAST KEY RACCOON!');mark('🔑')}
+   else mark('🥅');
+   audio('success');if(game.raccoonsCaught>=8)achievement('raccoon-wrangler','Certified Raccoon Wrangler');
+   $('raccoonCount').textContent=game.raccoonsCaught+' / 12';
+  }
+  save();ui()
+ }
+ run.catchRaccoon=catchRaccoon;
+ run.clearCell=clearCell;
+ activeFrame=requestAnimationFrame(frame);
+ interact={extend:()=>{run.until+=5000;for(const o of run.objects)if(!o.caught)o.endAt+=1400;notify('🥺 +5 seconds! More time to catch the raccoons.')},
+  auto:()=>{const o=run.objects.find(o=>!o.caught&&!o.decoy);if(o)catchRaccoon(o,true);else game.autoClear++}};
+}
+function raccoonSweep(side){ // Desktop keyboard fallback; touch players net individual pop-ups.
+ if(phase!=='raccoons'||!raccoonRun||paused||performance.now()<raccoonRun.goUntil)return;
+ const run=raccoonRun,now=performance.now();if(now-run.netAt<400)return;run.netAt=now;
+ const candidate=run.objects.find(o=>!o.caught&&!o.decoy&&(side==='left'?o.slot%3<2:o.slot%3>0));
+ if(candidate)run.catchRaccoon(candidate);else notify('🥅 No raccoon in that half. Watch the holes!')
+}
+
+function raccoonWaveEnd(wave,run){if(phase!=='raccoons'||raccoonRun!==run||run.complete)return;run.complete=true;hideChallenge();phase='raccoonInterlude';game.phase=phase;
+ game.stageResults['raccoonWave'+(wave+1)]={caught:run.caught,escaped:run.missed,decoys:run.decoys};save();
+ const reaction=run.caught>=3?'Tiny: I AM BASICALLY A PROFESSIONAL RACCOON WRANGLER.':'Mo: Please tell me you know where they went.';
+ bubble(reaction);setCharacters('tiny',wave===0?'catalyst':wave===1?'mo':'savvy');
+ setText('Wave '+(wave+1)+' finished!','Caught '+run.caught+' raccoons, '+run.missed+' escaped. '+(run.decoys?'You also caught '+run.decoys+' fake hat.':''),'THE CHASE CONTINUES');
+ choices([[wave===2?'FACE MO’S VERDICT ▸':'NEXT RACCOON WAVE ▸',()=>wave===2?raccoonVerdict():startRaccoonWave(wave+1),'gold']])
+}
+function raccoonVerdict(){phase='raccoonVerdict';game.phase=phase;setCharacters('tiny','mo');
+ const enough=game.raccoonsCaught>=7;game.choices.raccoonOutcome=enough?'contained':'escaped';
+ if(enough){bubble('Mo: ...Fine. At least you caught most of them.');setText('Mo is reluctantly impressed','You rescued enough raccoons to avoid the timeout corner. Mostly.','A MIRACLE HAS OCCURRED');addScore(240);choices([['FOLLOW THE TRAIN KEYS ▸',stage3End,'gold']]);}
+ else{bubble('Mo: Tiny. CORNER. Now.');setText('THE TIMEOUT CORNER','Too many raccoons escaped. Mo has officially assigned consequences.','NO GAME OVER • JUST CONSEQUENCES');
+ choices([['SINCERE APOLOGY',()=>{game.influence.mo+=2;addScore(80);bubble('Tiny: I am deeply sorry... that you noticed.');stage3End()},'gold'],['CAT, MAKE A DISTRACTION',()=>{game.influence.catalyst+=2;game.evidence.raccoons=true;addScore(140);bubble('Cat: If anyone asks, I’m a decorative cushion.');stage3End()}]])}
+ save()}
+function stage3End(){hideChallenge();phase='stage3End';game.phase=phase;game.completed=[...new Set([...game.completed,3])];game.stageResults[3]={score:game.score,misses:game.misses,caught:game.raccoonsCaught,escaped:game.raccoonsEscaped};game.outfit='tan-bear';
+ $('crate').classList.remove('jitter');setCharacters('tiny','devi');bubble('Tiny: I’m exhausted. Emergency bear onesie activated.');setText('STAGE 3 COMPLETE','The last raccoon bolts toward the train station with something shiny. Devi shakes his head as Tiny arrives in her emergency bear onesie. Surely this will be fine.','NEXT STOP • TINY & DEVI’S TRAIN');
+ mark('🚂');achievement('raccoon-incident','The Great Raccoon Incident');toStorage(CHECKPOINT,{...game,stage:4,phase:'trainTeaser'});save();choices([['STAGE 4: ALL ABOARD ▸',startStage4,'gold']])}
+
+// Stage 4: tiny train simulator with visible incoming obstacles, responsive lane switches,
+// brake held to slow the clock and timed DUCK for overhead hazards.
+const script4=[
+ ['Devi','Tiny. Why are you carrying a bottle of tequila onto the locomotive?','devi'],
+ ['Tiny','Emergency supplies! It is sealed. I am a PROFESSIONAL.','tiny'],
+ ['Devi','Then it can stay sealed and safely away from the controls.','devi'],
+ ['Tiny','Great. Who has the train keys?','tiny'],
+ ['Devi','A raccoon, apparently. I am choosing not to ask further questions.','devi'],
+ ['Tiny','Perfect! I will steer. You can be the voice of... emotional support.','tiny']
+];
+const trainHazards=[
+ {name:'FALLEN SIGN',icon:'🪧',blocked:[1],text:'A fallen sign is blocking the CENTRE track!',bonus:2},
+ {name:'LOST LUGGAGE',icon:'🧳',blocked:[0],text:'Lost luggage is piled on the LEFT track!',bonus:1},
+ {name:'RACCOON CART',icon:'🛒',blocked:[2],text:'Raccoons are rolling a cart down the RIGHT track!',bonus:0},
+ {name:'LOW BRIDGE',icon:'🚧',blocked:[0,1,2],duck:true,text:'LOW BRIDGE! Stay on the track and DUCK!',bonus:-1},
+ {name:'BARREL PILE',icon:'🛢️',blocked:[0,1],text:'Barrels everywhere. Only the RIGHT track is clear!',bonus:2},
+ {name:'THE CROWN',icon:'👑',blocked:[1,2],text:'A giant crown blocks the CENTRE and RIGHT tracks!',bonus:0},
+ {name:'RACCOON PARADE',icon:'🦝',blocked:[0,2],text:'Two raccoon parades! The CENTRE is clear!',bonus:1},
+ {name:'LOW BANNER',icon:'🎏',blocked:[0,1,2],duck:true,text:'Another low banner! DUCK, TINY!',bonus:-1},
+ {name:'UNATTENDED TROLLEY',icon:'🚋',blocked:[1],text:'A trolley is stopped in the CENTRE. Switch tracks!',bonus:0}
+];
+let trainSequence=null;
+function buildTrainSequence(){
+ // Start with readable one-track problems; keep a low bridge before the
+ // signal panic, then mix harder multi-track hazards into the final five.
+ const single=mixDeck(trainHazards.filter(h=>!h.duck&&h.blocked.length===1));
+ const dual=mixDeck(trainHazards.filter(h=>!h.duck&&h.blocked.length===2));
+ const overhead=mixDeck(trainHazards.filter(h=>h.duck));
+ const third=Math.random()<.5?single[2]:dual[0];
+ const opening=[single[0],single[1],third,overhead[0]],used=new Set(opening);
+ const ordered=opening.concat(mixDeck(trainHazards.filter(h=>!used.has(h))));
+ const deck=ordered.map(h=>{
+  const next={...h,blocked:[...h.blocked]};if(h.duck)return next;
+  const lanes=['LEFT','CENTRE','RIGHT'];
+  if(h.blocked.length===1){
+    const danger=Math.floor(Math.random()*3);next.blocked=[danger];
+    const clear=[0,1,2].filter(i=>i!==danger);next.bonus=clear[Math.floor(Math.random()*clear.length)];
+    next.text=h.name+' on the '+lanes[danger]+' track! Pick a clear lane!';
+  }else{
+    const clear=Math.floor(Math.random()*3);next.blocked=[0,1,2].filter(i=>i!==clear);
+    next.bonus=clear;next.text=h.name+'! Only the '+lanes[clear]+' track is clear!';
+  }
+  return next;
+ });
+ return freshDeck(deck,'train',h=>h.name+':'+h.blocked.join(','));
+}
+function drawHeldTequila(){
+ const root=$('leftChar');if(!root)return;root.querySelector('.held-tequila')?.remove();
+ if(game.stage!==4||phase==='train'||phase==='trainResult'||phase==='result')return;
+ const holder=document.createElement('span');holder.className='held-tequila'+(trainProp==='shot'?' shot':'');holder.setAttribute('aria-label',trainProp==='shot'?'Empty shot glass':'Closed tequila bottle');
+ holder.innerHTML=trainProp==='shot'
+ ?'<svg viewBox="0 0 62 75"><path d="M6 7H56L48 55Q32 68 14 55Z" fill="#d9eeecaa" stroke="#eaffec" stroke-width="5"/><path d="M16 26L45 27L42 49Q30 57 20 48Z" fill="#b8e6e680"/><path d="M30 58v11M15 71H48" fill="none" stroke="#eaffec" stroke-width="5"/></svg>'
+ :'<svg viewBox="0 0 75 135"><rect x="29" y="5" width="18" height="21" rx="3" fill="#cea66a" stroke="#ecda9f" stroke-width="4"/><path d="M27 23H49V43Q64 48 63 64V116Q63 128 50 129H23Q12 129 12 116V64Q12 49 27 43Z" fill="#b5d7b5" stroke="#e9f8d7" stroke-width="5"/><rect x="18" y="67" width="40" height="43" rx="4" fill="#efd9a1" stroke="#855f57" stroke-width="3"/><text x="38" y="83" font-size="12" font-weight="900" text-anchor="middle" fill="#694b45">TINY</text><text x="38" y="96" font-size="11" font-weight="900" text-anchor="middle" fill="#694b45">TEQUILA</text><path d="M22 118H54" stroke="#e4bd6c" stroke-width="4"/></svg>';
+ root.append(holder)
+}
+function startStage4(){trainSequence=buildTrainSequence();hideChallenge();beginScene(4);trainPressure=37;trainLastVent=0;phase='trainIntro';game.phase=phase;trainProp='bottle';setCharacters('tiny','devi');drawHeldTequila();bubble('Devi: Why do I have a feeling this is about to get expensive?');setText('The Unauthorized Train Ride','One raccoon stole the keys. Tiny and Devi have ended up in the cab of a very real train.','STAGE 4 • TINY + DEVI');save();playDialogue(script4,trainPlanChoice)}
+function trainPlanChoice(){phase='trainChoice';game.phase=phase;setCharacters('tiny','devi');drawHeldTequila();showPower(true);setText('Who is driving this thing?','Pick a very questionable approach. The bottle stays sealed and out of the controls.','CHOOSE YOUR RAILWAY STRATEGY');bubble('Devi: I am going to regret this, affectionately.');choices([
+ ['TINY TAKES THE WHEEL',()=>trainPlan('tiny'),'gold'],
+ ['DEVI, READ THE SIGNALS',()=>trainPlan('devi')],
+ ['FOLLOW THE RACCOON',()=>trainPlan('raccoon')]
+]);save()}
+function trainPlan(plan){game.choices.trainPlan=plan;game.influence.devi+=plan==='devi'?3:1;
+ if(plan==='devi'){earn(15);bubble('Devi: Left is left. Right is right. Please remember that.');}
+ else if(plan==='raccoon'){addScore(110);game.autoClear++;bubble('Tiny: He looks like he knows where he is going!');}
+ else{addScore(140);bubble('Tiny: The conductor hat makes this OFFICIAL.');}
+ save();setText('ALL ABOARD','View three tracks through the cabin windshield. Switch tracks, DUCK under bridges, hold BRAKE, and VENT STEAM before boiler pressure maxes out.','HOW TO TRAIN WITHOUT A LICENCE');choices([['START THE TRAIN ▸',()=>startTrainHazard(0),'gold']])}
+function showTrainBoard(run,hazard){
+ const board=$('trainBoard');board.classList.remove('hidden');
+ board.setAttribute('aria-label',hazard.text+' Blocked: '+hazard.blocked.map(i=>['left','centre','right'][i]).join(', ')+'. Watch the boiler gauge and vent steam to prevent overheating.');
+ board.innerHTML=`<div class="train-top"><span>🚂 CABIN VIEW</span><span>${run.index+1}/${trainHazards.length} · ${hazard.name}</span><span id="trainSpeed">FAST</span></div>
+ <div class="cabin-window" aria-hidden="true"><div class="cabin-cloud">☁</div><div class="cabin-cloud second">☁</div><div class="cabin-perspective"><div class="rail-bed"></div><i class="rail-stripe one"></i><i class="rail-stripe two"></i><i class="rail-stripe three"></i><i class="rail-stripe four"></i></div><div class="cabin-lanes" id="trainRails">${['left','centre','right'].map((l,i)=>`<div class="cabin-lane ${hazard.blocked.includes(i)?'danger':'safe'}" data-track="${i}"></div>`).join('')}</div><div class="cabin-labels">${['LEFT','CENTRE','RIGHT'].map((l,i)=>`<span class="${hazard.blocked.includes(i)?'danger':'safe'}">${hazard.blocked.includes(i)?'✕':'✓'} ${l}</span>`).join('')}</div></div>
+ <div class="train-object${hazard.duck?' overhead':''}" id="trainObject">${hazard.icon}</div><div class="cabin-crew tiny">${character(game.outfit==='tan-bear'?'tiny-bear':'tiny')}</div><div class="cabin-crew devi">${character('devi')}</div><div class="train-footer${hazard.duck?' duck':''}">${hazard.duck?'LOW BRIDGE! DUCK WHEN CLOSE':'FOLLOW A GREEN TRACK · KEEP BOILER COOL'}</div>
+ <div class="cabin-dash"><span class="cabin-wheel">🛞</span><div class="cabin-pressure"><div class="cabin-pressure-top"><span>🔥 BOILER</span><span id="pressureLabel" aria-live="off">37%</span></div><div class="cabin-pressure-track" role="progressbar" aria-label="Boiler pressure" aria-valuemin="0" aria-valuemax="100" aria-valuenow="37" id="pressureMeter"><i id="pressureFill"></i></div></div><button type="button" class="cabin-vent" id="steamVent" aria-label="Vent steam to lower boiler pressure">💨 VENT STEAM</button></div><div class="cabin-steam" id="steamCloud" aria-hidden="true">💨</div>`;
+ $('steamVent').addEventListener('click',ventSteam);
+ $('trainBrakeWrap').classList.remove('hidden');$('gameplay').classList.add('cabin-driving');renderTrainPosition(run);
+}
+function renderTrainPosition(run){if(!run)return;
+ const lane=run.lane;
+ for(const el of document.querySelectorAll('#trainRails [data-track]'))el.classList.toggle('chosen',Number(el.dataset.track)===lane);
+ const meter=$('trainBrakeFill');if(meter)meter.style.width=Math.round(run.brakeMeter)+'%';
+ const amount=$('trainBrakeAmount');if(amount)amount.textContent=Math.round(run.brakeMeter);
+ const brake=$('trainBrake');if(brake)brake.classList.toggle('engaged',run.brake&&run.brakeMeter>0);
+ const speed=$('trainSpeed');if(speed)speed.textContent=run.brake&&run.brakeMeter>0?'BRAKING':'FAST';
+ renderTrainPressure();
+}
+function renderTrainPressure(){
+ const label=$('pressureLabel'),fill=$('pressureFill'),meter=$('pressureMeter'),vent=$('steamVent');
+ if(label)label.textContent=Math.round(trainPressure)+'%'+(trainPressure>=82?' ⚠':'');
+ if(fill){fill.style.width=Math.round(trainPressure)+'%';fill.classList.toggle('hot',trainPressure>=75)}
+ if(meter)meter.setAttribute('aria-valuenow',Math.round(trainPressure));
+ if(vent)vent.disabled=paused||trainPressure<25;
+}
+function ventSteam(){
+ if(phase!=='train'||paused||!trainRun||trainRun.resolved||trainPressure<25)return;
+ const now=performance.now();if(now-trainLastVent<900)return;
+ trainLastVent=now;const before=trainPressure;trainPressure=Math.max(10,trainPressure-39);
+ game.trainVents=(game.trainVents||0)+1;
+ if(before>=72){addScore(85);earn(5);notify('💨 PERFECT VENT! +85 CHAOS')}else notify('💨 Pressure released!');
+ if(game.trainVents%2===1)bubble(game.trainVents===1?'Devi: Finally. Someone found the steam valve.':'Tiny: IT IS A VERY DRAMATIC KETTLE.');
+ const cloud=$('steamCloud');if(cloud){cloud.classList.remove('burst');void cloud.offsetWidth;cloud.classList.add('burst')}
+ renderTrainPressure();audio('sneak');save();
+}
+function trainPressureTick(dt,braking){
+ trainPressure=Math.min(103,trainPressure+dt*(10.4+(trainRun?.index||0)*.33+(braking?6.5:0)));
+ if(trainPressure>=100){
+  trainPressure=44;game.trainSteamBlasts=(game.trainSteamBlasts||0)+1;game.misses++;
+  notify('💥 BOILER OVERHEATED! DEVI TO THE RESCUE');bubble('Devi: Tiny. We are operating a train, not a kettle.');
+  const b=$('trainBoard');if(b){b.classList.remove('cabin-shaking');void b.offsetWidth;b.classList.add('cabin-shaking')}
+  const cloud=$('steamCloud');if(cloud){cloud.classList.remove('burst');void cloud.offsetWidth;cloud.classList.add('burst')}
+  audio('oops');
+ }
+ renderTrainPressure();
+}
+function chooseTrainLane(i){if(phase!=='train'||paused||!trainRun)return;trainRun.lane=i;renderTrainPosition(trainRun);audio('sneak')}
+function duckTrain(){if(phase!=='train'||paused||!trainRun)return;trainRun.duckUntil=performance.now()+1600;notify('⬇ DUCK!');mark('⬇');audio('sneak')}
+function trainBrake(down){if(phase!=='train'||!trainRun||paused){$('trainBrake').classList.remove('engaged');return}trainRun.brake=Boolean(down)&&trainRun.brakeMeter>0;renderTrainPosition(trainRun)}
+function trainButtons(){choices([
+ ['◀ LEFT',()=>chooseTrainLane(0)],['● CENTRE',()=>chooseTrainLane(1)],['RIGHT ▶',()=>chooseTrainLane(2)],['▼ DUCK',duckTrain,'gold']
+])}
+function startTrainHazard(index){
+ if(!trainSequence)trainSequence=buildTrainSequence();
+ if(index>=trainSequence.length){stage4Verdict();return}
+ hideChallenge();phase='train';game.phase=phase;game.stage=4;
+ setCharacters('tiny','devi');
+ showPower(true);const hazard=trainSequence[index];const run={id:++trainRunId,index,lane:(trainRun?.lane??1),progress:0,duration:Math.max(2.65,4.3-index*.19),brakeMeter:100,brake:false,duckUntil:0,skip:false,lastTime:performance.now(),resolved:false,extra:0};
+ // Preserve the last chosen track between obstacles, even as the board is rebuilt.
+ run.lane=Number.isInteger(game.choices.lastTrainLane)?game.choices.lastTrainLane:1;
+ trainRun=run;setText('INSIDE THE CONDUCTOR CAB','Three tracks ahead! Find the green track, DUCK under low bridges, and VENT the boiler when it gets hot.','TRAIN DISASTER • '+(index+1)+'/'+trainHazards.length);
+ bubble(hazard.text);showTrainBoard(run,hazard);trainButtons();
+ interact={extend:()=>{run.progress=Math.max(0,run.progress-.3);notify('🥺 Extra time to dodge!')},auto:()=>{run.skip=true;notify('🦝 Raccoons cleared the tracks for you!')}};
+ function frame(t){if(phase!=='train'||trainRun!==run||run.resolved)return;const dt=Math.min(.08,Math.max(0,(t-run.lastTime)/1000));run.lastTime=t;
+  if(!paused){const braking=run.brake&&run.brakeMeter>0;run.progress+=dt*(braking?.37:1)/run.duration;run.brakeMeter=clamp(run.brakeMeter+(braking?-35:17)*dt,0,100);if(run.brakeMeter<=0)run.brake=false;trainPressureTick(dt,braking);renderTrainPosition(run);
+   const obj=$('trainObject');if(obj){obj.style.top=(42+Math.min(1,run.progress)*27)+'%';const laneCentre=16.666+hazard.blocked[0]*33.333;obj.style.left=hazard.duck?'50%':(50+(laneCentre-50)*Math.min(1,.09+run.progress*.91))+'%';obj.style.transform='translate(-50%,-50%) scale('+(0.32+run.progress*1.26).toFixed(2)+')';}
+   if(run.progress>=1){resolveTrainHazard(run,hazard);return}}
+  activeFrame=requestAnimationFrame(frame)
+ }
+ activeFrame=requestAnimationFrame(frame);save()
+}
+function resolveTrainHazard(run,hazard){if(phase!=='train'||run.resolved||trainRun!==run)return;
+ run.resolved=true;cancelAnimationFrame(activeFrame);activeFrame=null;run.brake=false;
+ game.choices.lastTrainLane=run.lane;
+ let safe=hazard.duck?performance.now()<=run.duckUntil:!hazard.blocked.includes(run.lane);
+ if(run.skip||game.autoClear>0){safe=true;if(game.autoClear>0)game.autoClear--;notify('🦝 Raccoon assist!')}
+ if(!safe&&game.shield>0){safe=true;game.shield--;notify('🥺 Tiny gets away with it!')}
+ const board=$('trainBoard'),el=document.createElement('div');el.className='train-incident'+(safe?'':' hit');el.textContent=safe?'✨ CLEAR TRACK! NICE WORK!':'💥 BONK! DEVI SAVES THE TRAIN!';board.append(el);
+ if(safe){game.trainSafe++;game.perfects++;addScore(180+(hazard.bonus===run.lane?80:0));if(hazard.bonus===run.lane)game.trainBonus++;earn(12);bubble(['Tiny: WE ARE TRAIN PROFESSIONALS!','Devi: I would not go that far.','Devi: I am impressed. And a little concerned.'][run.index%3]);audio('success')}
+ else{game.trainHits++;game.misses++;game.influence.devi+=1;game.evidence.train=true;bubble(['Devi: It is fine. I have the controls now.','Tiny: That sign attacked ME!','Savvy: *A very long sigh.*'][run.index%3]);mark('💥');audio('oops')}
+ if(game.rage>0)game.rage--;save();
+ const next=run.index+1;
+ const advance=()=>{if(paused){setTimeout(advance,160);return}if(phase!=='train'||trainRun!==run)return;
+  if(next===4)trainPanic();else startTrainHazard(next)};
+ setTimeout(advance,760)
+}
+function trainPanic(){hideChallenge();phase='trainPanic';game.phase=phase;trainProp='shot';setCharacters('tiny','devi');drawHeldTequila();showPower(true);
+ let deadline=performance.now()+5200;trainPanicDeadline=deadline;
+ bubble('Devi: Why do you have an EMPTY shot glass?');
+ setText('RACCOON ON THE SIGNAL LEVER!','There is a raccoon changing the railway signals. Choose fast! Tiny is waving her empty shot glass like a conductor’s baton.','PANIC DECISION • 5 SECONDS');
+ const ch=$('challenge');ch.className='challenge';ch.classList.remove('hidden');ch.innerHTML='<h3>🚨 TRAIN PANIC!</h3><div class="timer" id="trainPanicClock">5.2</div><p>THE SIGNALS ARE CHANGING!</p>';
+ const tick=()=>{if(paused){deadline+=.06;return}const remain=(deadline-performance.now())/1000;if($('trainPanicClock'))$('trainPanicClock').textContent=Math.max(0,remain).toFixed(1);if(remain<=0)trainPanicResult('freeze')};
+ activeTimer=setInterval(tick,60);
+ interact={extend:()=>{deadline+=3000;notify('🥺 Devi gives you an extra three seconds!')}};
+ choices([
+ ['LET DEVI DRIVE',()=>trainPanicResult('devi'),'gold'],
+ ['BRAKE & CHECK',()=>trainPanicResult('brake')],
+ ['SCREAM AT RACCOON',()=>trainPanicResult('raccoon')]
+ ]);save()
+}
+function trainPanicResult(which){if(phase!=='trainPanic')return;hideChallenge();phase='trainInterlude';game.phase=phase;game.choices.trainPanic=which;trainProp='shot';setCharacters('tiny','devi');
+ if(which==='devi'){game.influence.devi+=3;game.autoClear++;addScore(160);bubble('Devi: I have the controls. You can stop directing traffic with your glass.');}
+ else if(which==='brake'){game.influence.devi+=1;earn(20);addScore(170);bubble('Tiny: See? BRAKES! I knew we had those!');}
+ else if(which==='raccoon'){game.influence.catalyst+=1;addScore(240);bubble('Tiny: SIR. YOU ARE NOT A LICENCED SIGNAL OPERATOR.');}
+ else {game.misses++;bubble('Devi: The train is still moving, Tiny.');}
+ setText('Back on the rails','Devi shakes his head fondly. The tequila bottle stays sealed, and the empty glass goes back in Tiny’s bag.','TINY & DEVI • MIDPOINT');
+ choices([['BACK TO THE TRACKS ▸',()=>{trainProp='none';startTrainHazard(4)},'gold']]);save()
+}
+function stage4Verdict(){hideChallenge();phase='trainVerdict';game.phase=phase;setCharacters('tiny','devi');
+ game.choices.trainOutcome=game.trainHits>=4?'uncontrolled':game.trainHits===0?'perfect':'rescued';
+ if(game.trainHits===0){achievement('perfect-conductor','Zero Accidents, Many Questions');bubble('Devi: You did surprisingly well. I am genuinely impressed.');addScore(360)}
+ else if(game.trainHits<4){bubble('Devi: A few close calls. Could have been worse.');addScore(140)}
+ else{bubble('Devi: Well. We arrived. That is technically a success.');}
+ setText('THE TRAIN HAS ARRIVED','Clear tracks: '+game.trainSafe+' / '+trainHazards.length+'. Devi had to rescue Tiny '+game.trainHits+' times. Nobody is asking about the timetable.','TRAIN INCIDENT • CONSEQUENCES');
+ choices([['UNLOAD THE TRAIN ▸',stage4End,'gold']]);save()
+}
+function stage4End(){hideChallenge();phase='stage4End';game.phase=phase;game.completed=[...new Set([...game.completed,4])];
+ game.stageResults[4]={score:game.score,hits:game.trainHits,safe:game.trainSafe,bonus:game.trainBonus,plan:game.choices.trainPlan};
+ trainProp='none';setCharacters('tiny','devi');mark('🥊');achievement('train-incident','The Unlicensed Express');
+ bubble('Devi: We survived. Baba is requesting a rematch over the station speakers. I am so sorry.');setText('STAGE 4 COMPLETE','As the train stops, Baba announces he wants to spar with Tiny. Devi lovingly shakes his head. Nobody is approving this event.','NEXT STAGE • TINY VS BABA');
+ toStorage(CHECKPOINT,{...game,stage:5,phase:'fightIntro'});save();choices([['STAGE 5: ACCEPT BABA’S CHALLENGE ▸',startStage5,'gold']])
+}
+// Stage 5: readable telegraphs, escalating comedy, multiple reaction types.
+const fightMoves=[
+ {type:'punch',title:'BABA POSES FOR THE CAMERA',hint:'His guard is down! PUNCH!',say:'Baba: Go on, you can have the first one.'},
+ {type:'dodge',title:'BABA WINDS UP A BONK!',hint:'DUCK THE INCOMING BONK. DODGE!',say:'Baba: I may have encouraged this.'},
+ {type:'sass',title:'BABA STARTS A SPEECH',hint:'Interrupt the lecture. SASS!',say:'Baba: I think this is a valuable teaching moment.'},
+ {type:'punch',title:'HE ADJUSTS HIS GLASSES',hint:'He cannot see! PUNCH!',say:'Tiny: Those glasses have a vulnerability.'},
+ {type:'dodge',title:'BABA TELEGRAPHS A SWING',hint:'DODGE while he takes a big step!',say:'Baba: Observe my advanced technique.'},
+ {type:'combo',title:'DODGE THEN PUNCH!',hint:'Two moves! DODGE → PUNCH!',say:'Devi: This is somehow more dangerous than the train.'},
+ {type:'sass',title:'BABA TRIES TRASH TALK',hint:'Fight words with words. SASS!',say:'Baba: I bet you cannot even reach my glasses.'},
+ {type:'dodge',title:'THE DOUBLE BONK WINDUP',hint:'Danger! DODGE!',say:'Mo: If you two break anything, it is corner time.'},
+ {type:'combo',title:'HIS ULTIMATE COMBO',hint:'DODGE then PUNCH! Hurry!',say:'Savvy: *Aggressively sighs.*'},
+ {type:'finish',title:'THE FINAL COMEBACK',hint:'Your choice! PUNCH, DODGE or SASS!',say:'Baba: Whatever you do, make it dramatic.'}
+];
+let fightDeck=null;
+function buildFightDeck(){
+ const regular=mixDeck(fightMoves.filter(m=>m.type!=='combo'&&m.type!=='finish'));
+ const combo=mixDeck(fightMoves.filter(m=>m.type==='combo'));
+ const finisher=fightMoves.find(m=>m.type==='finish');
+ const result=regular.slice(0,4).concat(mixDeck(regular.slice(4).concat(combo)),[finisher]);
+ // First four cues teach the three basic reactions; combos appear afterwards.
+ return freshDeck(result,'fight',m=>m.title);
+}
+const fightResponses={punch:['💥 TINY LANDS A CARTOON BONK!','Baba: I encouraged this, did I not?'],dodge:['🌀 PERFECT LITTLE DUCK!','Baba: There she goes again.'],sass:['💬 BABA HAS BEEN OUT-SASSED','Baba: I taught her far too well.'],raccoon:['🦝 RACCOON DISTRACTION!','Baba: WHY ARE THERE RACCOONS IN THE RING?!']};
+const fightScript=[
+ ['Baba','YOU DROVE MY TRAIN?! I am impressed, but now I challenge you!','baba'],
+ ['Tiny','I am very small and very dangerous.','tiny'],
+ ['Baba','Exactly. You have three options: punch, dodge, or out-sass me.','baba'],
+ ['Tiny','You forgot the fourth option. Raccoons.','tiny'],
+ ['Baba','...Actually, I respect that.','baba']
+];
+function startStage5(){hideChallenge();beginScene(5);phase='fightIntro';game.phase=phase;
+ fightDeck=buildFightDeck();game.outfit='black';game.fightWins=0;game.fightBonks=0;game.fightCombos=0;fightStreak=0;fightBeat=0;
+ setCharacters('tiny','baba');bubble('Baba: I have been waiting ALL DAY for a Tiny-sized challenge.');
+ setText('Tiny vs Baba','A very serious and completely unnecessary cartoon showdown. Read the move, then PUNCH, DODGE, or SASS before the clock runs out.','STAGE 5 • UNNECESSARY DRAMA');
+ save();playDialogue(fightScript,fightIntroChoice)
+}
+function fightIntroChoice(){phase='fightChoice';game.phase=phase;setCharacters('tiny','baba');showPower(true);
+ bubble('Baba: Come on, show me that Tiny energy!');
+ setText('Choose your fighting style','Your choice changes the bonus but all three moves are available during battle. Mis-timing a move just earns a comic consequence.','OFFICIAL UTW SPARRING RULES');
+ choices([
+  ['👊 CHAOTIC PUNCHES',()=>chooseFightStyle('punch'),'gold'],
+  ['🌀 SNEAKY DODGES',()=>chooseFightStyle('dodge')],
+  ['💬 MAXIMUM SASS',()=>chooseFightStyle('sass')]
+ ]);save()
+}
+function chooseFightStyle(style){game.choices.fightStyle=style;game.influence.baba+=style==='sass'?2:1;
+ bubble(style==='sass'?'Baba: That is my girl. A menace with vocabulary.':style==='dodge'?'Baba: I can already hear the footwork.':'Baba: Bold choice, Tiny. Absolutely spectacular.');
+ setText('READY TO RUMBLE?','Watch Baba’s cue in the middle of the ring. It will tell you whether to PUNCH, DODGE or SASS. COMBO means two moves in order.','BABA’S TECHNIQUE: ENCOURAGEMENT');
+ choices([['START THE SHOWDOWN ▸',()=>startFightBeat(0),'gold']]);save()
+}
+function fightComposure(){const pct=clamp(100-(game.fightWins||0)*11+(game.fightBonks||0)*2,0,100);
+ $('fightComposureLabel').textContent=pct+'%';$('fightComposureBar').style.width=pct+'%';}
+function animateFight(correct,kind){const l=$('leftChar'),r=$('rightChar');
+ for(const el of [l,r])el.classList.remove('fight-strike','fight-flinch','fight-duck');void l.offsetWidth;
+ if(correct&&kind!=='dodge')l.classList.add('fight-strike');else if(correct)l.classList.add('fight-duck');else l.classList.add('fight-flinch');
+ if(correct)r.classList.add('fight-flinch');else r.classList.add('fight-strike');
+ mark(correct?(kind==='sass'?'💬':kind==='dodge'?'💨':'💥'):'💫');
+}
+function fightButtons(){choices([['👊 PUNCH',()=>fightAction('punch'),'gold'],['🌀 DODGE',()=>fightAction('dodge')],['💬 SASS',()=>fightAction('sass')]])}
+function startFightBeat(index){if(!fightDeck)fightDeck=buildFightDeck();if(index>=fightDeck.length){fightVerdict();return}
+ clearInterval(activeTimer);activeTimer=null;phase='fight';game.phase=phase;game.stage=5;fightBeat=index;
+ const move=fightDeck[index],duration=Math.max(1.95,3.8-index*.2);
+ const run={id:++fightRunId,index,move,step:0,deadline:performance.now()+duration*1000,total:duration*1000,done:false};fightRun=run;
+ setCharacters('tiny','baba');showPower(true);$('fightBoard').classList.remove('hidden');$('fightPatience').classList.remove('hidden');
+ const cue=move.type==='combo'?'DODGE → PUNCH':move.type==='finish'?'CHOOSE YOUR FINISHER':move.type.toUpperCase()+'!';
+ $('fightBoard').innerHTML='<div class="fight-count"><span>🥊 ROUND '+(index+1)+'/'+fightMoves.length+'</span><span>COMBO × '+(fightStreak+1)+'</span></div><div class="fight-cue" id="fightCue">'+move.title+'</div><div class="fight-help" id="fightHint">'+move.hint+'  '+cue+'</div><div class="fight-clock"><i id="fightClockFill"></i></div>';
+ fightComposure();fightButtons();bubble(move.say);
+ setText('React to Baba!','The highlighted move in the centre tells you what to do. Wrong moves become hilarious evidence against Tiny.','TINY vs BABA • '+(index+1)+'/'+fightMoves.length);
+ interact={extend:()=>{run.deadline+=2000;run.total+=2000;notify('🥺 Baba gives you two more seconds!')},auto:()=>{if(fightRun===run&&!run.done)finishFightBeat(run,true,'raccoon')}};
+ activeTimer=setInterval(()=>{if(phase!=='fight'||fightRun!==run||run.done){clearInterval(activeTimer);activeTimer=null;return}
+  if(paused){run.deadline+=55;return}
+  const remain=run.deadline-performance.now();const fill=$('fightClockFill');if(fill)fill.style.width=clamp(remain/run.total*100,0,100)+'%';
+  if(remain<=0)finishFightBeat(run,false,'timeout');
+ },55);save()
+}
+function fightAction(kind){if(phase!=='fight'||paused||!fightRun||fightRun.done)return;
+ const run=fightRun,move=run.move;
+ if(move.type==='combo'){
+  const expected=run.step===0?'dodge':'punch';
+  if(kind!==expected){finishFightBeat(run,false,kind);return}
+  if(run.step===0){run.step=1;run.deadline+=1550;run.total+=1550;
+   $('fightCue').textContent='NICE DUCK! NOW PUNCH!';$('fightHint').textContent='SECOND MOVE: 👊 PUNCH!';
+   animateFight(true,'dodge');bubble('Tiny: I AM BOTH FAST AND SHORT.');audio('success');return}
+  game.fightCombos++;finishFightBeat(run,true,kind);return;
+ }
+ const correct=move.type==='finish'?['punch','dodge','sass'].includes(kind):kind===move.type;
+ finishFightBeat(run,correct,kind)
+}
+function finishFightBeat(run,correct,kind){if(phase!=='fight'||run.done||fightRun!==run)return;
+ run.done=true;clearInterval(activeTimer);activeTimer=null;
+ const board=$('fightBoard'),result=document.createElement('div');result.className='fight-result'+(correct?'':' bad');
+ let text=correct?fightResponses[kind]?.[0]||'✨ PERFECT CHAOS!':'💫 BONK! THAT WAS NOT THE MOVE!';
+ if(kind==='timeout')text='⏰ BABA WAITED TOO LONG. BONK!';
+ result.textContent=text;board.append(result);animateFight(correct,kind);
+ if(correct){game.fightWins++;game.perfects++;fightStreak++;
+  addScore(180+Math.min(4,fightStreak-1)*55+(run.move.type==='combo'?150:0));earn(12);
+  if(fightStreak>=3&&fightStreak%3===0){addScore(125);notify('🔥 3-MOVE CHAOS COMBO! +125')}
+  bubble(fightResponses[kind]?.[1]||'Baba: I WAS NOT EXPECTING THE RACCOON OPTION.');audio('success');
+  if(game.rage>0)game.rage--;
+  if(run.move.title==='HE ADJUSTS HIS GLASSES')clue('glasses');
+ } else{game.fightBonks++;game.misses++;fightStreak=0;game.influence.baba++;
+  bubble(['Baba: Ha! I still have it!','Mo: Both of you, the corner.','Tiny: THIS FIGHT IS RIGGED!'][run.index%3]);audio('oops');}
+ fightComposure();save();
+ const next=()=>{if(phase!=='fight'||fightRun!==run)return;if(paused){setTimeout(next,120);return}startFightBeat(run.index+1)};
+ setTimeout(next,740)
+}
+function fightVerdict(){hideChallenge();phase='fightVerdict';game.phase=phase;showPower(false);setCharacters('tiny','baba');
+ const wins=game.fightWins;
+ game.choices.fightOutcome=wins>=8?'tiny-champion':wins>=5?'friendly-draw':'baba-victory';
+ if(wins>=8){achievement('fight-champion','Tiny-Sized Champion');bubble('Baba: I have been defeated by someone approximately the size of my shoe. BRAVO.');addScore(400)}
+ else if(wins>=5){bubble('Baba: This was technically a draw. I would like that noted in writing.');addScore(180)}
+ else{bubble('Baba: I win! Tiny wins in spirit. Mo says we both lose.');}
+ setText('THE MOST UNNECESSARY FIGHT EVER','Tiny landed '+wins+' of '+fightMoves.length+' moves. Baba delivered '+game.fightBonks+' cartoon bonks. The official referee (Savvy) has resigned.','STAGE 5 • UNOFFICIAL VERDICT');
+ choices([['ACCEPT THE VERY QUESTIONABLE RESULT ▸',stage5End,'gold']]);save()
+}
+function stage5End(){hideChallenge();phase='stage5End';game.phase=phase;game.completed=[...new Set([...game.completed,5])];
+ game.stageResults[5]={score:game.score,success:game.fightWins,bonks:game.fightBonks,combos:game.fightCombos,outcome:game.choices.fightOutcome};
+ setCharacters('tiny','baba');mark('🚨');achievement('baba-bout','The Great Baba Bonkening');
+ bubble('Noosh: I WAS GONE FOR FIVE MINUTES. Why does the station have a boxing ring?!');
+ setText('STAGE 5 COMPLETE','The shouting has summoned Noosh. Baba looks proud. Tiny looks suspiciously innocent. Nobody has cleaned the throne.','NEXT STAGE • THE ULTIMATE COVER-UP');
+ toStorage(CHECKPOINT,{...game,stage:6,phase:'coverupTeaser'});save();
+ choices([['STAGE 6: HIDE THE EVIDENCE ▸',startStage6,'gold']])
+}
+
+
+// Stage 6: The Ultimate Cover-Up. Story never game-overs and no online writes occur.
+// Stage 6: each run hides evidence in different pieces of room furniture.
+const coverEvidence=[
+ {id:'raccoon-fur',icon:'🦝',label:'Raccoon fur',short:'FUR'},
+ {id:'train-keys',icon:'🔑',label:'Train keys',short:'KEYS'},
+ {id:'boxing-gloves',icon:'🥊',label:'Boxing gloves',short:'GLOVES'},
+ {id:'sealed-order',icon:'✉️',label:'Sealed letter',short:'LETTER',clue:true}
+];
+// Item coordinates are scattered in the throne room, not in labeled hotspots.
+// A subset is chosen per run; every location is a plausible hiding place.
+const coverClueSlots=[
+ [17,67,-12],[27,49,8],[34,79,17],[61,72,-15],[73,62,9],[83,45,-13],
+ [32,25,4],[69,29,-8],[58,85,12],[18,32,-18],[78,82,9],[42,22,13]
+];
+const throneStainSlots=[
+ {id:'throne-stain',icon:'💦',label:'Throne drool',x:44,y:57},
+ {id:'raccoon-prints',icon:'🐾',label:'Muddy paw prints',x:52,y:71},
+ {id:'mop-stain',icon:'💧',label:'Sticky stain',x:54,y:44}
+];
+const throneRoomDecor=[
+ {kind:'curtain',x:1,y:10,w:12,h:74,content:''},{kind:'curtain right',x:87,y:10,w:12,h:74,content:''},
+ {kind:'frame',x:23,y:19,w:10,h:18,content:'🖼️'},{kind:'frame',x:67,y:19,w:10,h:18,content:'🌻'},
+ {kind:'table',x:20,y:65,w:14,h:22,content:'🫙'},{kind:'table',x:67,y:65,w:14,h:22,content:'🏺'},
+ {kind:'rug',x:27,y:84,w:46,h:18,content:''},{kind:'crate',x:79,y:76,w:11,h:17,content:'📦'},
+ {kind:'cushion',x:34,y:72,w:8,h:15,content:''},{kind:'garland',x:36,y:16,w:28,h:12,content:'✦  ✧  ✦'}
+];
+
+const coverDialogue=[
+ ['Noosh','I was gone for FIVE MINUTES.','noosh'],
+ ['Tiny','And you are welcome back!','tiny'],
+ ['Baba','I supervised. Extremely enthusiastically.','baba'],
+ ['Mo','I gave her a corner. She escaped it.','mo'],
+ ['Devi','I did save the train, for the record.','devi'],
+ ['Savvy','*A sigh so deep it becomes paperwork.*','savvy'],
+ ['Noosh','WHY IS THERE A TRAIN OUTSIDE THE THRONE ROOM?','noosh']
+];
+function startStage6(){
+ hideChallenge();beginScene(6);phase='coverupIntro';game.phase=phase;
+ game.coverupHidden=0;game.coverupMissed=0;game.coverupDecoys=0;game.coverupTrust=0;
+ game.choices.coverupAnswers=[];game.choices.coverupFileFound=false;
+ setCharacters('tiny','mo');bubble('Mo: You have ONE CHANCE to clean this up.');
+ setText('The Ultimate Cover-Up','Noosh is returning! Find the raccoon fur, train keys, boxing gloves, and sealed letter. Hide them, then clean the throne.','STAGE 6 • THE FINAL DISASTER');
+ choices([['START THE EMERGENCY CLEANUP ▸',coverupPlan,'gold']]);save()
+}
+function coverupPlan(){
+ phase='coverupChoice';game.phase=phase;showPower(true);setCharacters('tiny','mo');
+ bubble('Baba: I can distract him! This seems like a terrific plan.');
+ setText('Choose your cover story crew','Find these four evidence items: 🦝 fur, 🔑 train keys, 🥊 boxing gloves, ✉️ sealed letter. Tap each one to hide it. The trophy is innocent! Spray and scrub the throne stains.','OPERATION: HIDE THE EVIDENCE');
+ choices([
+ ['MO, ORGANIZE THE CLEANUP',()=>startCleanup('mo'),'gold'],
+ ['BABA, DISTRACT NOOSH',()=>startCleanup('baba')],
+ ['CAT, CAUSE MORE CHAOS',()=>startCleanup('cat')]
+ ]);save()
+}
+function buildCleanupRoom(){
+ const slots=mixDeck(coverClueSlots).slice(0,5);
+ const objects=mixDeck([...coverEvidence.map(e=>({...e,kind:'evidence'})),{id:'trophy',icon:'🏆',label:'Noosh trophy',kind:'decoy'}])
+   .map((item,i)=>({...item,x:slots[i][0],y:slots[i][1],tilt:slots[i][2],done:false,found:true}));
+ const stains=throneStainSlots.map(item=>({...item,kind:'stain',done:false,sprayed:false,progress:0}));
+ return [...objects,...stains];
+}
+function startCleanup(plan){
+ hideChallenge();phase='cleanup';game.phase=phase;game.stage=6;
+ game.choices.coverupPlan=plan;setCharacters('tiny',plan==='cat'?'catalyst':plan==='baba'?'baba':'mo');showPower(true);
+ if(plan==='mo')game.influence.mo+=3;else if(plan==='baba')game.influence.baba+=3;else game.influence.catalyst+=3;
+ const board=$('cleanupBoard');board.classList.remove('hidden');const objects=buildCleanupRoom();
+ const total=plan==='mo'?108000:plan==='baba'?102000:98000;
+ const run={id:++cleanupRunId,objects,until:performance.now()+total,last:performance.now(),duration:total,finished:false,alerted:false,mode:'look',nextHintAt:0};
+ cleanupRun=run;
+ board.innerHTML='<div class="cleanup-top"><span>🔎 <strong id="cleanupEvidence">0/4</strong> CLUES</span>'+
+ '<span>🧴 <strong id="cleanupStains">0/3</strong> STAINS</span>'+
+ '<span>👣 <strong class="cleanup-clock" id="cleanupClock">108.0</strong></span></div>'+
+ '<div class="cleanup-progress"><i id="cleanupProgress"></i></div>'+
+ '<div class="evidence-inventory" id="evidenceInventory" aria-label="Evidence to find: raccoon fur, train keys, boxing gloves, sealed letter">'+
+ coverEvidence.map(e=>'<span class="evidence-target" id="evidence-'+e.id+'">'+e.icon+' '+e.short+'</span>').join('')+'</div>';
+ for(const decor of throneRoomDecor){
+  const el=document.createElement('div');el.className='throne-search-prop '+decor.kind;
+  el.style.left=decor.x+'%';el.style.top=decor.y+'%';el.style.width=decor.w+'%';el.style.height=decor.h+'%';
+  el.textContent=decor.content;el.setAttribute('aria-hidden','true');board.append(el);
+ }
+ for(const item of objects){
+  const btn=document.createElement('button');btn.type='button';btn.style.left=item.x+'%';btn.style.top=item.y+'%';
+  if(item.kind==='stain'){
+   btn.className='throne-stain';btn.setAttribute('aria-label',item.label+' on throne, spray and scrub');
+   btn.innerHTML='<span class="smear">'+item.icon+'</span><span class="foam">🫧</span>';
+   btn.addEventListener('click',()=>tapCleanupStain(item,run));
+   btn.addEventListener('pointerdown',e=>{if(run.mode==='wipe'&&item.sprayed&&!item.done){
+    e.preventDefault();item.pointerId=e.pointerId;item.lastX=e.clientX;item.lastY=e.clientY;item.dragged=false;btn.setPointerCapture?.(e.pointerId);
+   }});
+   btn.addEventListener('pointermove',e=>{if(item.pointerId!==e.pointerId||run.mode!=='wipe'||item.done||paused)return;
+    const delta=Math.hypot(e.clientX-item.lastX,e.clientY-item.lastY);item.lastX=e.clientX;item.lastY=e.clientY;
+    if(delta>2){item.dragged=true;scrubCleanupStain(item,run,Math.min(delta,35)*1.5)}
+   });
+   btn.addEventListener('pointerup',e=>{if(item.pointerId===e.pointerId){item.pointerId=undefined;item.lastX=undefined}});
+   btn.addEventListener('pointercancel',()=>{item.pointerId=undefined});
+  }else{
+   btn.className='throne-clue'+(item.kind==='decoy'?' decoy':'');
+   btn.style.setProperty('--tilt',item.tilt+'deg');
+   btn.setAttribute('aria-label',item.kind==='decoy'?'Noosh trophy. Leave this object alone.':'Find and hide '+item.label);
+   btn.innerHTML='<span class="glyph">'+item.icon+'</span>';
+   btn.addEventListener('click',()=>hideCoverItem(item,run));
+  }
+  board.append(btn);item.el=btn;
+ }
+ setText('FIND FOUR PIECES OF EVIDENCE','🦝 Fur, 🔑 train keys, 🥊 boxing gloves, ✉️ sealed letter. Tap each to hide it. Use HINT for a nudge. Then SPRAY and WIPE the throne stains.','NOOSH IS COMING BACK • 7 TASKS');
+ cleanupTools(run);notify('🔎 Look for the four items listed above the throne!',2400);
+ interact={
+  extend:()=>{if(cleanupRun!==run)return;run.until+=8000;notify('🥺 Noosh is distracted! +8 seconds')},
+  auto:()=>{const target=run.objects.find(o=>!o.done&&o.kind==='evidence')||run.objects.find(o=>!o.done&&o.kind==='stain');
+   if(target){hideCoverItem(target,run,true);notify('🦝 A raccoon quietly hid one piece of evidence.')}}
+ };
+ function frame(now){
+  if(phase!=='cleanup'||cleanupRun!==run||run.finished)return;
+  if(paused){const shift=Math.max(0,now-run.last);run.until+=shift;run.last=now;activeFrame=requestAnimationFrame(frame);return}
+  run.last=now;const remaining=Math.max(0,run.until-now);
+  if($('cleanupClock'))$('cleanupClock').textContent=Math.ceil(remaining/1000)+'s';
+  if($('cleanupProgress'))$('cleanupProgress').style.width=Math.min(100,remaining/run.duration*100)+'%';
+  if(remaining<14000&&!run.alerted){run.alerted=true;notify('👣 Noosh’s footsteps are getting closer!');audio('alarm')}
+  if(remaining<=0||run.objects.every(o=>o.done||o.kind==='decoy')){cleanupVerdict(run);return}
+  activeFrame=requestAnimationFrame(frame)
+ }
+ activeFrame=requestAnimationFrame(frame);save()
+}
+function cleanupTools(run){
+ choices([['💡 HINT',()=>hintCleanupClue(run),'gold'],
+          ['🧴 SPRAY',()=>setCleanupTool('spray')],
+          ['🧽 WIPE',()=>setCleanupTool('wipe')]]);
+ setCleanupTool(run.mode);
+}
+function hintCleanupClue(run){
+ if(phase!=='cleanup'||cleanupRun!==run||run.finished||paused)return;
+ const target=run.objects.find(o=>o.kind==='evidence'&&!o.done);
+ if(!target){notify('✅ All four objects found! Clean the stains next.');return}
+ const now=performance.now();
+ if(now<run.nextHintAt){notify('✨ Hint cooling down. Keep scanning the throne room!');return}
+ run.nextHintAt=now+9000;
+ target.el.classList.add('hint');
+ const area=target.x<36?'left side':target.x>65?'right side':'centre of the room';
+ notify('✨ Check the '+area+' for something suspicious!',2400);
+ setTimeout(()=>target.el?.classList.remove('hint'),2300);
+}
+function setCleanupTool(mode){
+ const run=cleanupRun;if(phase!=='cleanup'||!run||paused)return;
+ run.mode=mode;
+ [...$('controls').children].forEach((btn,i)=>btn.classList.toggle('tool-selected',i>0&&['look','spray','wipe'][i]===mode));
+}
+function scrubCleanupStain(item,run,amount){
+ if(phase!=='cleanup'||paused||cleanupRun!==run||run.finished||item.done||!item.sprayed||run.mode!=='wipe')return;
+ item.progress=Math.min(100,item.progress+amount);
+ item.el.style.opacity=String(Math.max(.2,1-item.progress*.007));
+ if(item.progress>=100)hideCoverItem(item,run)
+}
+function tapCleanupStain(item,run){
+ if(phase!=='cleanup'||paused||cleanupRun!==run||run.finished||item.done)return;
+ if(!item.sprayed){
+  if(run.mode!=='spray'){setCleanupTool('spray');notify('🧴 Spray selected. Tap the stain again.');return}
+  item.sprayed=true;item.el.classList.add('foamy');
+  audio('sneak');notify('🫧 Now select WIPE and scrub with your finger!');setCleanupTool('wipe');return
+ }
+ if(run.mode!=='wipe'){setCleanupTool('wipe');notify('🧽 WIPE selected. Rub the stain clean!');return}
+ if(item.dragged){item.dragged=false;return} // touch release can synthesize a click
+ scrubCleanupStain(item,run,35); // accessible tap alternative, three taps
+}
+function hideCoverItem(item,run,assisted=false){
+ if(phase!=='cleanup'||paused||cleanupRun!==run||run.finished||item.done)return;
+ if(item.kind==='decoy'){
+  item.done=true;game.coverupDecoys++;game.misses++;game.coverupTrust--;
+  item.el?.classList.add('cleared');notify('🏆 THAT WAS NOOSH’S TROPHY!');audio('oops');mark('🏆');save();return
+ }
+ if(item.kind==='stain'&&!assisted&&item.progress<100)return;
+ item.done=true;item.el?.classList.add('cleared');game.coverupHidden++;addScore(100+(assisted?0:65));earn(7);audio('success');
+ const found=run.objects.filter(o=>o.done&&o.kind==='evidence').length;
+ const clean=run.objects.filter(o=>o.done&&o.kind==='stain').length;
+ if($('cleanupEvidence'))$('cleanupEvidence').textContent=found+'/4';
+ if(item.kind==='evidence'){
+  const target=$('evidence-'+item.id);if(target){target.classList.add('found');target.textContent='✓ '+item.short;target.setAttribute('aria-label','Hidden: '+item.label)}
+  const pop=document.createElement('span');pop.className='evidence-found-pop';pop.textContent='✓ FOUND: '+item.label.toUpperCase();
+  pop.style.left=Math.min(70,item.x)+'%';pop.style.top=item.y+'%';$('cleanupBoard').append(pop);setTimeout(()=>pop.remove(),1250);
+ }
+ if($('cleanupStains'))$('cleanupStains').textContent=clean+'/3';
+ if(item.clue){game.choices.coverupFileFound=true;clue('sealed-order');notify('✉️ A classified envelope! This belongs in the archives.')}
+ else if(item.id==='train-keys')notify('🔑 Train keys hidden. Devi would be relieved.');
+ else if(item.kind==='stain')notify('✨ The throne is looking spotless!');
+ else notify('🧺 Evidence tucked safely away!');
+ save()
+}
+
+function cleanupVerdict(run){
+ if(phase!=='cleanup'||cleanupRun!==run||run.finished)return;
+ run.finished=true;const remaining=run.objects.filter(o=>!o.done&&(o.kind==='evidence'||o.kind==='stain'));
+ game.coverupMissed=remaining.length;game.choices.coverupScore=game.coverupHidden;
+ if(!remaining.length){achievement('perfect-cleanup','No Evidence, No Regrets');game.coverupTrust+=2;addScore(400)}
+ else{game.coverupTrust-=Math.min(3,remaining.length);game.misses+=Math.min(3,remaining.length)}
+ hideChallenge();phase='cleanupVerdict';game.phase=phase;showPower(false);setCharacters('tiny','noosh');
+ bubble(remaining.length?'Noosh: I CAN LITERALLY SEE THE EVIDENCE.':'Noosh: ...Why does everything smell like cleaning spray?');
+ setText('NOOSH HAS RETURNED',(remaining.length?'Noosh: I CAN LITERALLY SEE THE EVIDENCE. ':'Noosh: Why does everything smell like cleaning spray? ')+'You cleared '+game.coverupHidden+' of 7.','EVIDENCE REPORT');
+ choices([['FACE NOOSH’S QUESTIONS ▸',startInterrogation,'gold']]);save()
+}
+const questions=[
+ {ask:'NOOSH: Why is the throne wet?',
+  options:[
+   {label:'I WAS POLISHING IT',delta:1,score:110,answer:'Noosh: With your TONGUE?'},
+   {label:'BABA MADE ME DO IT',delta:-1,baba:2,score:170,answer:'Baba: I DID ENCOURAGE THAT.'},
+   {label:'THE RACCOONS DID IT',delta:-2,cat:1,score:190,answer:'Savvy: *An enormous sigh.*'}
+  ]},
+ {ask:'NOOSH: Who authorized the train ride?',
+  options:[
+   {label:'DEVI KEPT US SAFE',delta:2,devi:2,score:120,answer:'Devi: I did my best. I really did.'},
+   {label:'IT WAS A TRANSPORT UPGRADE',delta:0,score:160,answer:'Noosh: IT LEFT THE STATION.'},
+   {label:'THE KEY-CARRYING RACCOON',delta:-1,cat:2,score:200,answer:'Cat: Sounds like one of my cousins.'}
+  ]},
+ {ask:'NOOSH: And the BOXING RING?',
+  options:[
+   {label:'TEAM-BUILDING EXERCISE',delta:1,score:120,answer:'Mo: I DID NOT APPROVE THE TEAM BUILDING.'},
+   {label:'BABA ISSUED A CHALLENGE',delta:-1,baba:2,score:160,answer:'Baba: SHE ANSWERED GLORIOUSLY.'},
+   {label:'EVERYONE NEEDED ENTERTAINMENT',delta:-1,score:220,answer:'Noosh: I NEEDED FIVE MINUTES OF PEACE.'}
+  ]}
+];
+function startInterrogation(){
+ hideChallenge();phase='interrogation';game.phase=phase;showPower(true);setCharacters('tiny','noosh');
+ bubble('Noosh: SIT. ALL OF YOU. I AM NOT LEAVING UNTIL I HAVE ANSWERS.');
+ setText('The Great UTW Interrogation','Noosh: SIT. ALL OF YOU. I AM NOT LEAVING UNTIL I HAVE ANSWERS.','THREE QUESTIONS • UNTIL NOOSH IS SATISFIED');
+ choices([['LET THE QUESTIONING BEGIN ▸',()=>askQuestion(0),'gold']]);save()
+}
+function askQuestion(index){
+ if(index>=questions.length){finalDefense();return}
+ phase='interrogation';game.phase=phase;showPower(true);
+ const question=questions[index];setCharacters('tiny','noosh');
+ bubble(question.ask);setText('Noosh’s Interrogation',question.ask,'QUESTION '+(index+1)+' / '+questions.length+' • NO TIME LIMIT');
+ choices(question.options.map((option,j)=>[option.label,()=>answerQuestion(index,j),j===0?'gold':'']));save()
+}
+function answerQuestion(index,j){
+ if(phase!=='interrogation'||index!==(game.choices.coverupAnswers||[]).length)return;
+ const opt=questions[index]?.options[j];if(!opt)return;
+ game.coverupTrust+=opt.delta;game.influence.baba+=(opt.baba||0);game.influence.devi+=(opt.devi||0);game.influence.catalyst+=(opt.cat||0);
+ game.choices.coverupAnswers.push(j);addScore(opt.score);bubble(opt.answer);
+ if(opt.delta>0)earn(8);
+ setText('THE OFFICIAL RESPONSE',opt.answer,'NOOSH IS TAKING NOTES');save();
+ choices([['NEXT QUESTION ▸',()=>askQuestion(index+1),'gold']])
+}
+function finalDefense(){
+ phase='finalDefense';game.phase=phase;showPower(false);setCharacters('tiny','noosh');
+ bubble('Noosh: ONE FINAL QUESTION. WHAT DO YOU HAVE TO SAY FOR YOURSELF?');
+ setText('Tiny’s Final Defense','Noosh: ONE FINAL QUESTION. WHAT DO YOU HAVE TO SAY FOR YOURSELF?','YOUR LAST CHANCE');
+ const options=[
+ ['I SHOULD RUN THIS PLACE',()=>resolveEnding('crown'),'gold'],
+ ['BABA MADE ME DO IT',()=>resolveEnding('baba')],
+ ['PLEASE FORGIVE ME, NOOSH',()=>resolveEnding('puppy')],
+ ['LET THE RACCOONS TESTIFY',()=>resolveEnding('raccoons')]
+ ];
+ if(archive.clues.includes('royal-crest')&&archive.clues.includes('raccoon-key')&&archive.clues.includes('glasses')&&game.choices.coverupFileFound){
+  options.push(['🔒 OPEN THE CLASSIFIED FILE',()=>resolveEnding('classified')]);
+ }
+ choices(options);save()
+}
+function chooseEnding(defense){
+ const secretReady=archive.clues.includes('royal-crest')&&archive.clues.includes('raccoon-key')&&archive.clues.includes('glasses')&&game.choices.coverupFileFound;
+ if(defense==='classified'&&secretReady)return 'classified';
+ const candidates={
+  queen:(game.score>=5300?4:0)+(game.coverupHidden>=6?1:0)+(defense==='crown'?9:0),
+  baba:(game.influence.baba>=5?3:0)+(game.choices.coverupAnswers||[]).filter(n=>n===1).length+(defense==='baba'?9:0),
+  noosh:(game.coverupTrust>=2?4:0)+(game.coverupHidden>=5?2:0)+(defense==='puppy'?9:0),
+  raccoons:(game.raccoonsEscaped>=5?4:0)+(game.choices.raccoonPlan==='cat'?2:0)+(defense==='raccoons'?9:0)
+ };
+ return Object.keys(candidates).sort((a,b)=>candidates[b]-candidates[a])[0]
+}
+const endingText={
+ queen:{title:'THE CHAOS QUEEN',icon:'👑',summary:'Tiny is officially put in charge of headquarters. Noosh has requested indefinite leave. Baba wants a parade.'},
+ baba:{title:'IT WAS BABA',icon:'🥊',summary:'Baba takes the blame and announces he regrets absolutely nothing. Tiny receives a gold star for strategic delegation.'},
+ noosh:{title:'NOOSH’S FAVOURITE MENACE',icon:'❤️',summary:'Noosh sighs, accepts the apology, and hands Tiny a cleaning cloth. He remains the voice of reason. Barely.'},
+ raccoons:{title:'THE RACCOON UPRISING',icon:'🦝',summary:'The raccoons claim the palace, Cat accepts his new duties, and Noosh files an official complaint against wildlife.'},
+ classified:{title:'OPERATION: FIVE MINUTES',icon:'🔒',summary:'The classified file reveals a supervision drill nobody was meant to discover. Tiny has turned the investigation upside down. Noosh would like the file back.'}
+};
+function resolveEnding(defense){
+ if(phase!=='finalDefense')return;
+ const id=chooseEnding(defense),end=endingText[id];game.choices.finalDefense=defense;game.choices.endingId=id;game.endingId=id;
+ game.completed=[...new Set([...game.completed,6])];game.stageResults[6]={score:game.score,hidden:game.coverupHidden,missed:game.coverupMissed,trust:game.coverupTrust,defense,ending:id};
+ if(!Array.isArray(archive.endings))archive.endings=[];if(!archive.endings.includes(id))archive.endings.push(id);
+ saveArchive();achievement('finished-story','Five Minutes, Six Disasters');
+ if(id==='classified')achievement('classified-ending','Officially Unsupervisable');
+ phase='storyComplete';game.phase=phase;toStorage(CHECKPOINT,{...game,stage:6,phase:'storyComplete'});save();
+ hideChallenge();showPower(false);setCharacters('tiny',id==='raccoons'?'catalyst':id==='baba'?'baba':'noosh');
+ bubble(id==='classified'?'Noosh: THAT FILE WAS CLASSIFIED.':id==='baba'?'Baba: I REGRET NOTHING.':id==='raccoons'?'Cat: Guess the raccoons run things now.':'Noosh: I am never taking five minutes off again.');
+ setText(end.icon+' '+end.title,end.summary,'STAGE 6 COMPLETE • ENDING UNLOCKED');
+ choices([['VIEW YOUR UTW INCIDENT REPORT ▸',finishPrototype,'gold']]);mark(end.icon)
+}
+
+function finishPrototype(){
+ hideChallenge();phase='result';currentModal='result';$('gameplay').classList.add('hidden');
+ const id=game.endingId||game.choices?.endingId||'noosh',end=endingText[id]||endingText.noosh;
+ const unlocked=archive.endings||[];const total=game.score.toLocaleString();
+ const known=[['queen','The Chaos Queen'],['baba','It Was Baba'],['noosh','Noosh’s Favourite Menace'],['raccoons','The Raccoon Uprising'],['classified','??? CLASSIFIED ???']];
+ const gallery=known.map(([k,label])=>unlocked.includes(k)?'✓ '+(k==='classified'?'Operation: Five Minutes':label):'🔒 '+(k==='classified'?'???':label)).join(' · ');
+ showModal('<div class="modal-kicker">UTW CHAOS ARCADE • SIX STAGES COMPLETE</div>'+
+ '<h1>'+end.icon+' '+end.title+'</h1><p>'+end.summary+'</p>'+
+ '<div class="stats"><div class="statbox"><b>'+total+'</b><small>CHAOS POINTS</small></div>'+
+ '<div class="statbox"><b>'+game.misses+'</b><small>INCIDENTS</small></div>'+
+ '<div class="statbox"><b>'+game.coverupHidden+'/7</b><small>EVIDENCE HIDDEN</small></div></div>'+
+ '<p><b>Noosh’s report:</b> '+game.fightBonks+' Baba bonks, '+game.raccoonsEscaped+' runaway raccoons, '+game.trainHits+' train rescues. The case is not closed.</p>'+
+ '<p><b>ENDINGS '+unlocked.length+'/5:</b> '+gallery+'</p>'+
+ '<div class="row"><button class="btn gold" id="againBtn">REPLAY YOUR POOR DECISIONS</button><button class="btn alt" id="archiveBtn">INCIDENT ARCHIVES</button><button class="btn alt" id="menuBtn">MENU</button></div>'+
+ '<p class="tooltip">Unlocked endings and discovered clues remain in your archive. Endless Chaos and shared leaderboards are future updates.</p>');
+ $('againBtn').onclick=()=>startNew();$('archiveBtn').onclick=()=>showArchive();$('menuBtn').onclick=()=>menu()
+}
+function usePower(which){if(paused||!['sneak','lick','throneChoice','buttonChoice','panic','dodge','approach','raccoonChoice','raccoons','trainChoice','train','trainPanic','fightChoice','fight','cleanup','interrogation'].includes(phase))return;const cost={puppy:30,raccoon:60,nuggie:100}[which];if(game.energy<cost)return;game.energy-=cost;if(which==='puppy'){if(phase==='panic'||phase==='dodge'||phase==='raccoons'||phase==='train'||phase==='trainPanic'||phase==='fight'||phase==='cleanup')interact?.extend?.();else{game.shield++;notify('🥺 One mistake will be forgiven.')}}if(which==='raccoon'){if(phase==='raccoons'||phase==='train'||phase==='fight'||phase==='cleanup')interact?.auto?.();else game.autoClear++;notify('🦝 Raccoon Army activated!');mark('🦝')}if(which==='nuggie'){game.rage=4;notify('🍗 DINO NUGGIE RAGE! Next three successes earn double points!');mark('🔥')}audio('power');ui();save()}
+function showModal(html){$('modalBody').innerHTML=html;$('modal').classList.remove('hidden');$('gameplay').classList.add('hidden')}
+function hideModal(){$('modal').classList.add('hidden');$('gameplay').classList.remove('hidden');ui()}
+function menu(){phase='menu';currentModal='menu';hideChallenge();$('gameplay').classList.add('hidden');const hasSave=Boolean(fromStorage(SAVE,null)?.completed?.includes(1));showModal(`<div class="modal-kicker">UTW CHAOS ARCADE PRESENTS</div><h1>🎀 TINY:<br>LEFT UNSUPERVISED</h1><p>One Tiny. Zero supervision. Everybody suffers.</p><p>🥊 A story-driven cartoon chaos game. <b>The full SIX-stage story is playable. Four endings and a hidden fifth await.</b></p><div class="row"><button class="btn gold" id="newBtn">START THE CHAOS</button>${hasSave?'<button class="btn" id="resumeBtn">RESUME POOR DECISIONS</button>':''}</div><div class="row"><button class="btn alt" id="archiveBtn">NOOSH’S ARCHIVES</button><button class="btn alt" id="settingsBtn">SOUND SETTINGS</button></div><p class="tooltip">Landscape mobile · Fullscreen · Keyboard controls · Autosave after stages<br>Prototype uses lightweight placeholder chibi portraits inspired by your references. Final detailed sprites come next.</p><p class="tooltip">This prototype uses local scores only. No UTW login or private member data required.</p>`);$('newBtn').onclick=()=>startNew();if($('resumeBtn'))$('resumeBtn').onclick=()=>resume();$('archiveBtn').onclick=()=>showArchive();$('settingsBtn').onclick=()=>settings()}
+function startNew(){hideChallenge();game=blank();paused=false;try{localStorage.removeItem(CHECKPOINT)}catch{}unlockAudio();hideModal();opening()}
+function resume(){const saved=fromStorage(SAVE,null);if(!saved||saved.version!==1||!saved.completed?.includes(1)){menu();return}unlockAudio();const checkpoint=fromStorage(CHECKPOINT,null);game={...blank(),...(checkpoint?.version===1?checkpoint:saved)};game.evidence={...blank().evidence,...game.evidence};game.influence={...blank().influence,...game.influence};hideModal();if(game.completed?.includes(6)){beginScene(6);finishPrototype();return}if(game.completed?.includes(5)){startStage6();notify('✅ Resumed from Stage 6 checkpoint');return}if(game.completed?.includes(4)){startStage5();notify('✅ Resumed from Stage 5 checkpoint');return}if(game.completed?.includes(3)){startStage4();notify('✅ Resumed from Stage 4 checkpoint');return}if(game.completed?.includes(2)){startStage3();notify('✅ Resumed from Stage 3 checkpoint');return}startStage2();notify('✅ Resumed at the last stage checkpoint')}
+function showArchive(){
+ currentModal='archive';
+ const names={ghost:'Suspiciously Sneaky',throne:'Throne Inspector',cleanup:'Janitorial Staff',unsupervised:'Five Minutes Unsupervised',button:'Definitely Should Not Have Pressed It',dodge:'The Uncatchable Menace',flawless:'Absolutely No Regrets','raccoon-wrangler':'Certified Raccoon Wrangler','raccoon-incident':'The Great Raccoon Incident','baba-bout':'The Great Baba Bonkening','fight-champion':'Tiny-Sized Champion','train-incident':'The Unlicensed Express','perfect-conductor':'Zero Accidents, Many Questions','perfect-cleanup':'No Evidence, No Regrets','finished-story':'Five Minutes, Six Disasters','classified-ending':'Officially Unsupervisable'};
+ const achievements=(archive.achievements||[]).map(id=>names[id]||id);
+ const endings=archive.endings||[],known=[['queen','The Chaos Queen'],['baba','It Was Baba'],['noosh','Noosh’s Favourite Menace'],['raccoons','The Raccoon Uprising'],['classified','???']];
+ const gallery=known.map(([id,label])=>(endings.includes(id)?'✅ ':'🔒 ')+(id==='classified'&&!endings.includes(id)?'???':id==='classified'?'Operation: Five Minutes':label)).join('<br>');
+ const clues=(archive.clues||[]).map(id=>({'royal-crest':'Strange Royal Crest','raccoon-key':'The Raccoon’s Paw-Print Key',glasses:'Something Odd About Baba’s Glasses','sealed-order':'Classified Envelope'})[id]||id);
+ showModal('<div class="modal-kicker">OFFICIAL UTW RECORDS</div><h2>📋 NOOSH’S INCIDENT ARCHIVES</h2>'+
+ '<p>Noosh insists this is a disciplinary file. Tiny calls it a trophy cabinet.</p>'+
+ '<div class="archive-grid"><div class="archive-item"><b>🏁 Endings '+endings.length+'/5</b><br>'+gallery+'</div>'+
+ '<div class="archive-item"><b>🏆 Achievements</b><br>'+(achievements.length?achievements.map(x=>'• '+x).join('<br>'):'None yet.')+'</div>'+
+ '<div class="archive-item"><b>🔎 Secret Clues</b><br>'+(clues.length?clues.map(x=>'• '+x).join('<br>'):'No evidence discovered.')+'</div></div>'+
+ '<p class="tooltip">Clues and endings survive a fresh playthrough. Your secret ending remains classified until discovered.</p><button class="btn gold" id="archiveBack">BACK</button>');
+ $('archiveBack').onclick=()=>phase==='result'?finishPrototype():menu()
+}
+function settings(){currentModal='settings';showModal(`<div class="modal-kicker">AUDIO CONTROL</div><h2>🎵 Sound Settings</h2><p>Original simple arcade music and playful sound effects.</p><label class="volume-label">Music <input type="range" id="musicVolume" min="0" max="100" value="${Math.round(musicVolume*100)}"></label><label class="volume-label">Effects <input type="range" id="fxVolume" min="0" max="100" value="${Math.round(fxVolume*100)}"></label><button class="btn" id="muteBtn">${soundOn?'MUTE AUDIO':'UNMUTE AUDIO'}</button><button class="btn gold" id="settingsBack">BACK</button>`);$('musicVolume').oninput=e=>musicVolume=+e.target.value/100;$('fxVolume').oninput=e=>fxVolume=+e.target.value/100;$('muteBtn').onclick=()=>{soundOn=!soundOn;toggleMusic();settings()};$('settingsBack').onclick=()=>paused?pauseMenu():menu()}
+function pauseMenu(){if(phase==='menu'||phase==='result')return;paused=true;if(phase!=='raccoons'&&phase!=='train'&&phase!=='fight'&&phase!=='cleanup')hideChallenge();currentModal='pause';showModal(`<div class="modal-kicker">OFFICIAL MAYHEM BREAK</div><h2>⏸ TINY IS TEMPORARILY SUPERVISED</h2><p>Even chaos goblins need water breaks.</p><button class="btn gold" id="backToGame">RESUME</button><button class="btn" id="soundSettings">SOUND SETTINGS</button><button class="btn alt" id="returnMenu">QUIT TO MENU</button>`);$('backToGame').onclick=()=>{paused=false;hideModal();recoverPhase()};$('soundSettings').onclick=()=>settings();$('returnMenu').onclick=()=>{paused=false;save();menu()}}
+function recoverPhase(){// Restart an interrupted micro-challenge instead of restoring a stale timer.
+ if(phase==='raccoons'||phase==='train'||phase==='fight'||phase==='cleanup')ui();else if(phase==='trainPanic')trainPanic();else if(phase==='sneak')sneakRound(round);else if(phase==='lick')startLick(game.choices.lick||'direct');else if(phase==='panic')panicChoice();else if(phase==='dodge')startDodge(round);else ui()}
+$('pauseBtn').onclick=pauseMenu;$('soundBtn').onclick=()=>{if(phase==='menu'){settings()}else{soundOn=!soundOn;toggleMusic();notify(soundOn?'🎵 Sound on':'🔇 Muted')}};
+$('fullBtn').onclick=async()=>{try{if(!document.fullscreenElement){await $('screen').requestFullscreen?.()}else await document.exitFullscreen?.()}catch{notify('Use your browser fullscreen option if available.')}};
+$('puppy').onclick=()=>usePower('puppy');$('raccoon').onclick=()=>usePower('raccoon');$('nuggie').onclick=()=>usePower('nuggie');
+let sx=0,sy=0;const scr=$('screen');scr.addEventListener('touchstart',e=>{if(e.touches.length){sx=e.touches[0].clientX;sy=e.touches[0].clientY}},{passive:true});scr.addEventListener('touchend',e=>{if(!e.changedTouches.length)return;const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;if(phase==='raccoons'&&Math.abs(dx)>48&&Math.abs(dx)>Math.abs(dy))raccoonSweep(dx<0?'left':'right');else if(phase==='train'){if(Math.abs(dx)>42&&Math.abs(dx)>Math.abs(dy))chooseTrainLane(clamp((trainRun?.lane||0)+(dx<0?-1:1),0,2));else if(dy>40)duckTrain()}else if(phase==='dodge'){if(Math.abs(dx)>35&&Math.abs(dx)>Math.abs(dy))resolveDodge(dx<0?'LEFT':'RIGHT');else if(dy>35)resolveDodge('DUCK')}},{passive:true});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('modal').classList.contains('hidden'))pauseMenu();return}if(!$('modal').classList.contains('hidden'))return;if(phase==='fight'){if(e.key.toLowerCase()==='j'||e.key==='ArrowLeft')fightAction('punch');if(e.key.toLowerCase()==='k'||e.key==='ArrowDown')fightAction('dodge');if(e.key.toLowerCase()==='l'||e.key==='ArrowRight')fightAction('sass')}else if(phase==='train'){if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')chooseTrainLane(Math.max(0,(trainRun?.lane??1)-1));if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')chooseTrainLane(Math.min(2,(trainRun?.lane??1)+1));if(e.key==='ArrowDown'||e.key.toLowerCase()==='s')duckTrain();if(e.code==='Space'){e.preventDefault();trainBrake(true)}}else if(phase==='raccoons'){if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')raccoonSweep('left');if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')raccoonSweep('right')}else if(phase==='dodge'){if(e.key==='ArrowLeft'||e.key.toLowerCase()==='a')resolveDodge('LEFT');if(e.key==='ArrowRight'||e.key.toLowerCase()==='d')resolveDodge('RIGHT');if(e.key==='ArrowDown'||e.key.toLowerCase()==='s')resolveDodge('DUCK')}else if((e.key==='Enter'||e.code==='Space')&&$('controls').children.length===1){e.preventDefault();$('controls').firstElementChild?.click()}});
+$('trainBrake').addEventListener('pointerdown',e=>{e.preventDefault();trainBrake(true)});for(const evt of ['pointerup','pointerleave','pointercancel'])$('trainBrake').addEventListener(evt,()=>trainBrake(false));document.addEventListener('keyup',e=>{if(e.code==='Space'&&phase==='train')trainBrake(false)});
+let ctx=null,musicTimer=null,musicVolume=.21,fxVolume=.55,tick=0;
+function unlockAudio(){try{const Audio=window.AudioContext||window.webkitAudioContext;if(!ctx&&Audio)ctx=new Audio();ctx?.resume();if(!musicTimer)musicTimer=setInterval(musicBeat,260)}catch{}}
+function note(f,d=.12,v=.09,type='sine'){if(!soundOn||!ctx)return;const o=ctx.createOscillator(),g=ctx.createGain(),t=ctx.currentTime;o.type=type;o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(Math.min(.3,v),t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g).connect(ctx.destination);o.start(t);o.stop(t+d+.02)}
+function musicBeat(){if(!soundOn||!ctx||phase==='menu'||paused)return;const song=[392,523,659,587,440,523,784,659,349,440,523,392,330,392,523,587];if(tick%2===0)note(song[Math.floor(tick/2)%song.length],.16,musicVolume*.09,'triangle');tick++}
+function audio(name){if(!ctx||!soundOn)return;const base={tap:[540,800],sneak:[420,560],success:[660,880],oops:[180,130],alarm:[880,230],power:[350,700]}[name]||[500,610];note(base[0],.1,fxVolume*.15,'triangle');setTimeout(()=>note(base[1],.14,fxVolume*.1,name==='oops'?'sawtooth':'sine'),90)}
+function toggleMusic(){if(soundOn)unlockAudio()}
+// Compact, original chibi vector sprites. Distinctive details match the supplied references.
+function polishedStageOneCharacter(name){return name==='tiny'?"<svg class=\"detail-sprite tiny-detail\" viewBox=\"0 0 300 400\" role=\"img\" aria-label=\"Tiny, detailed chibi\" xmlns=\"http://www.w3.org/2000/svg\">\n<defs>\n<linearGradient id=\"tinyHair\" x1=\"0\" x2=\".8\" y1=\"0\" y2=\"1\"><stop stop-color=\"#190f19\"/><stop offset=\".42\" stop-color=\"#38222d\"/><stop offset=\".78\" stop-color=\"#704450\"/><stop offset=\"1\" stop-color=\"#251620\"/></linearGradient>\n<linearGradient id=\"tinySkin\" x1=\".2\" x2=\".9\" y1=\".1\" y2=\"1\"><stop stop-color=\"#ffe0c5\"/><stop offset=\".65\" stop-color=\"#f3b8a0\"/><stop offset=\"1\" stop-color=\"#da8d84\"/></linearGradient>\n<linearGradient id=\"tinyTop\" x1=\"0\" x2=\"1\" y1=\"0\" y2=\"1\"><stop stop-color=\"#4b3648\"/><stop offset=\".5\" stop-color=\"#211a29\"/><stop offset=\"1\" stop-color=\"#10111c\"/></linearGradient>\n</defs>\n<ellipse cx=\"148\" cy=\"381\" rx=\"76\" ry=\"9\" fill=\"#150c22\" opacity=\".3\"/>\n<g class=\"detail-body\">\n<g class=\"detail-hair\">\n<path d=\"M70 91Q30 116 30 182Q11 259 45 295Q34 351 84 364Q104 371 130 339Q153 381 200 362Q247 356 239 309Q270 260 244 191Q257 129 211 93Z\" fill=\"url(#tinyHair)\" stroke=\"#20131d\" stroke-width=\"7\"/>\n<path d=\"M60 172Q25 235 59 286Q37 320 72 354M90 140Q68 250 98 345M210 132Q241 239 217 326M228 183Q253 244 236 282\" fill=\"none\" stroke=\"#a57a78\" stroke-width=\"9\" opacity=\".47\" stroke-linecap=\"round\"/>\n<path d=\"M51 203Q31 249 56 290M213 216Q246 274 225 324M83 256Q67 305 91 341\" fill=\"none\" stroke=\"#21141e\" stroke-width=\"10\" stroke-linecap=\"round\"/>\n</g>\n<path d=\"M105 286L101 348L78 367Q67 376 83 382L132 382Q140 375 134 363L137 295Z\" fill=\"#15141f\" stroke=\"#514153\" stroke-width=\"5\"/>\n<path d=\"M161 288L164 351L190 365Q201 377 185 382L140 382Q133 376 139 366L140 297Z\" fill=\"#171520\" stroke=\"#514153\" stroke-width=\"5\"/>\n<path d=\"M99 333L126 336M164 329L182 334M98 349L126 352M164 346L183 350\" fill=\"none\" stroke=\"#b1a0ad\" stroke-width=\"3\"/>\n<path d=\"M83 374H129M144 374H187\" stroke=\"#ffe1e3\" stroke-width=\"4\" opacity=\".6\"/>\n<path d=\"M88 234Q56 244 60 287L82 305L103 287L126 310L147 293L165 313L199 285Q224 305 237 279Q237 244 201 238L183 222Z\" fill=\"url(#tinyTop)\" stroke=\"#120f1b\" stroke-width=\"6\"/>\n<path d=\"M98 293Q152 315 195 290L193 329Q150 352 110 330Z\" fill=\"#16141f\" stroke=\"#45384a\" stroke-width=\"5\"/>\n<path d=\"M98 319Q145 339 197 322M75 278L83 297M209 272L216 288\" fill=\"none\" stroke=\"#a18b9c\" stroke-width=\"4\" opacity=\".5\"/>\n<path d=\"M113 233Q146 259 174 234\" stroke=\"#ffe3d8\" stroke-width=\"8\" fill=\"none\" stroke-linecap=\"round\"/>\n<g class=\"detail-head\">\n<path d=\"M53 130Q24 56 99 30Q160 1 218 53Q258 97 237 162Q247 237 216 261Q189 278 183 244L188 157L60 166L67 260Q34 252 40 210Z\" fill=\"url(#tinyHair)\" stroke=\"#241620\" stroke-width=\"7\"/>\n<ellipse cx=\"141\" cy=\"155\" rx=\"87\" ry=\"94\" fill=\"url(#tinySkin)\" stroke=\"#78484a\" stroke-width=\"5\"/>\n<path d=\"M56 135Q49 67 104 44Q158 13 209 62Q230 83 233 126Q201 108 174 85Q152 113 120 98Q87 113 56 135Z\" fill=\"url(#tinyHair)\" stroke=\"#271823\" stroke-width=\"5\"/>\n<path d=\"M71 93Q99 52 140 54M165 55Q204 60 220 94\" stroke=\"#b2817f\" stroke-width=\"7\" fill=\"none\" opacity=\".55\"/>\n<g class=\"detail-eyes\">\n<path d=\"M76 153Q99 134 121 154Q101 174 76 153M160 152Q185 131 207 151Q188 174 160 152\" fill=\"#fff9f3\"/>\n<ellipse cx=\"99\" cy=\"155\" rx=\"15\" ry=\"19\" fill=\"#4e303a\"/><ellipse cx=\"183\" cy=\"155\" rx=\"15\" ry=\"19\" fill=\"#4e303a\"/>\n<ellipse cx=\"101\" cy=\"157\" rx=\"9\" ry=\"13\" fill=\"#1e1b29\"/><ellipse cx=\"182\" cy=\"157\" rx=\"9\" ry=\"13\" fill=\"#1e1b29\"/>\n<ellipse cx=\"96\" cy=\"149\" rx=\"5\" ry=\"6\" fill=\"#fff\"/><circle cx=\"110\" cy=\"162\" r=\"3\" fill=\"#fff\"/>\n<ellipse cx=\"179\" cy=\"149\" rx=\"5\" ry=\"6\" fill=\"#fff\"/><circle cx=\"194\" cy=\"162\" r=\"3\" fill=\"#fff\"/>\n<path d=\"M70 151Q97 129 122 151M156 150Q182 128 210 148\" stroke=\"#301a27\" stroke-width=\"8\" fill=\"none\" stroke-linecap=\"round\"/>\n<path d=\"M78 143L67 135M84 140L77 129M203 143L214 130M207 149L221 139\" stroke=\"#2d1c27\" stroke-width=\"4\" fill=\"none\"/>\n</g>\n<ellipse cx=\"80\" cy=\"184\" rx=\"25\" ry=\"14\" fill=\"#ef789a\" opacity=\".65\"/><ellipse cx=\"199\" cy=\"184\" rx=\"25\" ry=\"14\" fill=\"#ef789a\" opacity=\".65\"/>\n<path d=\"M135 175Q142 180 147 173\" stroke=\"#b96d71\" stroke-width=\"3\" fill=\"none\"/>\n<g class=\"detail-mouth-normal\"><path d=\"M121 199Q141 216 162 199\" fill=\"none\" stroke=\"#aa4764\" stroke-width=\"6\" stroke-linecap=\"round\"/></g>\n<g class=\"detail-mouth-gasp\"><ellipse cx=\"141\" cy=\"203\" rx=\"13\" ry=\"15\" fill=\"#9a3c59\"/><ellipse cx=\"143\" cy=\"211\" rx=\"8\" ry=\"5\" fill=\"#f5a5af\"/></g>\n<g class=\"detail-mouth-sly\"><path d=\"M125 202Q153 207 161 192\" fill=\"none\" stroke=\"#af3f5f\" stroke-width=\"6\" stroke-linecap=\"round\"/></g>\n<path d=\"M49 182Q42 173 37 183Q32 194 49 205Q65 192 58 182Q54 176 49 182Z\" fill=\"#fff0e8\" stroke=\"#efc5c4\" stroke-width=\"2\"/>\n<path d=\"M230 183Q226 173 219 183Q216 195 231 207Q248 194 240 183Q237 177 230 183Z\" fill=\"#fff0e8\" stroke=\"#efc5c4\" stroke-width=\"2\"/>\n<g class=\"detail-face-hair\"><path d=\"M56 107Q42 163 70 243Q37 233 36 188Q28 141 56 107Z\" fill=\"url(#tinyHair)\"/><path d=\"M223 104Q244 164 213 243Q249 220 247 180Q253 133 223 104Z\" fill=\"url(#tinyHair)\"/></g>\n</g>\n<g class=\"detail-bow\">\n<path d=\"M75 76Q30 30 32 78Q36 112 95 100Q130 122 143 91Q138 65 107 69Q95 31 75 76Z\" fill=\"#14121d\" stroke=\"#7d5d7c\" stroke-width=\"5\"/>\n<path d=\"M114 77Q150 23 181 44Q205 69 163 99L142 101Z\" fill=\"#1a1421\" stroke=\"#745673\" stroke-width=\"5\"/>\n<path d=\"M122 95Q111 147 81 168Q81 119 97 94Z\" fill=\"#17121e\" stroke=\"#71506f\" stroke-width=\"4\"/>\n<path d=\"M50 77Q80 63 103 81M146 82Q169 62 184 68\" stroke=\"#b494b0\" stroke-width=\"4\" fill=\"none\" opacity=\".6\"/>\n<circle cx=\"126\" cy=\"88\" r=\"16\" fill=\"#211825\" stroke=\"#8b7089\" stroke-width=\"4\"/>\n<text x=\"49\" y=\"87\" fill=\"#fff0ef\" font-family=\"cursive\" font-weight=\"700\" font-size=\"13\" transform=\"rotate(-14 49 87)\">Tiny</text>\n<path d=\"M172 82Q167 74 162 81Q158 90 173 100Q187 89 181 81Q176 74 172 82Z\" fill=\"#ffaec7\"/>\n</g>\n</g></svg>":"<svg class=\"detail-sprite noosh-detail\" viewBox=\"0 0 300 400\" role=\"img\" aria-label=\"Noosh, detailed chibi\" xmlns=\"http://www.w3.org/2000/svg\">\n<defs><radialGradient id=\"nFur\" cx=\".3\" cy=\".23\" r=\".83\"><stop stop-color=\"#fffefa\"/><stop offset=\".66\" stop-color=\"#f5f2eb\"/><stop offset=\"1\" stop-color=\"#d5cdd0\"/></radialGradient><linearGradient id=\"nCollar\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\".4\"><stop stop-color=\"#4ba89d\"/><stop offset=\".5\" stop-color=\"#69dbc2\"/><stop offset=\"1\" stop-color=\"#287e7e\"/></linearGradient><radialGradient id=\"nEye\" cx=\".3\" cy=\".25\" r=\".82\"><stop stop-color=\"#b8edf0\"/><stop offset=\".52\" stop-color=\"#74bec5\"/><stop offset=\"1\" stop-color=\"#376f83\"/></radialGradient></defs>\n<ellipse cx=\"148\" cy=\"383\" rx=\"78\" ry=\"11\" fill=\"#140d22\" opacity=\".25\"/>\n<g class=\"detail-body\">\n<path d=\"M192 263Q259 235 248 191Q243 177 232 187\" fill=\"none\" stroke=\"#f4efec\" stroke-width=\"25\" stroke-linecap=\"round\"/>\n<path d=\"M73 226Q41 260 65 323L78 367Q102 383 120 363L135 298L151 302L159 363Q179 383 203 364L215 297Q221 249 202 229Z\" fill=\"url(#nFur)\" stroke=\"#bbb1b4\" stroke-width=\"6\"/>\n<path d=\"M80 361L122 361L119 379L77 379Q70 372 80 361M162 363L204 364Q212 371 201 379L164 379Z\" fill=\"#e9e3df\" stroke=\"#b9b1b3\" stroke-width=\"5\"/>\n<path d=\"M81 374l10 2 9-1 9-1M173 376l10-1 10-2\" stroke=\"#aca5a5\" stroke-width=\"3\" fill=\"none\"/>\n<g class=\"detail-ear\"><path d=\"M67 127Q48 51 66 24Q78 5 108 49L132 96Z\" fill=\"url(#nFur)\" stroke=\"#aaa0a4\" stroke-width=\"7\"/><path d=\"M81 111Q65 57 76 40Q96 52 109 95Z\" fill=\"#d9a3aa\"/></g>\n<g class=\"detail-ear right\"><path d=\"M167 92Q195 7 217 22Q240 37 225 128Z\" fill=\"url(#nFur)\" stroke=\"#aaa0a4\" stroke-width=\"7\"/><path d=\"M188 89Q207 42 221 40Q229 54 211 110Z\" fill=\"#e8b3b6\"/></g>\n<path d=\"M63 97Q95 64 146 64Q214 61 233 121Q256 184 216 244Q182 278 126 268Q62 267 42 211Q19 143 63 97Z\" fill=\"url(#nFur)\" stroke=\"#aaa3a7\" stroke-width=\"6\"/>\n<path d=\"M68 104Q119 82 166 97\" fill=\"none\" stroke=\"#fffefa\" stroke-width=\"9\" opacity=\".7\"/>\n<g class=\"detail-brows\" stroke=\"#555057\" stroke-width=\"10\" stroke-linecap=\"round\" fill=\"none\"><path d=\"M65 143Q84 133 108 144\"/><path d=\"M168 145Q192 131 220 140\"/></g>\n<g class=\"detail-eyes\">\n<ellipse cx=\"92\" cy=\"163\" rx=\"28\" ry=\"21\" fill=\"#f2efee\" stroke=\"#9c9295\" stroke-width=\"3\"/><ellipse cx=\"189\" cy=\"163\" rx=\"28\" ry=\"21\" fill=\"#f2efee\" stroke=\"#9c9295\" stroke-width=\"3\"/>\n<ellipse cx=\"99\" cy=\"164\" rx=\"15\" ry=\"14\" fill=\"url(#nEye)\"/><ellipse cx=\"183\" cy=\"164\" rx=\"15\" ry=\"14\" fill=\"url(#nEye)\"/>\n<ellipse cx=\"100\" cy=\"165\" rx=\"8\" ry=\"10\" fill=\"#15222c\"/><ellipse cx=\"184\" cy=\"165\" rx=\"8\" ry=\"10\" fill=\"#15222c\"/>\n<circle cx=\"96\" cy=\"160\" r=\"4\" fill=\"#fff\"/><circle cx=\"180\" cy=\"158\" r=\"4\" fill=\"#fff\"/>\n</g>\n<path d=\"M115 182Q141 170 164 183Q187 180 195 208Q197 242 162 245Q144 256 125 245Q92 244 90 210Q92 190 115 182Z\" fill=\"#e7dbd3\" stroke=\"#c8b7b3\" stroke-width=\"3\"/>\n<path d=\"M111 200Q112 179 137 183Q163 179 176 197Q180 217 162 221Q141 225 124 217Q108 213 111 200Z\" fill=\"#815b50\" stroke=\"#6d4a45\" stroke-width=\"4\"/>\n<path d=\"M121 193Q138 188 151 194\" stroke=\"#d9b1a2\" stroke-width=\"5\" fill=\"none\" opacity=\".7\"/>\n<path d=\"M139 218Q135 233 122 234M142 219Q153 231 162 230\" stroke=\"#5f4445\" stroke-width=\"4\" stroke-linecap=\"round\" fill=\"none\"/>\n<g fill=\"#876a58\" opacity=\".8\"><circle cx=\"113\" cy=\"205\" r=\"3\"/><circle cx=\"118\" cy=\"211\" r=\"2.5\"/><circle cx=\"166\" cy=\"204\" r=\"2.3\"/><circle cx=\"176\" cy=\"217\" r=\"3\"/></g>\n<g class=\"detail-collar\"><path d=\"M88 259Q147 282 201 250L200 273Q152 300 94 277Z\" fill=\"url(#nCollar)\" stroke=\"#36827e\" stroke-width=\"5\"/><circle cx=\"148\" cy=\"282\" r=\"13\" fill=\"#f6d07a\" stroke=\"#987a49\" stroke-width=\"4\"/><path d=\"M147 273l4 6-4 6-3-6z\" fill=\"#fff2cd\"/></g>\n<g class=\"detail-mouth-gasp\"><path d=\"M123 236Q141 257 161 237Q140 245 123 236Z\" fill=\"#743c4d\"/><path d=\"M126 237Q142 242 157 237\" fill=\"none\" stroke=\"#ffe6e9\" stroke-width=\"3\"/></g>\n</g></svg>";}
+function character(name){if(game.stage===1&&(name==='tiny'||name==='noosh'))return polishedStageOneCharacter(name);const skin='#f3b28e',eye='#30202a',stroke='#2d1a2d';const wrap=(inside)=>`<svg viewBox="0 0 220 295" role="img" aria-label="${name} chibi character" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="shine${name}" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".3"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><ellipse cx="108" cy="284" rx="71" ry="9" fill="#200e22" opacity=".3"/>${inside}</svg>`;
+ const shoe=`<ellipse cx="75" cy="263" rx="27" ry="14" fill="#1b1721" stroke="#57485d" stroke-width="4"/><ellipse cx="145" cy="263" rx="27" ry="14" fill="#1b1721" stroke="#57485d" stroke-width="4"/>`;
+ if(name==='tiny-bear')return wrap(`${shoe}<path d="M56 191Q46 215 54 266L96 265L109 216L123 264L166 263Q168 219 156 187Z" fill="#cda888" stroke="#7d5f51" stroke-width="6"/><path d="M51 169Q22 169 34 228Q57 253 82 231L115 251L158 230Q185 246 188 205Q189 173 168 165Z" fill="#c7a080" stroke="#8a6c58" stroke-width="6"/><ellipse cx="113" cy="220" rx="37" ry="29" fill="#f8e0c4"/><path d="M23 115Q12 31 79 15Q151 -1 190 60Q210 122 176 213Q155 239 151 189L76 185Q43 225 27 186Z" fill="#3c2731" stroke="#64424b" stroke-width="7"/><ellipse cx="107" cy="115" rx="72" ry="76" fill="#d3ab8e" stroke="#8b6b54" stroke-width="8"/><circle cx="52" cy="65" r="24" fill="#cdae8d" stroke="#846b58" stroke-width="7"/><circle cx="158" cy="54" r="24" fill="#cdae8d" stroke="#846b58" stroke-width="7"/><circle cx="51" cy="63" r="11" fill="#f7dfc8"/><circle cx="158" cy="53" r="11" fill="#f7dfc8"/><path d="M47 116Q31 72 68 52Q93 27 127 46Q167 47 173 91L162 119Q154 81 140 79Q103 102 76 80Q58 94 47 116" fill="#352631"/><ellipse cx="112" cy="140" rx="56" ry="58" fill="#f3b28e"/><path d="M76 139Q83 133 94 139M121 140Q133 132 142 139" fill="none" stroke="#3b2531" stroke-width="6" stroke-linecap="round"/><ellipse cx="76" cy="154" rx="15" ry="8" fill="#f68ca8"/><ellipse cx="145" cy="154" rx="15" ry="8" fill="#f68ca8"/><ellipse cx="112" cy="158" rx="11" ry="14" fill="#672f49"/><path d="M35 53Q21 29 10 45Q5 71 39 68Z" fill="#15111b" stroke="#756074" stroke-width="3"/><ellipse cx="178" cy="239" rx="28" ry="25" fill="#fff8e7" stroke="#d7aa93" stroke-width="4"/><circle cx="174" cy="230" r="3"/><circle cx="191" cy="231" r="3"/><path d="M180 240l8 4 -8 6Z" fill="#f2ac4b"/><text x="158" y="206" font-size="17">💤</text>`);
+ if(name==='tiny')return wrap(`<path d="M34 120 Q-8 174 27 252 Q42 284 75 252 Q121 292 158 267 Q216 226 177 128Z" fill="#2e1c26" stroke="#4f333e" stroke-width="5"/><path d="M61 195L55 260L88 270L101 210M125 210L132 269L161 261L151 189" fill="#29202b" stroke="#110b16" stroke-width="7"/>${shoe}<path d="M45 174Q24 186 29 214Q51 234 67 200L87 214L91 236L112 229L129 215L157 219Q187 211 185 183Q170 161 155 184Z" fill="#18121f" stroke="#39243b" stroke-width="6"/><path d="M65 183Q110 194 155 178L167 219L151 233L135 216L112 235L88 216L72 235L54 222Z" fill="#211321" stroke="#4a2a40" stroke-width="5"/><path d="M19 105Q-6 49 49 25Q120 -8 190 57Q226 118 188 233Q166 270 155 220Q164 184 163 150Z" fill="#33202a" stroke="#6b3c44" stroke-width="7"/><path d="M29 112Q10 60 54 44Q112 13 165 53Q198 91 177 154Q172 193 160 201L154 142Z" fill="#4b2a30"/><ellipse cx="110" cy="121" rx="69" ry="79" fill="${skin}" stroke="#512e36" stroke-width="5"/><path d="M41 97Q53 41 121 41Q172 34 182 95Q160 71 141 72Q105 88 74 71Q60 93 41 97" fill="#3a252e"/><path d="M70 124q15 -15 31 0M123 124q16 -15 31 0" stroke="${stroke}" stroke-width="7" stroke-linecap="round" fill="none"/><ellipse cx="72" cy="143" rx="18" ry="8" fill="#fa7d9e" opacity=".8"/><ellipse cx="149" cy="143" rx="18" ry="8" fill="#fa7d9e" opacity=".8"/><path d="M103 151Q112 163 124 151" stroke="#ae455a" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M60 34Q20 8 19 44Q26 65 69 61Q88 75 105 57Q89 14 60 34M91 37Q132 -3 153 14Q161 44 113 57Z" fill="#13101b" stroke="#7e566f" stroke-width="4"/><circle cx="101" cy="51" r="12" fill="#17111d"/><text x="68" y="51" font-size="10" fill="white" transform="rotate(-25 68 51)">Tiny</text><text x="50" y="170" font-size="18" fill="#ffe3ec">♥</text><text x="159" y="169" font-size="18" fill="#ffe3ec">♥</text>`);
+ if(name==='baba')return wrap(`${shoe}<path d="M54 195L55 257L96 257L102 209M116 209L118 258L160 257L167 194" fill="#22202a" stroke="#16121d" stroke-width="5"/><path d="M50 164Q28 176 35 216L59 231Q105 245 168 227L188 200Q184 169 168 163Z" fill="#191821" stroke="#34303c" stroke-width="6"/><path d="M63 203Q110 223 158 203" stroke="#45424c" stroke-width="5"/><text x="73" y="215" fill="white" font-size="28" font-family="sans-serif" font-weight="900">UTW</text><ellipse cx="108" cy="110" rx="69" ry="78" fill="${skin}" stroke="#53372c" stroke-width="5"/><path d="M47 124Q40 175 70 184Q116 218 161 179Q184 156 171 116Q147 141 115 137Q73 144 47 124Z" fill="#412c2a"/><path d="M64 134q44 14 90 -1M104 159q7 6 14 0" stroke="#201b20" stroke-width="5" fill="none"/><path d="M55 89Q75 80 98 89M119 90Q141 78 164 89" stroke="#402921" stroke-width="10" stroke-linecap="round"/><rect x="52" y="95" width="53" height="35" rx="9" fill="#8babc744" stroke="#1c1a21" stroke-width="7"/><rect x="111" y="95" width="53" height="35" rx="9" fill="#8babc744" stroke="#1c1a21" stroke-width="7"/><path d="M105 109h8" stroke="#1c1a21" stroke-width="7"/><circle cx="80" cy="111" r="5" fill="#536553"/><circle cx="139" cy="111" r="5" fill="#536553"/>`);
+ if(name==='noosh'||name==='savvy'){let white=name==='noosh',fur=white?'#f9f5eb':'#151923',out=white?'#afa2a0':'#3b4351',muzzle=white?'#775444':'#292e35',eyes=white?'#a5c4c6':'#aa9776';return wrap(`<path d="M56 165Q25 170 24 232L50 268L86 265L98 215L127 217L135 265L175 265Q200 230 171 168Z" fill="${fur}" stroke="${out}" stroke-width="6"/><path d="M43 183Q13 171 12 134Q17 119 30 152L62 176" fill="none" stroke="${fur}" stroke-width="18" stroke-linecap="round"/><path d="M42 114L48 16Q53 0 78 25L103 65L118 63L146 14Q161 0 169 37L174 107Z" fill="${fur}" stroke="${out}" stroke-width="6"/><path d="M53 91L58 28L90 85M132 88L152 26L164 90" fill="${white?'#ddaab0':'#5d5264'}"/><ellipse cx="109" cy="125" rx="79" ry="83" fill="${fur}" stroke="${out}" stroke-width="6"/><ellipse cx="79" cy="116" rx="17" ry="12" fill="${eyes}"/><ellipse cx="142" cy="116" rx="17" ry="12" fill="${eyes}"/><circle cx="83" cy="117" r="7" fill="#1c1a1c"/><circle cx="139" cy="117" r="7" fill="#1c1a1c"/><ellipse cx="110" cy="157" rx="41" ry="29" fill="${white?'#e8dad1':'#28303b'}"/><ellipse cx="110" cy="148" rx="24" ry="18" fill="${muzzle}"/><ellipse cx="104" cy="144" rx="7" ry="4" fill="#c19b8c" opacity=".6"/><path d="M108 163Q98 179 82 170M111 164Q126 181 139 168" stroke="#53363c" stroke-width="4" fill="none"/>${white?'<path d="M60 202Q111 218 164 201" fill="none" stroke="#53bbac" stroke-width="12"/><circle cx="110" cy="210" r="9" fill="#f1c47b"/>':''}`)}
+ if(name==='devi')return wrap(`${shoe}<path d="M50 189Q38 172 54 156L157 157Q192 177 170 221L58 226Z" fill="#171923" stroke="#4a4b5d" stroke-width="6"/><ellipse cx="108" cy="113" rx="65" ry="72" fill="#e1a079" stroke="#55342c" stroke-width="5"/><path d="M48 113Q25 53 49 33L59 50L70 17L82 45L101 8L109 42L138 12L141 46L173 30L157 64L182 74L164 105Z" fill="#3b2824" stroke="#a7773d" stroke-width="5"/><path d="M48 137Q63 175 108 184Q156 170 169 139L149 151L127 150L110 161L87 148L65 149Z" fill="#3b2626"/><path d="M65 110Q83 100 102 111M122 110Q142 99 155 108" stroke="#312429" stroke-width="7" fill="none"/><ellipse cx="84" cy="123" rx="12" ry="10" fill="#50abf2"/><ellipse cx="139" cy="123" rx="12" ry="10" fill="#50abf2"/><circle cx="86" cy="124" r="5" fill="#17222f"/><circle cx="141" cy="124" r="5" fill="#17222f"/><path d="M95 152Q111 163 130 151" stroke="#a95c4d" stroke-width="4" fill="none"/>`);
+ if(name==='mo')return wrap(`${shoe}<path d="M63 195Q49 224 48 264L176 266Q165 213 153 187Z" fill="#1a815e" stroke="#256d55" stroke-width="6"/><path d="M31 109Q17 37 71 27Q98 -4 159 34Q216 79 184 176L163 208Q169 145 141 88L62 92L47 206Z" fill="#3f2530" stroke="#6f4351" stroke-width="7"/><ellipse cx="109" cy="121" rx="66" ry="73" fill="#d99a7c"/><path d="M44 100Q48 45 121 36Q168 42 176 98L155 75L136 70L113 89L79 69Z" fill="#432932"/><rect x="52" y="104" width="49" height="28" rx="9" fill="#ffffff20" stroke="#22232c" stroke-width="5"/><rect x="113" y="104" width="49" height="28" rx="9" fill="#ffffff20" stroke="#22232c" stroke-width="5"/><path d="M100 117h13" stroke="#22232c" stroke-width="5"/><circle cx="76" cy="115" r="5" fill="#1b2334"/><circle cx="137" cy="115" r="5" fill="#1b2334"/><path d="M99 152Q109 156 122 150" stroke="#9e4b5d" stroke-width="4" fill="none"/><path d="M49 55Q109 0 175 53" stroke="#72b654" stroke-width="9" fill="none"/>${[54,77,101,133,159].map((x,i)=>`<circle cx="${x}" cy="${[52,34,29,38,53][i]}" r="10" fill="${['#ff8ca5','#ffc36d','#f5c4db','#c0a4e3','#f8a44a'][i]}"/>`).join('')}`);
+ if(name==='catalyst')return wrap(`${shoe}<path d="M46 173L38 260L172 263L167 171Z" fill="#6b4435" stroke="#3d2428" stroke-width="6"/><path d="M44 109L47 48L87 78L138 79L169 44L178 113Z" fill="#c97030" stroke="#6f3c2b" stroke-width="5"/><ellipse cx="109" cy="123" rx="76" ry="75" fill="#cf8136" stroke="#81502d" stroke-width="6"/><ellipse cx="80" cy="126" rx="13" ry="10" fill="#a5c959"/><ellipse cx="139" cy="126" rx="13" ry="10" fill="#a5c959"/><circle cx="85" cy="125" r="5"/><circle cx="137" cy="125" r="5"/><ellipse cx="110" cy="154" rx="43" ry="24" fill="#f2c8a7"/><path d="M101 149L110 157L120 149" fill="#a65343"/><path d="M55 185L109 209L161 185L145 218L112 228L75 216Z" fill="#af3a3a"/><path d="M30 84Q29 68 68 65L69 42Q103 20 148 42L157 65Q198 70 191 83Q121 99 30 84Z" fill="#6f3e29" stroke="#412b26" stroke-width="6"/>`);
+ return character('tiny')}
+menu();
+})();
+</script>
+</body></html>
