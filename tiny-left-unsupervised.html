@@ -234,6 +234,37 @@
 @media(max-height:450px){.cleanup-board{top:21%;height:50%}.cover-item{height:20%}.coverup-active .bubble{top:19%;font-size:10px}.coverup-active .controls .btn{min-height:30px;padding:4px 7px}.coverup-active .char{bottom:20%;height:58%}}
 @media(prefers-reduced-motion:reduce){.cover-item{animation:none}}
 
+
+/* Stage 6 revision: discover evidence under furniture, then spray and wipe marks */
+.cleanup-board{left:19%;width:63%;height:58%;background:linear-gradient(#65485c 0 59%,#a76b67 60%,#6f414c 100%);border-color:#ffe0a2}
+.cleanup-board:before{content:"";position:absolute;z-index:0;inset:20% 0 0;background:repeating-linear-gradient(90deg,#ffffff11 0 2px,transparent 2px 24%),linear-gradient(#88657e88 0 47%,#f3ad6f22 48%);pointer-events:none}
+.cleanup-board:after{content:"";position:absolute;z-index:1;left:0;right:0;top:65%;height:4%;background:#ffe2ab44;pointer-events:none}
+.cleanup-top{z-index:6;top:0;left:2%;right:2%;height:18%;font-size:clamp(8px,1.15vw,15px);gap:3px}
+.cleanup-top>span{white-space:nowrap}
+.cleanup-progress{z-index:6;top:18%;left:2%;right:2%}
+.room-prop,.stain-target{position:absolute;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:11px;touch-action:manipulation;transition:transform .17s,opacity .2s,background .15s}
+.room-prop{width:22%;height:22%;border:2px solid #f8dfb4;background:linear-gradient(#73546bbb,#42273eec);box-shadow:0 3px 8px #201120ad;color:#fff4e1;padding:2px;gap:0}
+.room-prop .emoji{font-size:clamp(18px,2.5vw,31px);line-height:1}
+.room-prop small{font-size:clamp(7px,.92vw,11px);line-height:1.05;font-weight:900;text-align:center}
+.room-prop:active,.stain-target:active{transform:scale(.94)}
+.room-prop.discovered{border-color:#b8ffd8;background:linear-gradient(#477460,#294a47);box-shadow:0 0 11px #7cffe47c}
+.room-prop.discovered.decoy{border-color:#ffd085;background:linear-gradient(#775c42,#4b3442)}
+.room-prop.searched{opacity:.4;border-style:dashed}
+.room-prop.cleared{opacity:.23;transform:scale(.83);pointer-events:none}
+.stain-target{width:26%;height:17%;border:2px dashed #f4c597;background:radial-gradient(ellipse,#70544ddd 18%,#5b3d5b8f 50%,#ffffff00 72%);color:#ffedcb;font-weight:900;gap:0;font-size:clamp(9px,1vw,13px);touch-action:none}
+.stain-target .emoji{font-size:clamp(17px,2vw,25px);line-height:1}
+.stain-target small{font-size:clamp(7px,.86vw,10px);line-height:1}
+.stain-target.foamy{border-color:#c2fff7;background:repeating-radial-gradient(circle at 35% 30%,#e5ffffdd 0 5px,#b1dbef9e 6px 11px,#7faac07d 12px 17px);color:#152e43;animation:foamJiggle .38s ease-in-out infinite alternate}
+.stain-target.cleared{opacity:.15;pointer-events:none;transform:scale(.8)}
+@keyframes foamJiggle{from{filter:brightness(.9)}to{filter:brightness(1.25)}}
+.cleanup-footer{height:9%;bottom:0;left:2%;right:2%;border-radius:5px;font-size:clamp(8px,.9vw,12px);pointer-events:none;z-index:5}
+.cleanup-tool-tag{position:absolute;z-index:6;right:1%;bottom:1%;height:8%;color:#ffe5a1;background:#30203abf;border-radius:5px;padding:1px 6px;font-size:clamp(8px,1vw,12px);font-weight:900}
+.coverup-active .controls .btn.tool-selected{background:linear-gradient(#5ac6ab,#266b6d);color:#fff;border-color:#d8fff4;box-shadow:0 0 12px #81ffe591}
+.coverup-active .controls{max-width:72%;gap:4px}
+.coverup-active .controls .btn{min-width:93px;max-width:150px;padding:5px 7px}
+@media(max-height:450px){.cleanup-board{top:20%;height:51%;left:20%;width:62%}.room-prop{height:22%}.room-prop .emoji{font-size:17px}.stain-target{height:17%}.cleanup-footer{display:none}.cleanup-tool-tag{bottom:1%;font-size:8px}}
+@media(prefers-reduced-motion:reduce){.stain-target.foamy{animation:none}}
+
 </style>
 </head>
 <body>
@@ -848,16 +879,29 @@ function stage5End(){hideChallenge();phase='stage5End';game.phase=phase;game.com
 
 
 // Stage 6: The Ultimate Cover-Up. Story never game-overs and no online writes occur.
-const coverItems=[
- {id:'throne-stain',icon:'💦',label:'Throne stains'},
- {id:'red-switch',icon:'🔴',label:'Forbidden button'},
+// Stage 6: each run hides evidence in different pieces of room furniture.
+const coverEvidence=[
  {id:'raccoon-fur',icon:'🦝',label:'Raccoon fur'},
  {id:'train-keys',icon:'🔑',label:'Train keys'},
- {id:'boxing-gloves',icon:'🥊',label:'Baba gloves'},
- {id:'baba-hat',icon:'🎩',label:'Suspicious hat'},
- {id:'sealed-order',icon:'✉️',label:'Sealed letter',clue:true},
- {id:'noosh-award',icon:'🏆',label:'Noosh trophy',decoy:true}
+ {id:'boxing-gloves',icon:'🥊',label:'Boxing gloves'},
+ {id:'sealed-order',icon:'✉️',label:'Sealed letter',clue:true}
 ];
+const coverFurniture=[
+ {id:'curtain',icon:'🪟',label:'Curtains'},
+ {id:'vase',icon:'🏺',label:'Flower vase'},
+ {id:'shelf',icon:'📚',label:'Bookshelf'},
+ {id:'crate',icon:'📦',label:'Storage crate'},
+ {id:'rug',icon:'🧶',label:'Royal rug'},
+ {id:'chair',icon:'🪑',label:'Armchair'},
+ {id:'portrait',icon:'🖼️',label:'Portrait'},
+ {id:'trunk',icon:'🧳',label:'Old trunk'}
+];
+const coverStains=[
+ {id:'throne-stain',icon:'💦',label:'Throne drool'},
+ {id:'raccoon-prints',icon:'🐾',label:'Muddy paws'},
+ {id:'mop-stain',icon:'🫗',label:'Mop spill'}
+];
+
 const coverDialogue=[
  ['Noosh','I was gone for FIVE MINUTES.','noosh'],
  ['Tiny','And you are welcome back!','tiny'],
@@ -878,85 +922,152 @@ function startStage6(){
 function coverupPlan(){
  phase='coverupChoice';game.phase=phase;showPower(true);setCharacters('tiny','mo');
  bubble('Baba: I can distract him! This seems like a terrific plan.');
- setText('Choose your cover story crew','Tap evidence in the room or sweep a side. Avoid Noosh’s innocent trophy. The clock starts when you enter.','OPERATION: HIDE THE EVIDENCE');
+ setText('Choose your cover story crew','Search behind furniture for hidden evidence. For dirt patches, SPRAY then WIPE. Leave Noosh’s trophy alone.','OPERATION: HIDE THE EVIDENCE');
  choices([
  ['MO, ORGANIZE THE CLEANUP',()=>startCleanup('mo'),'gold'],
  ['BABA, DISTRACT NOOSH',()=>startCleanup('baba')],
  ['CAT, CAUSE MORE CHAOS',()=>startCleanup('cat')]
  ]);save()
 }
+function buildCleanupRoom(){
+ const contents=mixDeck([...coverEvidence.map(x=>({...x,kind:'evidence'})),{id:'trophy',icon:'🏆',label:'Noosh trophy',kind:'decoy'},
+  {id:'dust-a',label:'Nothing here',kind:'empty'},{id:'dust-b',label:'Nothing here',kind:'empty'},{id:'dust-c',label:'Nothing here',kind:'empty'}]);
+ const spots=coverFurniture.map((f,i)=>({
+  ...contents[i],furniture:f,kind:contents[i].kind,found:false,done:false,
+  x:2+(i%4)*24.8,y:i<4?24:49
+ }));
+ const stains=mixDeck(coverStains).map((item,i)=>({...item,kind:'stain',found:true,done:false,sprayed:false,
+  x:5+i*32,y:75}));
+ return [...spots,...stains];
+}
 function startCleanup(plan){
  hideChallenge();phase='cleanup';game.phase=phase;game.stage=6;
  game.choices.coverupPlan=plan;setCharacters('tiny',plan==='cat'?'catalyst':plan==='baba'?'baba':'mo');showPower(true);
  if(plan==='mo')game.influence.mo+=3;else if(plan==='baba')game.influence.baba+=3;else game.influence.catalyst+=3;
  const board=$('cleanupBoard');board.classList.remove('hidden');
- const slots=mixDeck([[5,29],[36,29],[68,29],[5,55],[36,55],[68,55],[21,81],[53,81]]);
- const objects=mixDeck(coverItems).map((item,i)=>({...item,done:false,x:slots[i][0],y:slots[i][1]}));
- // Place the last row a little higher so no tappable item overlaps the footer.
- const total=plan==='mo'?30000:plan==='baba'?28000:25000;
- const run={id:++cleanupRunId,objects,until:performance.now()+total,last:performance.now(),duration:total,finished:false,swept:-Infinity,alerted:false};
+ const objects=buildCleanupRoom();
+ const total=plan==='mo'?56000:plan==='baba'?54000:52000;
+ const run={id:++cleanupRunId,objects,until:performance.now()+total,last:performance.now(),duration:total,
+  finished:false,alerted:false,mode:'search'};
  cleanupRun=run;
- board.innerHTML='<div class="cleanup-top"><span>🧽 <strong id="cleanupHidden">0/7</strong> HIDDEN</span><span>NOOSH IN <strong class="cleanup-clock" id="cleanupClock">30.0</strong></span></div><div class="cleanup-progress"><i id="cleanupProgress"></i></div><div class="cleanup-footer">TAP EVIDENCE OR SWEEP LEFT/RIGHT • DO NOT TOUCH 🏆</div>';
+ board.innerHTML='<div class="cleanup-top"><span>🔎 <strong id="cleanupEvidence">0/4</strong> FOUND</span>'+
+ '<span>🧴 <strong id="cleanupStains">0/3</strong> CLEAN</span>'+
+ '<span>⏱ <strong class="cleanup-clock" id="cleanupClock">56.0</strong></span></div>'+
+ '<div class="cleanup-progress"><i id="cleanupProgress"></i></div>'+
+ '<div class="cleanup-tool-tag" id="cleanupToolStatus" aria-live="polite">🔎 SEARCH</div>';
  for(const item of objects){
-  const btn=document.createElement('button');btn.className='cover-item'+(item.decoy?' decoy':'');
-  btn.type='button';btn.style.left=item.x+'%';btn.style.top=(item.y===81?66:item.y===55?45:24)+'%';
-  // Three rows have independent columns with no overlap at 780 × 360.
-  if(item.y===81)btn.style.left=(item.x===21?22:57)+'%';
-  btn.setAttribute('aria-label',item.label+(item.decoy?', do not hide':' , tap to hide'));
-  btn.innerHTML='<span class="emoji">'+item.icon+'</span><small>'+item.label+'</small>';
-  btn.addEventListener('click',()=>hideCoverItem(item,run));board.append(btn);item.el=btn;
+  const btn=document.createElement('button');btn.type='button';btn.style.left=item.x+'%';btn.style.top=item.y+'%';
+  if(item.kind==='stain'){
+   btn.className='stain-target';btn.setAttribute('aria-label',item.label+' stain, spray then wipe');
+   btn.innerHTML='<span class="emoji">'+item.icon+'</span><small>'+item.label+'</small>';
+   btn.addEventListener('click',()=>tapCleanupStain(item,run));
+   btn.addEventListener('pointerdown',e=>{if(run.mode==='wipe'&&item.sprayed){item.swipeX=e.clientX;item.swipeY=e.clientY;btn.setPointerCapture?.(e.pointerId)}});
+   btn.addEventListener('pointerup',e=>{if(run.mode!=='wipe'||!item.sprayed||item.done||item.swipeX===undefined)return;
+    const distance=Math.hypot(e.clientX-item.swipeX,e.clientY-item.swipeY);item.swipeX=undefined;
+    if(distance>9)hideCoverItem(item,run)});
+  }else{
+   btn.className='room-prop';btn.setAttribute('aria-label','Search '+item.furniture.label);
+   btn.innerHTML='<span class="emoji">'+item.furniture.icon+'</span><small>'+item.furniture.label+'</small>';
+   btn.addEventListener('click',()=>searchCleanupSpot(item,run));
+  }
+  board.append(btn);item.el=btn;
  }
- setText('THE CLEANUP IS ON!','Catch every incriminating object before Noosh reaches the door. Sweep a side for help. Leave his trophy alone!','NOOSH IS GETTING CLOSER');
- bubble('Tiny: THIS IS NOT A DISASTER. THIS IS A REDECORATION.');
- choices([['🧽 SWEEP LEFT',()=>sweepCover('left'),'gold'],['🧽 SWEEP RIGHT',()=>sweepCover('right')]]);
+ setText('FIND IT. SPRAY IT. HIDE IT.','Tap furniture to SEARCH, then tap the evidence again to pocket it. Spray stains with the bottle and wipe them with the cloth.','THE GREAT PALACE CLEANUP');
+ bubble('Tiny: THERE IS NOTHING TO SEE HERE. ESPECIALLY NOT UNDER THE RUG.');
+ cleanupTools(run);
  interact={
-  extend:()=>{if(cleanupRun!==run)return;run.until+=4800;notify('🥺 Noosh looks the other way! +4.8s')},
-  auto:()=>{const target=run.objects.find(o=>!o.done&&!o.decoy);if(target)hideCoverItem(target,run,true)}
+  extend:()=>{if(cleanupRun!==run)return;run.until+=6000;notify('🥺 Noosh is distracted! +6 seconds')},
+  auto:()=>{const target=run.objects.find(o=>!o.done&&o.kind==='evidence')||
+                   run.objects.find(o=>!o.done&&o.kind==='stain');
+   if(target){hideCoverItem(target,run,true);notify('🦝 Raccoon Army hid a piece of evidence!')}}
  };
  function frame(now){
   if(phase!=='cleanup'||cleanupRun!==run||run.finished)return;
   if(paused){const shift=Math.max(0,now-run.last);run.until+=shift;run.last=now;activeFrame=requestAnimationFrame(frame);return}
   run.last=now;const remaining=Math.max(0,run.until-now);
-  const clock=$('cleanupClock'),progress=$('cleanupProgress');
+  const clock=$('cleanupClock'),bar=$('cleanupProgress');
   if(clock)clock.textContent=(remaining/1000).toFixed(1)+'s';
-  if(progress)progress.style.width=Math.min(100,remaining/run.duration*100)+'%';
-  if(remaining<9000&&!run.alerted){run.alerted=true;bubble('Noosh: WHY DO I HEAR SCRUBBING?!');mark('🚨');audio('alarm')}
-  if(remaining<=0||run.objects.every(o=>o.done||o.decoy)){cleanupVerdict(run);return}
+  if(bar)bar.style.width=Math.min(100,remaining/run.duration*100)+'%';
+  if(remaining<12000&&!run.alerted){run.alerted=true;bubble('Noosh: WHY DO I HEAR A SPRAY BOTTLE?!');mark('🚨');audio('alarm')}
+  if(remaining<=0||run.objects.every(o=>o.done||o.kind==='empty'||o.kind==='decoy')){cleanupVerdict(run);return}
   activeFrame=requestAnimationFrame(frame)
  }
  activeFrame=requestAnimationFrame(frame);save()
 }
+function cleanupTools(run){
+ choices([['🔎 SEARCH',()=>setCleanupTool('search'),'gold'],
+          ['🧴 SPRAY BOTTLE',()=>setCleanupTool('spray')],
+          ['🧽 WIPE CLOTH',()=>setCleanupTool('wipe')]]);
+ setCleanupTool(run.mode);
+}
+function setCleanupTool(mode){
+ const run=cleanupRun;if(phase!=='cleanup'||!run||paused)return;
+ run.mode=mode;
+ const labels={search:'🔎 SEARCH',spray:'🧴 SPRAY',wipe:'🧽 WIPE'};
+ const tag=$('cleanupToolStatus');if(tag)tag.textContent=labels[mode];
+ [...$('controls').children].forEach((btn,i)=>btn.classList.toggle('tool-selected',['search','spray','wipe'][i]===mode));
+}
+function searchCleanupSpot(item,run){
+ if(phase!=='cleanup'||paused||cleanupRun!==run||run.finished||item.done)return;
+ if(run.mode!=='search'){setCleanupTool('search');notify('🔎 Search the room first. Tap this spot again!');return}
+ if(!item.found){
+  item.found=true;
+  if(item.kind==='empty'){
+   item.done=true;item.el.classList.add('searched');
+   item.el.innerHTML='<span class="emoji">🕸️</span><small>Just dust</small>';
+   bubble('Tiny: Nothing here. Unless dust counts as evidence.');audio('tap');return
+  }
+  item.el.classList.add('discovered');
+  if(item.kind==='decoy')item.el.classList.add('decoy');
+  item.el.innerHTML='<span class="emoji">'+item.icon+'</span><small>'+(item.kind==='decoy'?'NOOSH’S TROPHY!':item.label+' • TAP TO BAG')+'</small>';
+  item.el.setAttribute('aria-label',item.kind==='decoy'?'Noosh trophy! Leave it alone':'Found '+item.label+', tap again to hide');
+  bubble(item.kind==='decoy'?'Tiny: That trophy is Noosh’s. Maybe do NOT touch it.':'Tiny: AHA! I FOUND '+item.label.toUpperCase()+'!');
+  audio('success');return
+ }
+ hideCoverItem(item,run)
+}
+function tapCleanupStain(item,run){
+ if(phase!=='cleanup'||paused||cleanupRun!==run||run.finished||item.done)return;
+ if(!item.sprayed){
+  if(run.mode!=='spray'){setCleanupTool('spray');notify('🧴 Bottle selected. Tap the dirty patch again!');return}
+  item.sprayed=true;item.el.classList.add('foamy');
+  item.el.innerHTML='<span class="emoji">🫧</span><small>NOW WIPE!</small>';
+  bubble('Tiny: THE BOTTLE IS WORKING. THIS IS ALMOST PROFESSIONAL.');
+  audio('sneak');mark('🧴');setCleanupTool('wipe');return
+ }
+ if(run.mode!=='wipe'){setCleanupTool('wipe');notify('🧽 Wipe the foamy stain!');return}
+ hideCoverItem(item,run)
+}
 function hideCoverItem(item,run,assisted=false){
  if(phase!=='cleanup'||paused||cleanupRun!==run||run.finished||item.done)return;
- item.done=true;item.el?.classList.add('cleared');
- if(item.decoy){
-  game.coverupDecoys++;game.misses++;game.coverupTrust--;
-  bubble('Noosh: WHO TOUCHED MY TROPHY?');audio('oops');mark('🏆');
- }else{
-  game.coverupHidden++;addScore(100+(assisted?0:40));earn(7);audio('success');
-  $('cleanupHidden').textContent=game.coverupHidden+'/7';
-  if(item.clue){game.choices.coverupFileFound=true;clue('sealed-order');bubble('Tiny: WHY is this envelope marked CLASSIFIED?!')}
-  else if(item.id==='train-keys')bubble('Devi: Please put those keys somewhere sensible this time.');
-  else if(item.id==='throne-stain')bubble('Tiny: Nothing suspicious about this completely polished throne.');
-  else bubble(assisted?'Cat: I accept the chaos as a lifestyle.':'Tiny: THE EVIDENCE HAS VANISHED.');
+ if(item.kind==='empty')return;
+ if(item.kind==='decoy'){
+  item.done=true;game.coverupDecoys++;game.misses++;game.coverupTrust--;
+  item.el?.classList.add('cleared');bubble('Noosh: WHO TOUCHED MY TROPHY?');audio('oops');mark('🏆');save();return
  }
- save()
+ if(!assisted&&item.kind==='stain'&&!item.sprayed)return;
+ item.done=true;item.el?.classList.add('cleared');
+ game.coverupHidden++;addScore(100+(assisted?0:65));earn(7);audio('success');
+ const found=run.objects.filter(o=>o.done&&o.kind==='evidence').length;
+ const clean=run.objects.filter(o=>o.done&&o.kind==='stain').length;
+ if($('cleanupEvidence'))$('cleanupEvidence').textContent=found+'/4';
+ if($('cleanupStains'))$('cleanupStains').textContent=clean+'/3';
+ if(item.clue){game.choices.coverupFileFound=true;clue('sealed-order');bubble('Tiny: WHY IS THIS DOCUMENT MARKED CLASSIFIED?!')}
+ else if(item.id==='train-keys')bubble('Devi: The keys are finally somewhere sensible.');
+ else if(item.kind==='stain')bubble('Tiny: SPOTLESS. NO ONE WILL SUSPECT A THING.');
+ else bubble(assisted?'Cat: I accept the chaos. Evidence handled.':'Tiny: INCRIMINATING ITEM REMOVED!');
+ if(item.kind==='stain')setCleanupTool('search');save()
 }
-function sweepCover(side){
- if(phase!=='cleanup'||!cleanupRun||paused)return;
- const run=cleanupRun,now=performance.now();if(now-run.swept<1000)return;run.swept=now;
- const items=run.objects.filter(o=>!o.done&&(side==='left'?o.x<45:o.x>=45));
- const item=items.find(o=>!o.decoy)||items[0];if(item){hideCoverItem(item,run)}else bubble('Tiny: THERE IS NOTHING LEFT TO HIDE ON THIS SIDE!')
-}
+
 function cleanupVerdict(run){
  if(phase!=='cleanup'||cleanupRun!==run||run.finished)return;
- run.finished=true;const remaining=run.objects.filter(o=>!o.done&&!o.decoy);
+ run.finished=true;const remaining=run.objects.filter(o=>!o.done&&(o.kind==='evidence'||o.kind==='stain'));
  game.coverupMissed=remaining.length;game.choices.coverupScore=game.coverupHidden;
  if(!remaining.length){achievement('perfect-cleanup','No Evidence, No Regrets');game.coverupTrust+=2;addScore(400)}
  else{game.coverupTrust-=Math.min(3,remaining.length);game.misses+=Math.min(3,remaining.length)}
  hideChallenge();phase='cleanupVerdict';game.phase=phase;showPower(false);setCharacters('tiny','noosh');
  bubble(remaining.length?'Noosh: I CAN LITERALLY SEE THE EVIDENCE.':'Noosh: ...Why does everything smell like cleaning spray?');
- setText('NOOSH HAS RETURNED','You hid '+game.coverupHidden+' of 7 suspicious items. '+remaining.length+' were left in plain sight. The investigation begins.','EVIDENCE REPORT');
+ setText('NOOSH HAS RETURNED','You cleared '+game.coverupHidden+' of 7 evidence items and stains. '+remaining.length+' were left in plain sight. The investigation begins.','EVIDENCE REPORT');
  choices([['FACE NOOSH’S QUESTIONS ▸',startInterrogation,'gold']]);save()
 }
 const questions=[
