@@ -14,7 +14,7 @@ test('Tiny prototype is a self-contained public browser game',()=>{
   assert.doesNotMatch(html,/fetch\(['"]\/api\/arcade/);
 });
 
-test('first three story stages with stage four held for later',()=>{
+test('first four story stages with Stage 5 held for later',()=>{
   assert.match(script,/function opening\(/);
   assert.match(script,/function sneakRound\(/);
   assert.match(script,/function startLick\(/);
@@ -25,7 +25,11 @@ test('first three story stages with stage four held for later',()=>{
   assert.match(script,/function startStage3\(/);
   assert.match(script,/function startRaccoonWave\(/);
   assert.match(script,/function stage3End\(/);
-  assert.doesNotMatch(script,/function startStage4\(/);
+  assert.match(script,/function startStage4\(/);
+  assert.match(script,/function startTrainHazard\(/);
+  assert.match(script,/function trainPanic\(/);
+  assert.match(script,/function stage4End\(/);
+  assert.doesNotMatch(script,/function startStage5\(/);
 });
 
 test('energy powers and local checkpoints are represented',()=>{
@@ -92,8 +96,42 @@ test('Stage 3 failure produces Mo’s consequence rather than game over',()=>{
 
 test('Stage 3 supports pause and saves between stages without altering arcade API',()=>{
   assert.match(script,/run\.until\+=delay;run\.spawnAt\+=delay/);
-  assert.match(script,/if\(phase!=='raccoons'\)hideChallenge\(\)/);
+  assert.match(script,/if\(phase!=='raccoons'&&phase!=='train'\)hideChallenge\(\)/);
   assert.match(script,/toStorage\(CHECKPOINT,\{\.\.\.game,stage:3,phase:'raccoonIntro'\}\)/);
   assert.match(script,/toStorage\(CHECKPOINT,\{\.\.\.game,stage:4,phase:'trainTeaser'\}\)/);
+  assert.doesNotMatch(script,/fetch\(['"]\/api\/arcade/);
+});
+
+test('Stage 4 uses visible three-track obstacles and clear directional controls',()=>{
+  assert.match(html,/id="trainBoard"/);
+  assert.match(html,/id="trainBrake"/);
+  assert.match(html,/\.train-track\.danger/);
+  assert.match(html,/\.train-track\.safe/);
+  assert.match(script,/function showTrainBoard\(run,hazard\)/);
+  assert.match(script,/function startTrainHazard\(index\)/);
+  assert.match(script,/function chooseTrainLane\(i\)/);
+  assert.match(script,/function duckTrain\(\)/);
+  assert.match(script,/function trainBrake\(down\)/);
+  assert.match(script,/braking\?\.37:1/);
+  assert.match(script,/hazard\.duck\?performance\.now\(\)<=run\.duckUntil/);
+});
+
+test('Stage 4 features Tiny and Devi, tequila props and consequences not game over',()=>{
+  assert.match(script,/function drawHeldTequila\(\)/);
+  assert.match(script,/Closed tequila bottle/);
+  assert.match(script,/Empty shot glass/);
+  assert.match(script,/trainProp='shot'/);
+  assert.match(script,/Devi:.*tequila/);
+  assert.match(script,/trainHits\+\+/);
+  assert.match(script,/function trainPanicResult\(/);
+  assert.match(script,/function stage4Verdict\(/);
+  assert.match(script,/function stage4End\(/);
+  assert.match(script,/game\.completed,4/);
+  assert.match(script,/stage:5,phase:'babaTeaser'/);
+});
+
+test('Stage 4 remains a local game, saving its checkpoint without sharing U-Dodge scores',()=>{
+  assert.match(script,/saved\.completed\?\.includes\(3\)\)\{startStage4\(\)/);
+  assert.match(script,/phase==='train'\|\|phase==='trainPanic'/);
   assert.doesNotMatch(script,/fetch\(['"]\/api\/arcade/);
 });
