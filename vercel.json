@@ -10,6 +10,9 @@
     },
     "api/builds.mjs": {
       "maxDuration": 30
+    },
+    "api/thp-update.mjs": {
+      "maxDuration": 30
     }
   },
   "headers": [
