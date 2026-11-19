@@ -14,7 +14,7 @@ test('Tiny prototype is a self-contained public browser game',()=>{
   assert.doesNotMatch(html,/fetch\(['"]\/api\/arcade/);
 });
 
-test('first five story stages with Stage 6 held for later',()=>{
+test('all six story stages with an ending report',()=>{
   assert.match(script,/function opening\(/);
   assert.match(script,/function sneakRound\(/);
   assert.match(script,/function startLick\(/);
@@ -32,7 +32,10 @@ test('first five story stages with Stage 6 held for later',()=>{
   assert.match(script,/function startStage5\(/);
   assert.match(script,/function startFightBeat\(index\)/);
   assert.match(script,/function stage5End\(/);
-  assert.doesNotMatch(script,/function startStage6\(/);
+  assert.match(script,/function startStage6\(/);
+  assert.match(script,/function startCleanup\(plan\)/);
+  assert.match(script,/function startInterrogation\(\)/);
+  assert.match(script,/function resolveEnding\(defense\)/);
 });
 
 test('energy powers and local checkpoints are represented',()=>{
@@ -99,7 +102,7 @@ test('Stage 3 failure produces Mo’s consequence rather than game over',()=>{
 
 test('Stage 3 supports pause and saves between stages without altering arcade API',()=>{
   assert.match(script,/run\.until\+=delay;run\.spawnAt\+=delay/);
-  assert.match(script,/if\(phase!=='raccoons'&&phase!=='train'&&phase!=='fight'\)hideChallenge\(\)/);
+  assert.match(script,/if\(phase!=='raccoons'&&phase!=='train'&&phase!=='fight'&&phase!=='cleanup'\)hideChallenge\(\)/);
   assert.match(script,/toStorage\(CHECKPOINT,\{\.\.\.game,stage:3,phase:'raccoonIntro'\}\)/);
   assert.match(script,/toStorage\(CHECKPOINT,\{\.\.\.game,stage:4,phase:'trainTeaser'\}\)/);
   assert.doesNotMatch(script,/fetch\(['"]\/api\/arcade/);
@@ -190,7 +193,7 @@ test('Stage 5 offers punch, dodge, sass and two-step combos with clear timing',(
   assert.match(script,/function stage5End\(\)/);
 });
 
-test('Baba fight supports powers, story consequences, saved checkpoint, and Stage 6 teaser',()=>{
+test('Baba fight supports powers, story consequences, saved checkpoint, and Stage 6 launch',()=>{
   assert.match(script,/phase==='fight'/);
   assert.match(script,/phase==='fight'\)interact\?\.auto\?\.\(\)/);
   assert.match(script,/phase==='fight'\)interact\?\.extend\?\.\(\)/);
