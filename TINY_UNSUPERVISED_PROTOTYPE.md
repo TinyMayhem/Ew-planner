@@ -7,7 +7,7 @@ A standalone, public browser-game preview on the `feature/tiny-left-unsupervised
 1. **The Throne Incident:** Noosh peeks back unpredictably; collect five separate licks while his back is turned.
 2. **DO NOT PRESS:** Branching choices, a timed panic decision, three clearly marked dodge lanes and visibly incoming obstacles.
 3. **Release the Raccoons:** Chase three waves of moving raccoons by tapping or sweeping; Baba's decoy hats, Cat's help, Mo's consequences, and the key clue.
-4. **Tiny & Devi's Unauthorized Train Ride:** Animated three-track obstacles, big LEFT/CENTRE/RIGHT buttons, a timed DUCK move for low bridges, and hold-to-BRAKE to slow approaching hazards. After four obstacles, the raccoon changes railway signals, triggering a time-limited decision before the remaining hazards. Devi supports Tiny and catches mistakes without a game over.
+4. **Tiny & Devi's Unauthorized Train Ride:** A conductor-cabin view with a panoramic windshield looking out onto three perspective railway tracks, visible incoming obstacles, large LEFT/CENTRE/RIGHT controls, DUCK for low bridges, and hold-to-BRAKE to slow approaching hazards. Added a live BOILER PRESSURE gauge and tappable VENT STEAM button so players balance train driving and boiler pressure between incoming hazards. Braking increases the rate of pressure buildup. A high-pressure vent awards bonus points, while overheating produces a brief steam burst, cabin shake, Devi commentary and a comic penalty. After four obstacles, the raccoon changes railway signals, triggering a time-limited decision before the remaining hazards. Devi supports Tiny and catches mistakes without a game over.
 
 Tiny boards with a **closed tequila bottle** and produces an **empty shot glass** in the midstage dialogue as visual gags. The bottle is put away for active driving, and no drinking-based gameplay or driving bonus is used.
 
@@ -29,7 +29,7 @@ Tiny boards with a **closed tequila bottle** and produces an **empty shot glass*
 ## Validation
 
 - Chromium end-to-end playthrough tested at 780×360 and 844×390, including all nine train hazards, midstage panic, power meters, scene transitions and final report.
-- 1280×720 brake and pause checks passed: holding the brake slowed hazard progress, and pause froze the train clock.
+- 1280×720 brake and pause checks passed: holding the brake slowed hazard progress, and pause froze the train clock. The new cabin view was checked at 780×360, 844×390 and 1280×720, with vent input, pressure buildup, and safe lane changes verified. An overheat case resets boiler pressure and displays Devi's reaction. Pause freezes pressure.
 - Intro, bottle, train track, shot-glass scene and ending screenshots inspected.
 - JavaScript syntax checked with Node `--check`; static tests in `tests/tiny-left-unsupervised.test.mjs` cover all four stages and no unauthorized score submissions.
 - Please still review in your mobile browser before production deployment.
@@ -37,3 +37,7 @@ Tiny boards with a **closed tequila bottle** and produces an **empty shot glass*
 ## Next
 
 Stage 5 is the playful Tiny vs Baba punch/dodge/sass fight. Stage 6 is The Ultimate Cover-Up with Noosh's interrogation, followed by endings and Endless Chaos Mode. Full-reference sprite polish and Tiny-specific shared leaderboards remain future work.
+
+## Stage 4 cabin redesign, based on gameplay feedback
+
+The original Stage 4 looked too much like a three-column obstacle quiz. The new version places players in the locomotive cabin with a forward-facing windshield, three receding perspective tracks, scenery, driver/codriver portraits and a control dashboard. Boiler pressure rises throughout the ride; venting it is the second interactive task during the interval before each obstacle. Bonus points for skillful high-pressure vents, harmless comedic consequences if pressure maxes out. Active driving and reaction timing remain readable. The tequila bottle and empty shot glass remain cutscene visual props only; no drinking mechanic is implemented.
