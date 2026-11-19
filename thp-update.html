@@ -29,11 +29,11 @@
 <label>Main squad type <span class="thp-required">*</span>
 <select name="squadType" required><option value="">Choose squad</option><option value="tank">Tank</option><option value="air">Air</option><option value="missile">Missile</option></select></label>
 <label>Main squad power <span class="thp-required">*</span>
-<input id="thp-squad-power" name="squadPower" inputmode="decimal" maxlength="30" required placeholder="52.78M">
-<small id="thp-squad-preview">Example: 52.78M = 52,780,000</small></label>
+<input id="thp-squad-power" name="squadPower" inputmode="decimal" maxlength="30" required placeholder="58.02 or 58.02M">
+<small id="thp-squad-preview">58.02 = 58,020,000. Decimals without M mean millions.</small></label>
 <label>Total Hero Power (THP) <span class="thp-required">*</span>
-<input id="thp-hero-power" name="heroPower" inputmode="decimal" maxlength="30" required placeholder="159.89M">
-<small id="thp-hero-preview">Power Details → Hero Power. Not overall commander power!</small></label>
+<input id="thp-hero-power" name="heroPower" inputmode="decimal" maxlength="30" required placeholder="159.98 or 159.98M">
+<small id="thp-hero-preview">159.98 = 159,980,000. Use Hero Power, not total commander power.</small></label>
 </div>
 <label>Optional proof screenshot
 <input name="screenshot" id="thp-proof" type="file" accept="image/jpeg,image/png,image/webp">
@@ -53,5 +53,5 @@
 </section>
 <p id="thp-load-status" class="thp-muted" role="status">Checking Members Den access…</p>
 </main><footer class="footer"><div class="container">UTW · A little chaos. A lot of correct numbers.</div></footer>
-<script src="/assets/thp-update.js?version=20261118-v1" type="module"></script>
+<script src="/assets/thp-update.js?version=decimal-millions-20261118" type="module"></script>
 </body></html>
