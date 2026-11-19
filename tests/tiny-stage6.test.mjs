@@ -34,7 +34,7 @@ test('Finale has visible evidence hunt, timer, a safe decoy and pauses correctly
  assert.match(script,/function sweepCover\(side\)/);
  assert.match(script,/function cleanupVerdict\(run\)/);
  assert.match(script,/run\.until\+=shift/);
- assert.match(script,/phase!=='cleanup'&&cleanupRun!==run/);
+ assert.match(script,/phase!=='cleanup'\|\|cleanupRun!==run/);
  assert.match(script,/item\.decoy/);
  assert.match(script,/game\.coverupMissed=remaining\.length/);
  assert.match(script,/if\(remaining<=0\|\|run\.objects\.every/);
