@@ -14,6 +14,7 @@ import {buildTrainAdvice,resolveNames,isTopDonationTrain} from '../lib/train-adv
 import {activeR4MemberOptions} from '../lib/r4-eligible-members.mjs';
 import {utwConfigured,utwScoreboard,utwWeeklyOverview} from '../lib/utw-scores.mjs';
 import {GET as runDuelBackupCron} from '../lib/r4-duel-backup.mjs';
+import {latestThpSnapshotDate} from '../assets/r4-thp-roles.mjs';
 
 const HEADERS={'Cache-Control':'private, no-store, max-age=0','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'};
 export const validThp=value=>Number.isSafeInteger(value)&&value>=0;
@@ -52,8 +53,7 @@ async function donationR4Conflict(source,slot,conductorId,vipId){
  if(!isTopDonationTrain(source,slot))return '';
  const [members,aliases]=await Promise.all([
   list('utw_stat_members',{select:'id,display_name',limit:'1000'}),
-  list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'}),
-    list('utw_r4_member_squad_profiles',{select:'source_member_id,member_name,squad_type,squad_power,updated_at,updated_by',order:'member_name.asc',limit:'1000'})
+  list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'})
  ]);
  const r4=await utwR4Membership(members,aliases);
  const offenders=members.filter(m=>r4.has(m.id)&&(m.id===conductorId||m.id===vipId));
@@ -127,15 +127,18 @@ export async function GET(request){
    const actor=await sessionUser(request);
    if(actor?.role==='von')return json({error:'UTW R4 access required'},403);
    const at=q.get('date');
-   if(!isoDate(at))return json({error:'Choose a valid THP snapshot date'},400);
+   if(!isoDate(at))return json({error:'Choose a valid THP measurement date'},400);
+   // The selected date identifies only the measurement to edit, not the display cutoff.
+   const latestAsOf=latestThpSnapshotDate();
    const [records,latest,members,aliases,squads]=await Promise.all([
     list('utw_r4_member_thp_history',{
      select:'source_member_id,member_name,thp,recorded_on,entry_source,updated_at,updated_by',
      recorded_on:'eq.'+at,order:'member_name.asc',limit:'1000'
     }),
-    db('rpc/utw_r4_thp_latest',{method:'POST',body:JSON.stringify({p_date:at})}),
+    db('rpc/utw_r4_thp_latest',{method:'POST',body:JSON.stringify({p_date:latestAsOf})}),
     list('utw_stat_members',{select:'id,display_name',limit:'1000'}),
-    list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'})
+    list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'}),
+    list('utw_r4_member_squad_profiles',{select:'source_member_id,member_name,squad_type,squad_power,updated_at,updated_by',order:'member_name.asc',limit:'1000'})
    ]);
    if(![records,latest,members,aliases,squads].every(Array.isArray))throw Error('Incomplete THP snapshot');
    const resolve=resolveNames(members,aliases),mapped=new Map(),conflicts=new Set(),unmatched=[];
@@ -146,9 +149,9 @@ export async function GET(request){
     mapped.set(deskId,{member_id:deskId,source_member_id:r.source_member_id,name:r.member_name,thp:r.thp,recorded_on:r.recorded_on});
    }
    for(const id of conflicts)mapped.delete(id);
-   return json({date:at,records,latest,squads,mapped:[...mapped.values()],unmatched,
+   return json({date:at,latestAsOf,records,latest,squads,mapped:[...mapped.values()],unmatched,
     ambiguous:conflicts.size,
-    explanation:'Latest THP for each member at or before date, not necessarily measured that day'});
+    explanation:'Display uses latest recorded THP through today in server time. The chosen date is exclusively for editing a dated entry.'});
   }
   if(q.get('image'))return await evidence(request,q.get('image'));
   if(q.get('audit')==='1'){

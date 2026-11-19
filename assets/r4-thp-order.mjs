@@ -1,5 +1,5 @@
-// The THP tracker is ordered by the most recent THP available on or before
-// the selected snapshot date. Do not sort by historical THP from the future.
+// The THP tracker is ordered by the latest saved THP through today (ST).
+// Changing the entry date never changes ranking or displayed THP.
 // A recorded zero is a real value and is ranked above a missing measurement.
 export function orderThpPeople(members,latest=[]){
  const powers=new Map();

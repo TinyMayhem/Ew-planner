@@ -21,7 +21,7 @@ test('THP ranks highest to lowest, unknown last, ties alphabetically',()=>{
  assert.deepEqual(orderThpPeople(people,last).map(x=>x.id),['large','tieA','tieB','small','zero','missing']);
  assert.deepEqual(people.map(x=>x.id),['missing','small','zero','large','tieA','tieB'],'sorting must not mutate input');
 });
-test('Empty snapshot falls back to alphabetical, and selected date governs ranking',()=>{
+test('THP sorting uses latest saved values, and empty data falls back to alphabetical',()=>{
  assert.deepEqual(orderThpPeople([{id:'b',name:'Zed'},{id:'a',name:'Alice'}],[]).map(x=>x.id),['a','b']);
  assert.deepEqual(orderThpPeople([{id:'a',name:'Alice'},{id:'b',name:'Zed'}],[{source_member_id:'a',thp:1},{source_member_id:'b',thp:2}]).map(x=>x.id),['b','a']);
 });
@@ -46,7 +46,8 @@ test('THP tracker offers independent squad controls while train THP rules stay i
  assert.ok(thp.includes('orderThpPeople'));
  assert.ok(thp.includes("state.squads=data.squads||[]"));
  assert.ok(server.includes("case 'member_squad'"));
- assert.ok(page.includes('ranked by their latest available THP'));
+ assert.ok(page.includes('ranked by their latest saved THP'));
+ assert.ok(page.includes('Choosing an entry date does not change the displayed THP'));
  assert.ok(sql.includes('enable row level security'));
  assert.ok(sql.includes('revoke all'));
  for(const path of ['assets/r4-thp.js','assets/r4-thp-order.mjs','api/r4-stats.mjs']){
