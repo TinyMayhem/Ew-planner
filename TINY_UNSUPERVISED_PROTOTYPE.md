@@ -89,3 +89,16 @@ Note: The larger user-requested Stage 6 visual rework to place hidden objects an
 - **Dialogue:** All Stage 6 floating speech bubbles are suppressed. Noosh's questions, official responses and the final defense show their words in the bottom panel, avoiding misattribution to Tiny's portrait.
 - **Verified:** Existing regression suite of 27 checks passed. A simulated-DOM complete run caught all 12 raccoons across three waves, confirmed simultaneous key+buddy presence, cleared the four scattered clues and three scrubbed stains, triggered the trophy penalty, and reached an ending recorded in the archive.
 - **Pending:** Real-phone landscape visual acceptance and sprite polish. Do not merge the draft PR until those are reviewed.
+
+## Stage 6 evidence discoverability fix
+
+Player feedback confirmed the raccoon net stage and tactile throne scrubbing work well, but the hidden-object portion did not say **what objects count**.
+
+- Stage 6 now explicitly names the four required objects before gameplay: 🦝 raccoon fur, 🔑 train keys, 🥊 Baba's boxing gloves, and ✉️ sealed letter.
+- A slim in-scene **evidence checklist** remains visible above the throne with four item labels. The appropriate item is checked off in green after each successful collection.
+- Each collection briefly displays a floating **FOUND: [ITEM]** confirmation. The four objects remain scattered in random positions.
+- Replaced misleading, passive **LOOK FOR CLUES** mode with an actual **HINT** action. Tapping it briefly highlights one uncleared evidence object and indicates its general area, with a nine-second cooldown. The hint reveals no secret ending details.
+- The Stage 6 How-to card and initial mission text now state the four-item objective and warn that Noosh's trophy is not evidence.
+- The existing net-catching game, finger-scrub stain cleaning, Noosh countdown, consequences, secret envelope clue, and final interrogation are unchanged.
+
+Validation: 28 regression checks passed. Simulated UI confirmed the checklist exists, one hint highlights an uncleared object, the corresponding checklist entry turns green on collection, the floating feedback appears, and the cooldown blocks repeat hint spam. User mobile acceptance remains pending.
