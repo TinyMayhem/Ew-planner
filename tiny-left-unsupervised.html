@@ -207,13 +207,37 @@
 /* The cabin actors replace, rather than duplicate, the external character portraits. */
 .train-active.cabin-driving > .char,.train-active.cabin-driving > .name-tag{opacity:0!important;visibility:hidden;pointer-events:none}
 
+
+/* Stage 6: timed evidence hunt, deliberately scaled for mobile landscape. */
+.coverup-room{background:linear-gradient(#3d2d50,#69415d 59%,#8e5164 60%,#422136 100%)}
+.coverup-room .castle-title{color:#ffdb9e;opacity:.72}
+.coverup-active .char{width:17%;height:65%;bottom:18%}
+.coverup-active .bubble{top:17%;left:4%;max-width:22%;font-size:clamp(9px,1.4vw,15px)}
+.cleanup-board{position:absolute;z-index:7;top:17%;left:24%;width:52%;height:57%;border:3px solid #eac58a;border-radius:15px;background:linear-gradient(155deg,#543e57f7,#2e273df5);box-shadow:0 8px 26px #100f23ba,inset 0 0 0 2px #ffffff1b;overflow:hidden}
+.cleanup-top{position:absolute;top:1%;left:3%;right:3%;height:17%;display:flex;justify-content:space-between;align-items:center;gap:7px;font-size:clamp(9px,1.2vw,15px);color:#ffe5af;z-index:3}
+.cleanup-top strong{color:#fff;font-size:1.08em}
+.cleanup-clock{color:#ffcf8a;font-variant-numeric:tabular-nums}
+.cleanup-progress{position:absolute;left:3%;right:3%;top:17%;height:5px;border-radius:5px;background:#230f27;overflow:hidden}
+.cleanup-progress i{display:block;width:100%;height:100%;background:linear-gradient(90deg,#a8efd1,#ffd78a,#f47c88);transform-origin:left center}
+.cover-item{position:absolute;width:23%;height:26%;padding:2px 3px;border:2px solid #f3d8a1;border-radius:9px;background:linear-gradient(#764a63,#4a304e);box-shadow:0 3px 7px #0008;color:#fffaf1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;z-index:3;animation:evidenceJiggle 1.3s ease-in-out infinite alternate}
+.cover-item .emoji{font-size:clamp(17px,3.1vw,35px);line-height:1}
+.cover-item small{font-size:clamp(7px,.84vw,11px);font-weight:900;line-height:1.03}
+.cover-item.decoy{border-color:#aab7d2;filter:saturate(.7)}
+.cover-item:active{background:#a65d72}
+.cover-item.cleared{animation:none;opacity:0;transform:scale(.5);pointer-events:none;transition:opacity .25s,transform .25s}
+.cleanup-footer{position:absolute;bottom:1%;left:2%;right:2%;height:13%;display:flex;align-items:center;justify-content:center;font-size:clamp(8px,.99vw,13px);font-weight:950;color:#e9ddff;background:#24172eb8;border-radius:6px;text-align:center;z-index:2}
+@keyframes evidenceJiggle{from{rotate:-3deg}to{rotate:3deg}}
+.coverup-active .power-row{bottom:24%}
+@media(max-height:450px){.cleanup-board{top:21%;height:50%}.cover-item{height:27%}.coverup-active .bubble{top:19%;font-size:10px}.coverup-active .controls .btn{min-height:30px;padding:4px 7px}.coverup-active .char{bottom:20%;height:58%}}
+@media(prefers-reduced-motion:reduce){.cover-item{animation:none}}
+
 </style>
 </head>
 <body>
 <div id="app"><main class="screen" id="screen" aria-label="Tiny: Left Unsupervised arcade game">
  <div id="gameplay" class="hidden"><div class="scene" id="scene"><div class="lamp"></div><div class="lamp r"></div><div class="castle-title">UTW PALACE OF QUESTIONABLE DECISIONS</div><div class="sparkles"></div><div class="throne" id="throne"><div class="back"></div><div class="seat"></div><div class="leg l"></div><div class="leg r"></div></div><div class="button-pedestal hidden" id="pedestal"><div class="pedestal"></div><div class="danger-button" id="dangerButton"></div><div class="warning-label">DO NOT PRESS</div></div><div class="crate hidden" id="crate">🦝📦</div><div class="noosh-peek hidden" id="nooshPeek" aria-hidden="true"></div><div class="confetti hidden" id="confetti"></div></div>
  <header class="hud"><span class="logo">🎀 TINY <small>LEFT UNSUPERVISED</small></span><span class="chip" id="stageChip">STAGE 1</span><span class="chip">CHAOS <strong id="score">0</strong></span><div class="energy-mini"><b>⚡ <span id="energy">0</span>/100</b><div class="bar"><i id="energyFill"></i></div></div><div class="hud-spacer"></div><button class="icon-btn" id="pauseBtn" aria-label="Pause">Ⅱ</button><button class="icon-btn" id="soundBtn" aria-label="Sound settings">♫</button><button class="icon-btn" id="fullBtn" aria-label="Fullscreen">⛶</button></header>
- <span class="stage-label" id="stageLabel">THE THRONE INCIDENT</span><div class="bubble" id="bubble" aria-live="polite">Five minutes. What could possibly go wrong?</div><div class="char left" id="leftChar"></div><div class="char right" id="rightChar"></div><span class="name-tag left" id="leftName">TINY</span><span class="name-tag right" id="rightName">BABA</span><div class="action-mark" id="actionMark">💥</div><div class="dodge-board hidden" id="dodgeBoard" role="group" aria-label="Incoming obstacles and safe lanes"></div><div class="raccoon-board hidden" id="raccoonBoard" aria-label="Raccoon chase: tap moving raccoons, avoid the fake hats"><div class="raccoon-heading"><span>🦝 <strong id="raccoonCount">0 / 12</strong></span><span>ESCAPED <strong id="raccoonEscaped">0</strong></span><span>⏱ <strong id="raccoonClock">0</strong></span></div><div class="raccoon-field" id="raccoonField"></div><div class="raccoon-net" id="raccoonNet"></div><div class="raccoon-footer">TAP RACCOONS OR SWEEP THE SIDE THEY’RE ON • AVOID 🎩</div></div><div class="fight-board hidden" id="fightBoard" role="group" aria-label="Baba and Tiny cartoon sparring challenge"></div><div class="fight-patience hidden" id="fightPatience" aria-label="Baba composure"><div class="fight-patience-title"><span>😎 BABA’S COMPOSURE</span><span id="fightComposureLabel">100%</span></div><div class="fight-patience-meter"><i id="fightComposureBar"></i></div></div><div class="train-board hidden" id="trainBoard" role="group" aria-label="Railway: red tracks are blocked, green tracks are safe"></div><div class="train-brake hidden" id="trainBrakeWrap"><button id="trainBrake" type="button">✋ HOLD BRAKE</button><label>BRAKE <span id="trainBrakeAmount">100</span>%</label><div class="train-brake-meter"><i id="trainBrakeFill"></i></div></div><div class="challenge hidden" id="challenge"></div><div class="power-row hidden" id="powerRow"><button class="power" id="puppy" title="Puppy Eyes costs 30">🥺 Puppy Eyes <b>30</b></button><button class="power" id="raccoon" title="Raccoon Army costs 60">🦝 Raccoons <b>60</b></button><button class="power" id="nuggie" title="Dino Nuggie Rage costs 100">🍗 Nuggie Rage <b>100</b></button></div><div class="note hidden" id="note"></div><footer class="panel"><div class="story"><div class="eyebrow" id="panelKicker">THE ADVENTURE BEGINS</div><h2 id="panelTitle">Five Minutes Unsupervised</h2><p id="panelText">Tiny has promised to behave.</p></div><div class="controls" id="controls"><button class="btn gold" id="continueBtn">CONTINUE</button></div></footer></div>
+ <span class="stage-label" id="stageLabel">THE THRONE INCIDENT</span><div class="bubble" id="bubble" aria-live="polite">Five minutes. What could possibly go wrong?</div><div class="char left" id="leftChar"></div><div class="char right" id="rightChar"></div><span class="name-tag left" id="leftName">TINY</span><span class="name-tag right" id="rightName">BABA</span><div class="action-mark" id="actionMark">💥</div><div class="dodge-board hidden" id="dodgeBoard" role="group" aria-label="Incoming obstacles and safe lanes"></div><div class="raccoon-board hidden" id="raccoonBoard" aria-label="Raccoon chase: tap moving raccoons, avoid the fake hats"><div class="raccoon-heading"><span>🦝 <strong id="raccoonCount">0 / 12</strong></span><span>ESCAPED <strong id="raccoonEscaped">0</strong></span><span>⏱ <strong id="raccoonClock">0</strong></span></div><div class="raccoon-field" id="raccoonField"></div><div class="raccoon-net" id="raccoonNet"></div><div class="raccoon-footer">TAP RACCOONS OR SWEEP THE SIDE THEY’RE ON • AVOID 🎩</div></div><div class="cleanup-board hidden" id="cleanupBoard" role="group" aria-label="Tap the pieces of evidence before Noosh returns"></div><div class="fight-board hidden" id="fightBoard" role="group" aria-label="Baba and Tiny cartoon sparring challenge"></div><div class="fight-patience hidden" id="fightPatience" aria-label="Baba composure"><div class="fight-patience-title"><span>😎 BABA’S COMPOSURE</span><span id="fightComposureLabel">100%</span></div><div class="fight-patience-meter"><i id="fightComposureBar"></i></div></div><div class="train-board hidden" id="trainBoard" role="group" aria-label="Railway: red tracks are blocked, green tracks are safe"></div><div class="train-brake hidden" id="trainBrakeWrap"><button id="trainBrake" type="button">✋ HOLD BRAKE</button><label>BRAKE <span id="trainBrakeAmount">100</span>%</label><div class="train-brake-meter"><i id="trainBrakeFill"></i></div></div><div class="challenge hidden" id="challenge"></div><div class="power-row hidden" id="powerRow"><button class="power" id="puppy" title="Puppy Eyes costs 30">🥺 Puppy Eyes <b>30</b></button><button class="power" id="raccoon" title="Raccoon Army costs 60">🦝 Raccoons <b>60</b></button><button class="power" id="nuggie" title="Dino Nuggie Rage costs 100">🍗 Nuggie Rage <b>100</b></button></div><div class="note hidden" id="note"></div><footer class="panel"><div class="story"><div class="eyebrow" id="panelKicker">THE ADVENTURE BEGINS</div><h2 id="panelTitle">Five Minutes Unsupervised</h2><p id="panelText">Tiny has promised to behave.</p></div><div class="controls" id="controls"><button class="btn gold" id="continueBtn">CONTINUE</button></div></footer></div>
  <div class="modal" id="modal"><div class="modal-card" id="modalBody"></div></div>
  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 </main></div><div class="rotate"><span>📱↻</span><h2>Turn your phone sideways!</h2><p>Tiny needs room to cause problems.</p><small>Landscape mode works best. Fullscreen is available inside the game.</small></div>
@@ -222,13 +246,13 @@
 const $=id=>document.getElementById(id);
 const SAVE='utw:tiny-unsupervised:prototype-save:v1',CHECKPOINT='utw:tiny-unsupervised:prototype-checkpoint:v1',ARCH='utw:tiny-unsupervised:prototype-archive:v1';
 const fromStorage=(key,def)=>{try{return JSON.parse(localStorage.getItem(key))||def}catch{return def}},toStorage=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));return true}catch{return false}};
-const blank=()=>({version:1,stage:1,phase:'opening',score:0,energy:0,choices:{},influence:{baba:0,noosh:0,catalyst:0,mo:0,savvy:0,devi:0},evidence:{throne:false,button:false,raccoons:false,train:false,clues:[]},achievements:[],outfit:'black',stageResults:{},completed:[],perfects:0,misses:0,shield:0,autoClear:0,rage:0,raccoonsCaught:0,raccoonsEscaped:0,raccoonDecoys:0,trainHits:0,trainSafe:0,trainBonus:0,fightWins:0,fightBonks:0,fightCombos:0});
-let game=blank(),archive=fromStorage(ARCH,{achievements:[],clues:[],completed:[]}),phase='menu',dialogIndex=0,dialogDone=null,locked=false,activeTimer=null,activeFrame=null,expectedKey='',challengeStarted=0,round=0,promptUsed=false,interact=null,soundOn=true,paused=false,offTime=0,currentModal='menu',raccoonRun=null,raccoonRunId=0,trainRun=null,trainRunId=0,trainProp='bottle',trainPanicDeadline=0,trainPressure=37,trainLastVent=0,fightRun=null,fightRunId=0,fightBeat=0,fightStreak=0;
+const blank=()=>({version:1,stage:1,phase:'opening',score:0,energy:0,choices:{},influence:{baba:0,noosh:0,catalyst:0,mo:0,savvy:0,devi:0},evidence:{throne:false,button:false,raccoons:false,train:false,clues:[]},achievements:[],outfit:'black',stageResults:{},completed:[],perfects:0,misses:0,shield:0,autoClear:0,rage:0,raccoonsCaught:0,raccoonsEscaped:0,raccoonDecoys:0,trainHits:0,trainSafe:0,trainBonus:0,fightWins:0,fightBonks:0,fightCombos:0,coverupHidden:0,coverupMissed:0,coverupDecoys:0,coverupTrust:0,endingId:null});
+let game=blank(),archive=fromStorage(ARCH,{achievements:[],clues:[],completed:[]}),phase='menu',dialogIndex=0,dialogDone=null,locked=false,activeTimer=null,activeFrame=null,expectedKey='',challengeStarted=0,round=0,promptUsed=false,interact=null,soundOn=true,paused=false,offTime=0,currentModal='menu',raccoonRun=null,raccoonRunId=0,trainRun=null,trainRunId=0,trainProp='bottle',trainPanicDeadline=0,trainPressure=37,trainLastVent=0,fightRun=null,fightRunId=0,fightBeat=0,fightStreak=0,fightSequence=null,cleanupRun=null,cleanupRunId=0;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function save(){toStorage(SAVE,game)}function saveArchive(){toStorage(ARCH,archive)}
 function addScore(amount){game.score=Math.max(0,game.score+Math.round(amount*(game.rage>0?2:1)));ui()}
 function earn(amount){game.energy=clamp(game.energy+amount,0,100);ui()}
-function ui(){$('score').textContent=game.score.toLocaleString();$('energy').textContent=game.energy;$('energyFill').style.width=game.energy+'%';$('stageChip').textContent='STAGE '+game.stage;$('stageLabel').textContent=({1:'THE THRONE INCIDENT',2:'DO NOT PRESS',3:'RELEASE THE RACCOONS',4:'TINY & DEVI: TRAIN CHAOS',5:'TINY VS BABA: THE SHOWDOWN'})[game.stage]||'NEXT DISASTER';for(const [id,cost] of [['puppy',30],['raccoon',60],['nuggie',100]])$(id).disabled=game.energy<cost||paused}
+function ui(){$('score').textContent=game.score.toLocaleString();$('energy').textContent=game.energy;$('energyFill').style.width=game.energy+'%';$('stageChip').textContent='STAGE '+game.stage;$('stageLabel').textContent=({1:'THE THRONE INCIDENT',2:'DO NOT PRESS',3:'RELEASE THE RACCOONS',4:'TINY & DEVI: TRAIN CHAOS',5:'TINY VS BABA: THE SHOWDOWN',6:'THE ULTIMATE COVER-UP'})[game.stage]||'NEXT DISASTER';for(const [id,cost] of [['puppy',30],['raccoon',60],['nuggie',100]])$(id).disabled=game.energy<cost||paused}
 function notify(s,duration=1600){const t=$('toast');t.textContent=s;t.classList.remove('hidden');clearTimeout(t._hide);t._hide=setTimeout(()=>t.classList.add('hidden'),duration)}
 function achievement(id,label){if(!archive.achievements.includes(id)){archive.achievements.push(id);saveArchive();notify('🏆 Achievement: '+label,2100)}if(!game.achievements.includes(id))game.achievements.push(id)}
 function clue(id){if(!archive.clues.includes(id)){archive.clues.push(id);saveArchive();notify('🔎 A suspicious clue was archived!',1900)}if(!game.evidence.clues.includes(id))game.evidence.clues.push(id)}
@@ -237,11 +261,11 @@ function choices(options){const c=$('controls');c.replaceChildren();options.forE
 function setText(title,body,kicker='A TERRIBLE IDEA'){$('panelTitle').textContent=title;$('panelText').textContent=body;$('panelKicker').textContent=kicker}
 function bubble(s){$('bubble').textContent=s}
 function showPower(on){$('powerRow').classList.toggle('hidden',!on);ui()}
-function hideChallenge(){cancelAnimationFrame(activeFrame);clearInterval(activeTimer);clearTimeout(activeTimer);activeFrame=null;activeTimer=null;$('challenge').classList.add('hidden');$('challenge').classList.remove('guard-challenge','dodge-timer');$('challenge').replaceChildren();$('dodgeBoard').classList.add('hidden');$('dodgeBoard').replaceChildren();$('nooshPeek').className='noosh-peek hidden';$('raccoonBoard').classList.add('hidden');$('raccoonField').replaceChildren();raccoonRun=null;raccoonRunId++;$('trainBoard').classList.add('hidden');$('trainBoard').replaceChildren();$('fightBoard').classList.add('hidden');$('fightBoard').replaceChildren();$('fightPatience').classList.add('hidden');$('gameplay').classList.remove('cabin-driving');fightRun=null;fightRunId++;$('trainBrakeWrap').classList.add('hidden');trainRun=null;trainRunId++;interact=null}
+function hideChallenge(){cleanupRun=null;cleanupRunId++;$('cleanupBoard').classList.add('hidden');$('cleanupBoard').replaceChildren();cancelAnimationFrame(activeFrame);clearInterval(activeTimer);clearTimeout(activeTimer);activeFrame=null;activeTimer=null;$('challenge').classList.add('hidden');$('challenge').classList.remove('guard-challenge','dodge-timer');$('challenge').replaceChildren();$('dodgeBoard').classList.add('hidden');$('dodgeBoard').replaceChildren();$('nooshPeek').className='noosh-peek hidden';$('raccoonBoard').classList.add('hidden');$('raccoonField').replaceChildren();raccoonRun=null;raccoonRunId++;$('trainBoard').classList.add('hidden');$('trainBoard').replaceChildren();$('fightBoard').classList.add('hidden');$('fightBoard').replaceChildren();$('fightPatience').classList.add('hidden');$('gameplay').classList.remove('cabin-driving');fightRun=null;fightRunId++;$('trainBrakeWrap').classList.add('hidden');trainRun=null;trainRunId++;interact=null}
 function mark(s){const el=$('actionMark');el.textContent=s;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),670)}
 function react(id){const el=$(id);el.classList.remove('nudge');void el.offsetWidth;el.classList.add('nudge')}
 function setCharacters(l='tiny',r='baba'){$('leftChar').innerHTML=character(l==='tiny'&&game.outfit==='tan-bear'?'tiny-bear':l);$('rightChar').innerHTML=character(r);$('leftName').textContent=l.toUpperCase();$('rightName').textContent=r.toUpperCase();$('rightChar').classList.remove('gone');$('leftChar').classList.remove('gone');drawHeldTequila()}
-function beginScene(stage){game.stage=stage;game.phase=stage===1?'opening':stage===2?'buttonIntro':stage===3?'raccoonIntro':stage===4?'trainIntro':'fightIntro';$('scene').classList.toggle('train-room',stage===2);$('scene').classList.toggle('raccoon-room',stage===3);$('scene').classList.toggle('railway-room',stage===4);$('scene').classList.toggle('fight-room',stage===5);document.querySelector('.castle-title').textContent=stage===4?'UTW RAILWAY OF TERRIBLE IDEAS':stage===5?'UTW OFFICIAL SPARRING CLUB':'UTW PALACE OF QUESTIONABLE DECISIONS';$('gameplay').classList.toggle('raccoon-active',stage===3);$('gameplay').classList.toggle('train-active',stage===4);$('gameplay').classList.toggle('fight-active',stage===5);$('throne').classList.toggle('hidden',stage!==1);$('pedestal').classList.toggle('hidden',stage!==2);$('crate').classList.toggle('hidden',stage!==3);$('crate').classList.toggle('jitter',stage===3);$('throne').classList.toggle('wet',Boolean(game.evidence.throne));$('challenge').classList.add('hidden');$('nooshPeek').className='noosh-peek hidden';$('note').classList.add('hidden');$('confetti').classList.add('hidden');showPower(false);setCharacters();ui();save()}
+function beginScene(stage){game.stage=stage;game.phase=stage===1?'opening':stage===2?'buttonIntro':stage===3?'raccoonIntro':stage===4?'trainIntro':stage===5?'fightIntro':'coverupIntro';$('scene').classList.toggle('train-room',stage===2);$('scene').classList.toggle('raccoon-room',stage===3);$('scene').classList.toggle('railway-room',stage===4);$('scene').classList.toggle('fight-room',stage===5);$('scene').classList.toggle('coverup-room',stage===6);document.querySelector('.castle-title').textContent=stage===4?'UTW RAILWAY OF TERRIBLE IDEAS':stage===5?'UTW OFFICIAL SPARRING CLUB':stage===6?'UTW INCIDENT CONTROL':'UTW PALACE OF QUESTIONABLE DECISIONS';$('gameplay').classList.toggle('raccoon-active',stage===3);$('gameplay').classList.toggle('train-active',stage===4);$('gameplay').classList.toggle('fight-active',stage===5);$('gameplay').classList.toggle('coverup-active',stage===6);$('throne').classList.toggle('hidden',stage!==1&&stage!==6);$('pedestal').classList.toggle('hidden',stage!==2);$('crate').classList.toggle('hidden',stage!==3);$('crate').classList.toggle('jitter',stage===3);$('throne').classList.toggle('wet',Boolean(game.evidence.throne));$('challenge').classList.add('hidden');$('nooshPeek').className='noosh-peek hidden';$('note').classList.add('hidden');$('confetti').classList.add('hidden');showPower(false);setCharacters();ui();save()}
 const script1=[['Noosh','Tiny. I am leaving for FIVE minutes. Please behave.','noosh'],['Tiny','I am a responsible and entirely trustworthy individual.','tiny'],['Savvy','*The longest sigh in UTW history.*','savvy'],['Baba','Don’t worry, Noosh. I’ll watch her.','baba'],['Noosh','That is literally what I’m worried about.','noosh'],['Tiny','So... nobody is guarding the throne?','tiny'],['Baba','You’re thinking what I’m thinking.','baba']];
 const script3=[['Tiny','Okay, who opened the raccoon enclosure?','tiny'],['Baba','Technically the button did. I merely encouraged it.','baba'],['Catalyst','Those are my cousins. They do this.','catalyst'],['Mo','Tiny. The corner. NOW.','mo'],['Savvy','*SIGH.*','savvy'],['Tiny','WAIT. ONE OF THEM HAS THE TRAIN KEYS!','tiny']];
 const script2=[['Baba','That noise was... probably normal.','baba'],['Tiny','Why is there a button under the throne?','tiny'],['Baba','Only one way to find out.','baba'],['Tiny','It specifically says DO NOT PRESS.','tiny'],['Baba','Those sound like suggestions to me.','baba']];
@@ -708,6 +732,15 @@ const fightMoves=[
  {type:'combo',title:'HIS ULTIMATE COMBO',hint:'DODGE then PUNCH! Hurry!',say:'Savvy: *Aggressively sighs.*'},
  {type:'finish',title:'THE FINAL COMEBACK',hint:'Your choice! PUNCH, DODGE or SASS!',say:'Baba: Whatever you do, make it dramatic.'}
 ];
+let fightDeck=null;
+function buildFightDeck(){
+ const regular=mixDeck(fightMoves.filter(m=>m.type!=='combo'&&m.type!=='finish'));
+ const combo=mixDeck(fightMoves.filter(m=>m.type==='combo'));
+ const finisher=fightMoves.find(m=>m.type==='finish');
+ const result=regular.slice(0,4).concat(mixDeck(regular.slice(4).concat(combo)),[finisher]);
+ // First four cues teach the three basic reactions; combos appear afterwards.
+ return freshDeck(result,'fight',m=>m.title);
+}
 const fightResponses={punch:['💥 TINY LANDS A CARTOON BONK!','Baba: I encouraged this, did I not?'],dodge:['🌀 PERFECT LITTLE DUCK!','Baba: There she goes again.'],sass:['💬 BABA HAS BEEN OUT-SASSED','Baba: I taught her far too well.'],raccoon:['🦝 RACCOON DISTRACTION!','Baba: WHY ARE THERE RACCOONS IN THE RING?!']};
 const fightScript=[
  ['Baba','YOU DROVE MY TRAIN?! I am impressed, but now I challenge you!','baba'],
@@ -717,7 +750,7 @@ const fightScript=[
  ['Baba','...Actually, I respect that.','baba']
 ];
 function startStage5(){hideChallenge();beginScene(5);phase='fightIntro';game.phase=phase;
- game.outfit='black';game.fightWins=0;game.fightBonks=0;game.fightCombos=0;fightStreak=0;fightBeat=0;
+ fightDeck=buildFightDeck();game.outfit='black';game.fightWins=0;game.fightBonks=0;game.fightCombos=0;fightStreak=0;fightBeat=0;
  setCharacters('tiny','baba');bubble('Baba: I have been waiting ALL DAY for a Tiny-sized challenge.');
  setText('Tiny vs Baba','A very serious and completely unnecessary cartoon showdown. Read the move, then PUNCH, DODGE, or SASS before the clock runs out.','STAGE 5 • UNNECESSARY DRAMA');
  save();playDialogue(fightScript,fightIntroChoice)
@@ -745,9 +778,9 @@ function animateFight(correct,kind){const l=$('leftChar'),r=$('rightChar');
  mark(correct?(kind==='sass'?'💬':kind==='dodge'?'💨':'💥'):'💫');
 }
 function fightButtons(){choices([['👊 PUNCH',()=>fightAction('punch'),'gold'],['🌀 DODGE',()=>fightAction('dodge')],['💬 SASS',()=>fightAction('sass')]])}
-function startFightBeat(index){if(index>=fightMoves.length){fightVerdict();return}
+function startFightBeat(index){if(!fightDeck)fightDeck=buildFightDeck();if(index>=fightDeck.length){fightVerdict();return}
  clearInterval(activeTimer);activeTimer=null;phase='fight';game.phase=phase;game.stage=5;fightBeat=index;
- const move=fightMoves[index],duration=Math.max(1.95,3.8-index*.2);
+ const move=fightDeck[index],duration=Math.max(1.95,3.8-index*.2);
  const run={id:++fightRunId,index,move,step:0,deadline:performance.now()+duration*1000,total:duration*1000,done:false};fightRun=run;
  setCharacters('tiny','baba');showPower(true);$('fightBoard').classList.remove('hidden');$('fightPatience').classList.remove('hidden');
  const cue=move.type==='combo'?'DODGE → PUNCH':move.type==='finish'?'CHOOSE YOUR FINISHER':move.type.toUpperCase()+'!';
@@ -785,7 +818,7 @@ function finishFightBeat(run,correct,kind){if(phase!=='fight'||run.done||fightRu
   if(fightStreak>=3&&fightStreak%3===0){addScore(125);notify('🔥 3-MOVE CHAOS COMBO! +125')}
   bubble(fightResponses[kind]?.[1]||'Baba: I WAS NOT EXPECTING THE RACCOON OPTION.');audio('success');
   if(game.rage>0)game.rage--;
-  if(run.index===6)clue('glasses');
+  if(run.move.title==='HE ADJUSTS HIS GLASSES')clue('glasses');
  } else{game.fightBonks++;game.misses++;fightStreak=0;game.influence.baba++;
   bubble(['Baba: Ha! I still have it!','Mo: Both of you, the corner.','Tiny: THIS FIGHT IS RIGGED!'][run.index%3]);audio('oops');}
  fightComposure();save();
@@ -807,21 +840,239 @@ function stage5End(){hideChallenge();phase='stage5End';game.phase=phase;game.com
  bubble('Noosh: I WAS GONE FOR FIVE MINUTES. Why does the station have a boxing ring?!');
  setText('STAGE 5 COMPLETE','The shouting has summoned Noosh. Baba looks proud. Tiny looks suspiciously innocent. Nobody has cleaned the throne.','NEXT STAGE • THE ULTIMATE COVER-UP');
  toStorage(CHECKPOINT,{...game,stage:6,phase:'coverupTeaser'});save();
- choices([['VIEW YOUR INCIDENT REPORT ▸',finishPrototype,'gold']])
+ choices([['STAGE 6: HIDE THE EVIDENCE ▸',startStage6,'gold']])
 }
 
-function finishPrototype(){hideChallenge();phase='result';currentModal='result';$('gameplay').classList.add('hidden');const total=game.score,ach=archive.achievements.length,cl=archive.clues.length;showModal(`<div class="modal-kicker">UTW CHAOS ARCADE • PROTOTYPE COMPLETE</div><h1>INCIDENT REPORT</h1><p>Noosh was gone for approximately five minutes. The official report is already eleven pages long.</p><div class="stats"><div class="statbox"><b>${total.toLocaleString()}</b><small>CHAOS POINTS</small></div><div class="statbox"><b>${game.misses}</b><small>UNFORTUNATE INCIDENTS</small></div><div class="statbox"><b>${game.perfects}</b><small>SUCCESSFUL ESCAPES</small></div></div><p><b>Noosh's verdict:</b> “This is not a game. This is evidence.”</p><p>🚨 The next chapter: <b>The Ultimate Cover-Up</b></p><p>🦝 Raccoons caught: <b>${game.raccoonsCaught}</b> • Escaped: <b>${game.raccoonsEscaped}</b> • Baba’s hats: <b>${game.raccoonDecoys}</b></p><p>🚂 Tracks cleared: <b>${game.trainSafe}/9</b> • Devi rescues: <b>${game.trainHits}</b> • Bonus routes: <b>${game.trainBonus}</b> • Boiler meltdowns: <b>${game.trainSteamBlasts||0}</b></p><p>🥊 Baba sparring: <b>${game.fightWins}/10</b> successful moves • <b>${game.fightBonks}</b> cartoon bonks • <b>${game.fightCombos}</b> combo finishes</p><div class="row"><button class="btn gold" id="againBtn">RESTART POOR DECISIONS</button><button class="btn alt" id="archiveBtn">INCIDENT ARCHIVES</button><button class="btn alt" id="menuBtn">MENU</button></div><p class="tooltip">Achievements: ${ach} • Clues discovered: ${cl} • Full story, Endless Mode and live leaderboards come later.</p>`);$('againBtn').onclick=()=>startNew();$('archiveBtn').onclick=()=>showArchive();$('menuBtn').onclick=()=>menu();}
-function usePower(which){if(paused||!['sneak','lick','throneChoice','buttonChoice','panic','dodge','approach','raccoonChoice','raccoons','trainChoice','train','trainPanic','fightChoice','fight'].includes(phase))return;const cost={puppy:30,raccoon:60,nuggie:100}[which];if(game.energy<cost)return;game.energy-=cost;if(which==='puppy'){if(phase==='panic'||phase==='dodge'||phase==='raccoons'||phase==='train'||phase==='trainPanic'||phase==='fight')interact?.extend?.();else{game.shield++;notify('🥺 One mistake will be forgiven.')}}if(which==='raccoon'){if(phase==='raccoons'||phase==='train'||phase==='fight')interact?.auto?.();else game.autoClear++;notify('🦝 Raccoon Army activated!');mark('🦝')}if(which==='nuggie'){game.rage=4;notify('🍗 DINO NUGGIE RAGE! Next three successes earn double points!');mark('🔥')}audio('power');ui();save()}
+
+// Stage 6: The Ultimate Cover-Up. Story never game-overs and no online writes occur.
+const coverItems=[
+ {id:'throne-stain',icon:'💦',label:'Throne stains'},
+ {id:'red-switch',icon:'🔴',label:'Forbidden button'},
+ {id:'raccoon-fur',icon:'🦝',label:'Raccoon fur'},
+ {id:'train-keys',icon:'🔑',label:'Train keys'},
+ {id:'boxing-gloves',icon:'🥊',label:'Baba gloves'},
+ {id:'baba-hat',icon:'🎩',label:'Suspicious hat'},
+ {id:'sealed-order',icon:'✉️',label:'Sealed letter',clue:true},
+ {id:'noosh-award',icon:'🏆',label:'Noosh trophy',decoy:true}
+];
+const coverDialogue=[
+ ['Noosh','I was gone for FIVE MINUTES.','noosh'],
+ ['Tiny','And you are welcome back!','tiny'],
+ ['Baba','I supervised. Extremely enthusiastically.','baba'],
+ ['Mo','I gave her a corner. She escaped it.','mo'],
+ ['Devi','I did save the train, for the record.','devi'],
+ ['Savvy','*A sigh so deep it becomes paperwork.*','savvy'],
+ ['Noosh','WHY IS THERE A TRAIN OUTSIDE THE THRONE ROOM?','noosh']
+];
+function startStage6(){
+ hideChallenge();beginScene(6);phase='coverupIntro';game.phase=phase;
+ game.coverupHidden=0;game.coverupMissed=0;game.coverupDecoys=0;game.coverupTrust=0;
+ game.choices.coverupAnswers=[];game.choices.coverupFileFound=false;
+ setCharacters('tiny','mo');bubble('Mo: You have ONE CHANCE to clean this up.');
+ setText('The Ultimate Cover-Up','Noosh is returning. The throne is wet, the raccoons are loose, and someone has left boxing gloves on the floor.','STAGE 6 • THE FINAL DISASTER');
+ choices([['START THE EMERGENCY CLEANUP ▸',coverupPlan,'gold']]);save()
+}
+function coverupPlan(){
+ phase='coverupChoice';game.phase=phase;showPower(true);setCharacters('tiny','mo');
+ bubble('Baba: I can distract him! This seems like a terrific plan.');
+ setText('Choose your cover story crew','Tap evidence in the room or sweep a side. Avoid Noosh’s innocent trophy. The clock starts when you enter.','OPERATION: HIDE THE EVIDENCE');
+ choices([
+ ['MO, ORGANIZE THE CLEANUP',()=>startCleanup('mo'),'gold'],
+ ['BABA, DISTRACT NOOSH',()=>startCleanup('baba')],
+ ['CAT, CAUSE MORE CHAOS',()=>startCleanup('cat')]
+ ]);save()
+}
+function startCleanup(plan){
+ hideChallenge();phase='cleanup';game.phase=phase;game.stage=6;
+ game.choices.coverupPlan=plan;setCharacters('tiny',plan==='cat'?'catalyst':plan==='baba'?'baba':'mo');showPower(true);
+ if(plan==='mo')game.influence.mo+=3;else if(plan==='baba')game.influence.baba+=3;else game.influence.catalyst+=3;
+ const board=$('cleanupBoard');board.classList.remove('hidden');
+ const slots=mixDeck([[5,29],[36,29],[68,29],[5,55],[36,55],[68,55],[21,81],[53,81]]);
+ const objects=mixDeck(coverItems).map((item,i)=>({...item,done:false,x:slots[i][0],y:slots[i][1]}));
+ // Place the last row a little higher so no tappable item overlaps the footer.
+ const total=plan==='mo'?30000:plan==='baba'?28000:25000;
+ const run={id:++cleanupRunId,objects,until:performance.now()+total,last:performance.now(),duration:total,finished:false,swept:0,alerted:false};
+ cleanupRun=run;
+ board.innerHTML='<div class="cleanup-top"><span>🧽 <strong id="cleanupHidden">0/7</strong> HIDDEN</span><span>NOOSH IN <strong class="cleanup-clock" id="cleanupClock">30.0</strong></span></div><div class="cleanup-progress"><i id="cleanupProgress"></i></div><div class="cleanup-footer">TAP EVIDENCE OR SWEEP LEFT/RIGHT • DO NOT TOUCH 🏆</div>';
+ for(const item of objects){
+  const btn=document.createElement('button');btn.className='cover-item'+(item.decoy?' decoy':'');
+  btn.type='button';btn.style.left=item.x+'%';btn.style.top=(item.y===81?65:item.y===55?50:24)+'%';
+  // Three rows have independent columns with no overlap at 780 × 360.
+  if(item.y===81)btn.style.left=(item.x===21?22:57)+'%';
+  btn.setAttribute('aria-label',item.label+(item.decoy?', do not hide':' , tap to hide'));
+  btn.innerHTML='<span class="emoji">'+item.icon+'</span><small>'+item.label+'</small>';
+  btn.addEventListener('click',()=>hideCoverItem(item,run));board.append(btn);item.el=btn;
+ }
+ setText('THE CLEANUP IS ON!','Catch every incriminating object before Noosh reaches the door. Sweep a side for help. Leave his trophy alone!','NOOSH IS GETTING CLOSER');
+ bubble('Tiny: THIS IS NOT A DISASTER. THIS IS A REDECORATION.');
+ choices([['🧽 SWEEP LEFT',()=>sweepCover('left'),'gold'],['🧽 SWEEP RIGHT',()=>sweepCover('right')]]);
+ interact={
+  extend:()=>{if(cleanupRun!==run)return;run.until+=4800;notify('🥺 Noosh looks the other way! +4.8s')},
+  auto:()=>{const target=run.objects.find(o=>!o.done&&!o.decoy);if(target)hideCoverItem(target,run,true)}
+ };
+ function frame(now){
+  if(phase!=='cleanup'||cleanupRun!==run||run.finished)return;
+  if(paused){const shift=Math.max(0,now-run.last);run.until+=shift;run.last=now;activeFrame=requestAnimationFrame(frame);return}
+  run.last=now;const remaining=Math.max(0,run.until-now);
+  const clock=$('cleanupClock'),progress=$('cleanupProgress');
+  if(clock)clock.textContent=(remaining/1000).toFixed(1)+'s';
+  if(progress)progress.style.width=Math.min(100,remaining/run.duration*100)+'%';
+  if(remaining<9000&&!run.alerted){run.alerted=true;bubble('Noosh: WHY DO I HEAR SCRUBBING?!');mark('🚨');audio('alarm')}
+  if(remaining<=0||run.objects.every(o=>o.done||o.decoy)){cleanupVerdict(run);return}
+  activeFrame=requestAnimationFrame(frame)
+ }
+ activeFrame=requestAnimationFrame(frame);save()
+}
+function hideCoverItem(item,run,assisted=false){
+ if(phase!=='cleanup'||paused||cleanupRun!==run||run.finished||item.done)return;
+ item.done=true;item.el?.classList.add('cleared');
+ if(item.decoy){
+  game.coverupDecoys++;game.misses++;game.coverupTrust--;
+  bubble('Noosh: WHO TOUCHED MY TROPHY?');audio('oops');mark('🏆');
+ }else{
+  game.coverupHidden++;addScore(100+(assisted?0:40));earn(7);audio('success');
+  $('cleanupHidden').textContent=game.coverupHidden+'/7';
+  if(item.clue){game.choices.coverupFileFound=true;clue('sealed-order');bubble('Tiny: WHY is this envelope marked CLASSIFIED?!')}
+  else if(item.id==='train-keys')bubble('Devi: Please put those keys somewhere sensible this time.');
+  else if(item.id==='throne-stain')bubble('Tiny: Nothing suspicious about this completely polished throne.');
+  else bubble(assisted?'Cat: I accept the chaos as a lifestyle.':'Tiny: THE EVIDENCE HAS VANISHED.');
+ }
+ save()
+}
+function sweepCover(side){
+ if(phase!=='cleanup'||!cleanupRun||paused)return;
+ const run=cleanupRun,now=performance.now();if(now-run.swept<1000)return;run.swept=now;
+ const items=run.objects.filter(o=>!o.done&&(side==='left'?o.x<45:o.x>=45));
+ const item=items.find(o=>!o.decoy)||items[0];if(item){hideCoverItem(item,run)}else bubble('Tiny: THERE IS NOTHING LEFT TO HIDE ON THIS SIDE!')
+}
+function cleanupVerdict(run){
+ if(phase!=='cleanup'||cleanupRun!==run||run.finished)return;
+ run.finished=true;const remaining=run.objects.filter(o=>!o.done&&!o.decoy);
+ game.coverupMissed=remaining.length;game.choices.coverupScore=game.coverupHidden;
+ if(!remaining.length){achievement('perfect-cleanup','No Evidence, No Regrets');game.coverupTrust+=2;addScore(400)}
+ else{game.coverupTrust-=Math.min(3,remaining.length);game.misses+=Math.min(3,remaining.length)}
+ hideChallenge();phase='cleanupVerdict';game.phase=phase;showPower(false);setCharacters('tiny','noosh');
+ bubble(remaining.length?'Noosh: I CAN LITERALLY SEE THE EVIDENCE.':'Noosh: ...Why does everything smell like cleaning spray?');
+ setText('NOOSH HAS RETURNED','You hid '+game.coverupHidden+' of 7 suspicious items. '+remaining.length+' were left in plain sight. The investigation begins.','EVIDENCE REPORT');
+ choices([['FACE NOOSH’S QUESTIONS ▸',startInterrogation,'gold']]);save()
+}
+const questions=[
+ {ask:'NOOSH: Why is the throne wet?',
+  options:[
+   {label:'I WAS POLISHING IT',delta:1,score:110,answer:'Noosh: With your TONGUE?'},
+   {label:'BABA MADE ME DO IT',delta:-1,baba:2,score:170,answer:'Baba: I DID ENCOURAGE THAT.'},
+   {label:'THE RACCOONS DID IT',delta:-2,cat:1,score:190,answer:'Savvy: *An enormous sigh.*'}
+  ]},
+ {ask:'NOOSH: Who authorized the train ride?',
+  options:[
+   {label:'DEVI KEPT US SAFE',delta:2,devi:2,score:120,answer:'Devi: I did my best. I really did.'},
+   {label:'IT WAS A TRANSPORT UPGRADE',delta:0,score:160,answer:'Noosh: IT LEFT THE STATION.'},
+   {label:'THE KEY-CARRYING RACCOON',delta:-1,cat:2,score:200,answer:'Cat: Sounds like one of my cousins.'}
+  ]},
+ {ask:'NOOSH: And the BOXING RING?',
+  options:[
+   {label:'TEAM-BUILDING EXERCISE',delta:1,score:120,answer:'Mo: I DID NOT APPROVE THE TEAM BUILDING.'},
+   {label:'BABA ISSUED A CHALLENGE',delta:-1,baba:2,score:160,answer:'Baba: SHE ANSWERED GLORIOUSLY.'},
+   {label:'EVERYONE NEEDED ENTERTAINMENT',delta:-1,score:220,answer:'Noosh: I NEEDED FIVE MINUTES OF PEACE.'}
+  ]}
+];
+function startInterrogation(){
+ hideChallenge();phase='interrogation';game.phase=phase;showPower(true);setCharacters('tiny','noosh');
+ bubble('Noosh: SIT. ALL OF YOU. I AM NOT LEAVING UNTIL I HAVE ANSWERS.');
+ setText('The Great UTW Interrogation','Noosh has questions. Your choices, allies and the evidence from earlier stages affect the verdict.','THREE QUESTIONS • UNTIL NOOSH IS SATISFIED');
+ choices([['LET THE QUESTIONING BEGIN ▸',()=>askQuestion(0),'gold']]);save()
+}
+function askQuestion(index){
+ if(index>=questions.length){finalDefense();return}
+ phase='interrogation';game.phase=phase;showPower(true);
+ const question=questions[index];setCharacters('tiny','noosh');
+ bubble(question.ask);setText('Noosh’s Interrogation',question.ask,'QUESTION '+(index+1)+' / '+questions.length+' • NO TIME LIMIT');
+ choices(question.options.map((option,j)=>[option.label,()=>answerQuestion(index,j),j===0?'gold':'']));save()
+}
+function answerQuestion(index,j){
+ if(phase!=='interrogation'||index!==(game.choices.coverupAnswers||[]).length)return;
+ const opt=questions[index]?.options[j];if(!opt)return;
+ game.coverupTrust+=opt.delta;game.influence.baba+=(opt.baba||0);game.influence.devi+=(opt.devi||0);game.influence.catalyst+=(opt.cat||0);
+ game.choices.coverupAnswers.push(j);addScore(opt.score);bubble(opt.answer);
+ if(opt.delta>0)earn(8);
+ setText('THE OFFICIAL RESPONSE',opt.answer,'NOOSH IS TAKING NOTES');save();
+ choices([['NEXT QUESTION ▸',()=>askQuestion(index+1),'gold']])
+}
+function finalDefense(){
+ phase='finalDefense';game.phase=phase;showPower(false);setCharacters('tiny','noosh');
+ bubble('Noosh: ONE FINAL QUESTION. WHAT DO YOU HAVE TO SAY FOR YOURSELF?');
+ setText('Tiny’s Final Defense','Choose the argument that matches the allies you made, the chaos you caused, and the clues you uncovered.','YOUR LAST CHANCE');
+ const options=[
+ ['I SHOULD RUN THIS PLACE',()=>resolveEnding('crown'),'gold'],
+ ['BABA MADE ME DO IT',()=>resolveEnding('baba')],
+ ['PLEASE FORGIVE ME, NOOSH',()=>resolveEnding('puppy')],
+ ['LET THE RACCOONS TESTIFY',()=>resolveEnding('raccoons')]
+ ];
+ if(archive.clues.includes('royal-crest')&&archive.clues.includes('raccoon-key')&&archive.clues.includes('glasses')&&game.choices.coverupFileFound){
+  options.push(['🔒 OPEN THE CLASSIFIED FILE',()=>resolveEnding('classified')]);
+ }
+ choices(options);save()
+}
+function chooseEnding(defense){
+ const secretReady=archive.clues.includes('royal-crest')&&archive.clues.includes('raccoon-key')&&archive.clues.includes('glasses')&&game.choices.coverupFileFound;
+ if(defense==='classified'&&secretReady)return 'classified';
+ const candidates={
+  queen:(game.score>=5300?4:0)+(game.coverupHidden>=6?1:0)+(defense==='crown'?9:0),
+  baba:(game.influence.baba>=5?3:0)+(game.choices.coverupAnswers||[]).filter(n=>n===1).length+(defense==='baba'?9:0),
+  noosh:(game.coverupTrust>=2?4:0)+(game.coverupHidden>=5?2:0)+(defense==='puppy'?9:0),
+  raccoons:(game.raccoonsEscaped>=5?4:0)+(game.choices.raccoonPlan==='cat'?2:0)+(defense==='raccoons'?9:0)
+ };
+ return Object.keys(candidates).sort((a,b)=>candidates[b]-candidates[a])[0]
+}
+const endingText={
+ queen:{title:'THE CHAOS QUEEN',icon:'👑',summary:'Tiny is officially put in charge of headquarters. Noosh has requested indefinite leave. Baba wants a parade.'},
+ baba:{title:'IT WAS BABA',icon:'🥊',summary:'Baba takes the blame and announces he regrets absolutely nothing. Tiny receives a gold star for strategic delegation.'},
+ noosh:{title:'NOOSH’S FAVOURITE MENACE',icon:'❤️',summary:'Noosh sighs, accepts the apology, and hands Tiny a cleaning cloth. He remains the voice of reason. Barely.'},
+ raccoons:{title:'THE RACCOON UPRISING',icon:'🦝',summary:'The raccoons claim the palace, Cat accepts his new duties, and Noosh files an official complaint against wildlife.'},
+ classified:{title:'OPERATION: FIVE MINUTES',icon:'🔒',summary:'The classified file reveals a supervision drill nobody was meant to discover. Tiny has turned the investigation upside down. Noosh would like the file back.'}
+};
+function resolveEnding(defense){
+ if(phase!=='finalDefense')return;
+ const id=chooseEnding(defense),end=endingText[id];game.choices.finalDefense=defense;game.choices.endingId=id;game.endingId=id;
+ game.completed=[...new Set([...game.completed,6])];game.stageResults[6]={score:game.score,hidden:game.coverupHidden,missed:game.coverupMissed,trust:game.coverupTrust,defense,ending:id};
+ if(!Array.isArray(archive.endings))archive.endings=[];if(!archive.endings.includes(id))archive.endings.push(id);
+ saveArchive();achievement('finished-story','Five Minutes, Six Disasters');
+ if(id==='classified')achievement('classified-ending','Officially Unsupervisable');
+ phase='storyComplete';game.phase=phase;toStorage(CHECKPOINT,{...game,stage:6,phase:'storyComplete'});save();
+ hideChallenge();showPower(false);setCharacters('tiny',id==='raccoons'?'catalyst':id==='baba'?'baba':'noosh');
+ bubble(id==='classified'?'Noosh: THAT FILE WAS CLASSIFIED.':id==='baba'?'Baba: I REGRET NOTHING.':id==='raccoons'?'Cat: Guess the raccoons run things now.':'Noosh: I am never taking five minutes off again.');
+ setText(end.icon+' '+end.title,end.summary,'STAGE 6 COMPLETE • ENDING UNLOCKED');
+ choices([['VIEW YOUR UTW INCIDENT REPORT ▸',finishPrototype,'gold']]);mark(end.icon)
+}
+
+function finishPrototype(){
+ hideChallenge();phase='result';currentModal='result';$('gameplay').classList.add('hidden');
+ const id=game.endingId||game.choices?.endingId||'noosh',end=endingText[id]||endingText.noosh;
+ const unlocked=archive.endings||[];const total=game.score.toLocaleString();
+ const known=[['queen','The Chaos Queen'],['baba','It Was Baba'],['noosh','Noosh’s Favourite Menace'],['raccoons','The Raccoon Uprising'],['classified','??? CLASSIFIED ???']];
+ const gallery=known.map(([k,label])=>unlocked.includes(k)?'✓ '+(k==='classified'?'Operation: Five Minutes':label):'🔒 '+(k==='classified'?'???':label)).join(' · ');
+ showModal('<div class="modal-kicker">UTW CHAOS ARCADE • SIX STAGES COMPLETE</div>'+
+ '<h1>'+end.icon+' '+end.title+'</h1><p>'+end.summary+'</p>'+
+ '<div class="stats"><div class="statbox"><b>'+total+'</b><small>CHAOS POINTS</small></div>'+
+ '<div class="statbox"><b>'+game.misses+'</b><small>INCIDENTS</small></div>'+
+ '<div class="statbox"><b>'+game.coverupHidden+'/7</b><small>EVIDENCE HIDDEN</small></div></div>'+
+ '<p><b>Noosh’s report:</b> '+game.fightBonks+' Baba bonks, '+game.raccoonsEscaped+' runaway raccoons, '+game.trainHits+' train rescues. The case is not closed.</p>'+
+ '<p><b>ENDINGS '+unlocked.length+'/5:</b> '+gallery+'</p>'+
+ '<div class="row"><button class="btn gold" id="againBtn">REPLAY YOUR POOR DECISIONS</button><button class="btn alt" id="archiveBtn">INCIDENT ARCHIVES</button><button class="btn alt" id="menuBtn">MENU</button></div>'+
+ '<p class="tooltip">Unlocked endings and discovered clues remain in your archive. Endless Chaos and shared leaderboards are future updates.</p>');
+ $('againBtn').onclick=()=>startNew();$('archiveBtn').onclick=()=>showArchive();$('menuBtn').onclick=()=>menu()
+}
+function usePower(which){if(paused||!['sneak','lick','throneChoice','buttonChoice','panic','dodge','approach','raccoonChoice','raccoons','trainChoice','train','trainPanic','fightChoice','fight','cleanup','interrogation'].includes(phase))return;const cost={puppy:30,raccoon:60,nuggie:100}[which];if(game.energy<cost)return;game.energy-=cost;if(which==='puppy'){if(phase==='panic'||phase==='dodge'||phase==='raccoons'||phase==='train'||phase==='trainPanic'||phase==='fight'||phase==='cleanup')interact?.extend?.();else{game.shield++;notify('🥺 One mistake will be forgiven.')}}if(which==='raccoon'){if(phase==='raccoons'||phase==='train'||phase==='fight'||phase==='cleanup')interact?.auto?.();else game.autoClear++;notify('🦝 Raccoon Army activated!');mark('🦝')}if(which==='nuggie'){game.rage=4;notify('🍗 DINO NUGGIE RAGE! Next three successes earn double points!');mark('🔥')}audio('power');ui();save()}
 function showModal(html){$('modalBody').innerHTML=html;$('modal').classList.remove('hidden');$('gameplay').classList.add('hidden')}
 function hideModal(){$('modal').classList.add('hidden');$('gameplay').classList.remove('hidden');ui()}
-function menu(){phase='menu';currentModal='menu';hideChallenge();$('gameplay').classList.add('hidden');const hasSave=Boolean(fromStorage(SAVE,null)?.completed?.includes(1));showModal(`<div class="modal-kicker">UTW CHAOS ARCADE PRESENTS</div><h1>🎀 TINY:<br>LEFT UNSUPERVISED</h1><p>One Tiny. Zero supervision. Everybody suffers.</p><p>🥊 A story-driven cartoon chaos game. <b>Five connected stages playable in this prototype.</b></p><div class="row"><button class="btn gold" id="newBtn">START THE CHAOS</button>${hasSave?'<button class="btn" id="resumeBtn">RESUME POOR DECISIONS</button>':''}</div><div class="row"><button class="btn alt" id="archiveBtn">NOOSH’S ARCHIVES</button><button class="btn alt" id="settingsBtn">SOUND SETTINGS</button></div><p class="tooltip">Landscape mobile · Fullscreen · Keyboard controls · Autosave after stages<br>Prototype uses lightweight placeholder chibi portraits inspired by your references. Final detailed sprites come next.</p><p class="tooltip">This prototype uses local scores only. No UTW login or private member data required.</p>`);$('newBtn').onclick=()=>startNew();if($('resumeBtn'))$('resumeBtn').onclick=()=>resume();$('archiveBtn').onclick=()=>showArchive();$('settingsBtn').onclick=()=>settings()}
+function menu(){phase='menu';currentModal='menu';hideChallenge();$('gameplay').classList.add('hidden');const hasSave=Boolean(fromStorage(SAVE,null)?.completed?.includes(1));showModal(`<div class="modal-kicker">UTW CHAOS ARCADE PRESENTS</div><h1>🎀 TINY:<br>LEFT UNSUPERVISED</h1><p>One Tiny. Zero supervision. Everybody suffers.</p><p>🥊 A story-driven cartoon chaos game. <b>The full SIX-stage story is playable. Four endings and a hidden fifth await.</b></p><div class="row"><button class="btn gold" id="newBtn">START THE CHAOS</button>${hasSave?'<button class="btn" id="resumeBtn">RESUME POOR DECISIONS</button>':''}</div><div class="row"><button class="btn alt" id="archiveBtn">NOOSH’S ARCHIVES</button><button class="btn alt" id="settingsBtn">SOUND SETTINGS</button></div><p class="tooltip">Landscape mobile · Fullscreen · Keyboard controls · Autosave after stages<br>Prototype uses lightweight placeholder chibi portraits inspired by your references. Final detailed sprites come next.</p><p class="tooltip">This prototype uses local scores only. No UTW login or private member data required.</p>`);$('newBtn').onclick=()=>startNew();if($('resumeBtn'))$('resumeBtn').onclick=()=>resume();$('archiveBtn').onclick=()=>showArchive();$('settingsBtn').onclick=()=>settings()}
 function startNew(){hideChallenge();game=blank();paused=false;try{localStorage.removeItem(CHECKPOINT)}catch{}unlockAudio();hideModal();opening()}
-function resume(){const saved=fromStorage(SAVE,null);if(!saved||saved.version!==1||!saved.completed?.includes(1)){menu();return}unlockAudio();const checkpoint=fromStorage(CHECKPOINT,null);game={...blank(),...(checkpoint?.version===1?checkpoint:saved)};game.evidence={...blank().evidence,...game.evidence};game.influence={...blank().influence,...game.influence};hideModal();if(game.completed?.includes(5)){beginScene(5);stage5End();return}if(game.completed?.includes(4)){startStage5();notify('✅ Resumed from Stage 5 checkpoint');return}if(game.completed?.includes(3)){startStage4();notify('✅ Resumed from Stage 4 checkpoint');return}if(game.completed?.includes(2)){startStage3();notify('✅ Resumed from Stage 3 checkpoint');return}startStage2();notify('✅ Resumed at the last stage checkpoint')}
-function showArchive(){currentModal='archive';let arr=archive.achievements.map(id=>({ghost:'Suspiciously Sneaky',throne:'Throne Inspector',cleanup:'Janitorial Staff',unsupervised:'Five Minutes Unsupervised',button:'Definitely Should Not Have Pressed It',dodge:'The Uncatchable Menace',flawless:'Absolutely No Regrets', 'raccoon-wrangler':'Certified Raccoon Wrangler','raccoon-incident':'The Great Raccoon Incident','baba-bout':'The Great Baba Bonkening','fight-champion':'Tiny-Sized Champion','train-incident':'The Unlicensed Express','perfect-conductor':'Zero Accidents, Many Questions'})[id]||id);showModal(`<div class="modal-kicker">OFFICIAL UTW RECORDS</div><h2>📋 NOOSH'S INCIDENT ARCHIVES</h2><p>Noosh insists this is a disciplinary file. Tiny calls it a trophy cabinet.</p><div class="archive-grid"><div class="archive-item"><b>🏆 Achievements</b><br>${arr.length?arr.map(x=>'• '+x).join('<br>'):'Nothing incriminating... yet.'}</div><div class="archive-item"><b>🔎 Secret Clues</b><br>${archive.clues.length?archive.clues.map(x=>'• '+(x==='royal-crest'?'Strange Royal Crest':x==='raccoon-key'?'The Raccoon’s Paw-Print Key':x==='glasses'?'Something Odd About Baba’s Glasses':x)).join('<br>'):'No evidence discovered.'}</div></div><p class="tooltip">The hidden fifth ending is reserved for the complete story. Your clue discoveries will remain here.</p><button class="btn gold" id="archiveBack">BACK</button>`);$('archiveBack').onclick=()=>phase==='result'?finishPrototype():menu()}
+function resume(){const saved=fromStorage(SAVE,null);if(!saved||saved.version!==1||!saved.completed?.includes(1)){menu();return}unlockAudio();const checkpoint=fromStorage(CHECKPOINT,null);game={...blank(),...(checkpoint?.version===1?checkpoint:saved)};game.evidence={...blank().evidence,...game.evidence};game.influence={...blank().influence,...game.influence};hideModal();if(game.completed?.includes(6)){beginScene(6);finishPrototype();return}if(game.completed?.includes(5)){startStage6();notify('✅ Resumed from Stage 6 checkpoint');return}if(game.completed?.includes(4)){startStage5();notify('✅ Resumed from Stage 5 checkpoint');return}if(game.completed?.includes(3)){startStage4();notify('✅ Resumed from Stage 4 checkpoint');return}if(game.completed?.includes(2)){startStage3();notify('✅ Resumed from Stage 3 checkpoint');return}startStage2();notify('✅ Resumed at the last stage checkpoint')}
+function showArchive(){currentModal='archive';let arr=archive.achievements.map(id=>({ghost:'Suspiciously Sneaky',throne:'Throne Inspector',cleanup:'Janitorial Staff',unsupervised:'Five Minutes Unsupervised',button:'Definitely Should Not Have Pressed It',dodge:'The Uncatchable Menace',flawless:'Absolutely No Regrets', 'raccoon-wrangler':'Certified Raccoon Wrangler','raccoon-incident':'The Great Raccoon Incident','baba-bout':'The Great Baba Bonkening','fight-champion':'Tiny-Sized Champion','train-incident':'The Unlicensed Express','perfect-conductor':'Zero Accidents, Many Questions'})[id]||id);showModal(`<div class="modal-kicker">OFFICIAL UTW RECORDS</div><h2>📋 NOOSH'S INCIDENT ARCHIVES</h2><p>Noosh insists this is a disciplinary file. Tiny calls it a trophy cabinet. The full ending gallery is below.</p><div class="archive-grid"><div class="archive-item"><b>🏆 Achievements</b><br>${arr.length?arr.map(x=>'• '+x).join('<br>'):'Nothing incriminating... yet.'}</div><div class="archive-item"><b>🔎 Secret Clues</b><br>${archive.clues.length?archive.clues.map(x=>'• '+(x==='royal-crest'?'Strange Royal Crest':x==='raccoon-key'?'The Raccoon’s Paw-Print Key':x==='glasses'?'Something Odd About Baba’s Glasses':x)).join('<br>'):'No evidence discovered.'}</div></div><p class="tooltip">The hidden fifth ending is reserved for the complete story. Your clue discoveries will remain here.</p><button class="btn gold" id="archiveBack">BACK</button>`);$('archiveBack').onclick=()=>phase==='result'?finishPrototype():menu()}
 function settings(){currentModal='settings';showModal(`<div class="modal-kicker">AUDIO CONTROL</div><h2>🎵 Sound Settings</h2><p>Original simple arcade music and playful sound effects.</p><label class="volume-label">Music <input type="range" id="musicVolume" min="0" max="100" value="${Math.round(musicVolume*100)}"></label><label class="volume-label">Effects <input type="range" id="fxVolume" min="0" max="100" value="${Math.round(fxVolume*100)}"></label><button class="btn" id="muteBtn">${soundOn?'MUTE AUDIO':'UNMUTE AUDIO'}</button><button class="btn gold" id="settingsBack">BACK</button>`);$('musicVolume').oninput=e=>musicVolume=+e.target.value/100;$('fxVolume').oninput=e=>fxVolume=+e.target.value/100;$('muteBtn').onclick=()=>{soundOn=!soundOn;toggleMusic();settings()};$('settingsBack').onclick=()=>paused?pauseMenu():menu()}
-function pauseMenu(){if(phase==='menu'||phase==='result')return;paused=true;if(phase!=='raccoons'&&phase!=='train'&&phase!=='fight')hideChallenge();currentModal='pause';showModal(`<div class="modal-kicker">OFFICIAL MAYHEM BREAK</div><h2>⏸ TINY IS TEMPORARILY SUPERVISED</h2><p>Even chaos goblins need water breaks.</p><button class="btn gold" id="backToGame">RESUME</button><button class="btn" id="soundSettings">SOUND SETTINGS</button><button class="btn alt" id="returnMenu">QUIT TO MENU</button>`);$('backToGame').onclick=()=>{paused=false;hideModal();recoverPhase()};$('soundSettings').onclick=()=>settings();$('returnMenu').onclick=()=>{paused=false;save();menu()}}
+function pauseMenu(){if(phase==='menu'||phase==='result')return;paused=true;if(phase!=='raccoons'&&phase!=='train'&&phase!=='fight'&&phase!=='cleanup')hideChallenge();currentModal='pause';showModal(`<div class="modal-kicker">OFFICIAL MAYHEM BREAK</div><h2>⏸ TINY IS TEMPORARILY SUPERVISED</h2><p>Even chaos goblins need water breaks.</p><button class="btn gold" id="backToGame">RESUME</button><button class="btn" id="soundSettings">SOUND SETTINGS</button><button class="btn alt" id="returnMenu">QUIT TO MENU</button>`);$('backToGame').onclick=()=>{paused=false;hideModal();recoverPhase()};$('soundSettings').onclick=()=>settings();$('returnMenu').onclick=()=>{paused=false;save();menu()}}
 function recoverPhase(){// Restart an interrupted micro-challenge instead of restoring a stale timer.
- if(phase==='raccoons'||phase==='train'||phase==='fight')ui();else if(phase==='trainPanic')trainPanic();else if(phase==='sneak')sneakRound(round);else if(phase==='lick')startLick(game.choices.lick||'direct');else if(phase==='panic')panicChoice();else if(phase==='dodge')startDodge(round);else ui()}
+ if(phase==='raccoons'||phase==='train'||phase==='fight'||phase==='cleanup')ui();else if(phase==='trainPanic')trainPanic();else if(phase==='sneak')sneakRound(round);else if(phase==='lick')startLick(game.choices.lick||'direct');else if(phase==='panic')panicChoice();else if(phase==='dodge')startDodge(round);else ui()}
 $('pauseBtn').onclick=pauseMenu;$('soundBtn').onclick=()=>{if(phase==='menu'){settings()}else{soundOn=!soundOn;toggleMusic();notify(soundOn?'🎵 Sound on':'🔇 Muted')}};
 $('fullBtn').onclick=async()=>{try{if(!document.fullscreenElement){await $('screen').requestFullscreen?.()}else await document.exitFullscreen?.()}catch{notify('Use your browser fullscreen option if available.')}};
 $('puppy').onclick=()=>usePower('puppy');$('raccoon').onclick=()=>usePower('raccoon');$('nuggie').onclick=()=>usePower('nuggie');
