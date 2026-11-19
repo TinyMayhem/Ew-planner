@@ -240,3 +240,23 @@ test('Every raccoon wave has a visible 3-2-1-GO countdown with no early spawns o
  assert.match(script,/performance\.now\(\)<run\.goUntil/);
  assert.match(script,/performance\.now\(\)<raccoonRun\.goUntil/);
 });
+
+
+test('Stage 1 has dedicated detailed animated Tiny and Noosh while other stages retain existing sprites',()=>{
+  assert.match(script,/function polishedStageOneCharacter\(name\)/);
+  assert.match(script,/game\.stage===1&&\(name==='tiny'\|\|name==='noosh'\)/);
+  assert.match(html,/class="stage-one-decor"/);
+  assert.match(html,/\.scene\.stage-one/);
+  assert.match(html,/\.stage-one \.char svg\.detail-sprite/);
+  assert.match(html,/@keyframes detailBlink/);
+  assert.match(html,/@keyframes earTwitch/);
+  assert.match(html,/@keyframes bowSway/);
+  assert.match(html,/prefers-reduced-motion:reduce/);
+  assert.match(script,/function refreshStageOneExpressions\(\)/);
+  assert.match(script,/dataset\.mood=/);
+  assert.match(script,/classList\.toggle\('stage-one',stage===1\)/);
+  assert.match(script,/\.detail-sprite tiny-detail/);
+  assert.match(script,/\.detail-sprite noosh-detail/);
+  assert.match(script,/Tiny<\/text>/);
+  assert.match(script,/detail-collar/);
+});
