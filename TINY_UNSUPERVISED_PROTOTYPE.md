@@ -1,38 +1,39 @@
-# Tiny: Left Unsupervised - Three-stage prototype
+# Tiny: Left Unsupervised | Four playable stages
 
-A browser-only preview of the first three stages, on a separate feature branch. Not linked from the public arcade until playtesting is complete.
+A standalone, public browser-game preview on the `feature/tiny-left-unsupervised-prototype-20261118` feature branch. **Not merged into main or linked from the live arcade.**
 
-- Open `/tiny-left-unsupervised.html` in the preview deployment.
-- Landscape phones recommended. Fullscreen button is available, with desktop keyboard controls.
-- Stage 1: opening story, sneaking timing challenge, **five separate stealth licks while Noosh looks away**, random Noosh peeks with a yellow warning, funny consequences if caught, and optional crest clue.
-- Stage 2: branching forbidden-button choices, surprise panic decision, five quick dodge prompts, and a seamless transition into Stage 3.
-- Stage 3: **Release the Raccoons**. Choose a plan (nuggie bribe, Catalyst's help, or all-out chase); tap twelve visible moving raccoons over three waves, or sweep either half of the playfield. Avoid Baba’s 🎩 decoys. A raccoon carrying a key reveals an archived clue. Mo assigns a comic corner consequence if too many escape, never a game over. At completion, Tiny automatically changes into her sleepy bear onesie and Devi introduces Stage 4.\n- Earn energy from successful challenges and spend it on Puppy Eyes (30), Raccoon Army (60), or Dino Nuggie Rage (100).
-- Score, energy, choices, and evidence are checkpointed after Stages 1 and 2 in the browser's local storage; completed achievements and clues are stored separately. Returning after Stage 3 shows the incident report.
-- Original compact SVG chibi placeholders visualize character personalities and silhouettes. Replace them with approved sprites based on the supplied reference images in a later art pass.
-- Original synthesized browser audio, mute and settings controls. Starts after a user tap.
-- Scores are local only. **Do not** reuse the current U-Dodge-only `/api/arcade` scoring endpoint for this game without adding separate game identity and validation.
-- No member passcode, roster, R4 records, or Supabase writes are used.
+## Playable progression
 
-## Testing
+1. **The Throne Incident:** Noosh peeks back unpredictably; collect five separate licks while his back is turned.
+2. **DO NOT PRESS:** Branching choices, a timed panic decision, three clearly marked dodge lanes and visibly incoming obstacles.
+3. **Release the Raccoons:** Chase three waves of moving raccoons by tapping or sweeping; Baba's decoy hats, Cat's help, Mo's consequences, and the key clue.
+4. **Tiny & Devi's Unauthorized Train Ride:** Animated three-track obstacles, big LEFT/CENTRE/RIGHT buttons, a timed DUCK move for low bridges, and hold-to-BRAKE to slow approaching hazards. After four obstacles, the raccoon changes railway signals, triggering a time-limited decision before the remaining hazards. Devi supports Tiny and catches mistakes without a game over.
 
-```sh
-npm test
-```
+Tiny boards with a **closed tequila bottle** and produces an **empty shot glass** in the midstage dialogue as visual gags. The bottle is put away for active driving, and no drinking-based gameplay or driving bonus is used.
 
-The prototype was also run through an automated Chromium clickthrough for both stages, including dialogue branching, timing/tap challenges, stage transitions, final incident report, and landscape mobile layout.
+## Controls
 
-## Future work
+- Landscape mobile (fullscreen available); left, centre and right buttons, swipe sideways to change one track, swipe down or press DUCK for low bridges, hold BRAKE to slow the approaching object.
+- Desktop: left/right arrows or A/D move across tracks; down arrow or S ducks; hold Space to brake.
+- Red railway tracks are blocked; green tracks are clear. On overhead hazards all three tracks are blocked and DUCK is required.
+- Each hazard becomes faster. Failures trigger short cartoon consequences but the story continues.
+- Puppy Eyes (30) buys more reaction time, Raccoon Army (60) clears the current obstacle, and Dino Nuggie Rage (100) boosts earned chaos score.
+- Music and effects start after player interaction. Separate settings, fullscreen and pause/resume are provided.
 
-The remaining four full-game stages, final five endings, Noosh's Patience survival mode, shared Tiny-specific leaderboards, full incident archive, and actual high-detail character sprites are deferred. Keep `main` untouched until the preview is approved.
+## Persistence and privacy
 
-## Stage 2 visibility correction
+- Local browser save/checkpoints after stages. Stage 3 checkpoint enters Stage 4; completed Stage 4 presents the incident report and a teaser for Tiny vs Baba.
+- Archive achievements and clues are local.
+- No access to private UTW member tools; no `/api/arcade` score posting. Current U-Dodge scoreboard is not reused.
 
-The initial dodge prompts listed object names but did not show where they were coming from. The revised prototype displays an animated incoming object in a three-lane danger scanner, clearly marking red blocked lanes and the green safe lane. Overhead chandelier and mop hazards block all three lanes and prompt a duck. The same three button controls and swipe gestures remain. The countdown is longer at first and gradually tightens over five obstacles. Mistakes show a comic collision result and the story continues. Puppy Eyes extends the running countdown, and Raccoon Army can still rescue the dodge.
+## Validation
 
-## Stage 3 local browser test results
+- Chromium end-to-end playthrough tested at 780×360 and 844×390, including all nine train hazards, midstage panic, power meters, scene transitions and final report.
+- 1280×720 brake and pause checks passed: holding the brake slowed hazard progress, and pause froze the train clock.
+- Intro, bottle, train track, shot-glass scene and ending screenshots inspected.
+- JavaScript syntax checked with Node `--check`; static tests in `tests/tiny-left-unsupervised.test.mjs` cover all four stages and no unauthorized score submissions.
+- Please still review in your mobile browser before production deployment.
 
-- Automated Chromium playthrough caught all twelve raccoons over three rounds without page errors.
-- Tested 780×360, 844×390 and 1280×720 layouts, including visual moving targets and tap inputs.
-- Tested Mo’s consequence branch with too few catches, archive clue unlock, stage-end report, and automatic bear-onesie art.
-- Pausing during the raccoon chase freezes the countdown instead of penalizing the player, and Stage 2 to Stage 3 checkpoint resume works.
-- **Stage 4 train chase is not yet playable.** The ending currently displays a teaser featuring Tiny and Devi.
+## Next
+
+Stage 5 is the playful Tiny vs Baba punch/dodge/sass fight. Stage 6 is The Ultimate Cover-Up with Noosh's interrogation, followed by endings and Endless Chaos Mode. Full-reference sprite polish and Tiny-specific shared leaderboards remain future work.
