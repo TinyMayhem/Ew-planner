@@ -51,3 +51,6 @@
 .thp-tiny-footer p{margin:0;line-height:1.55;font-size:14px;color:#315444}
 .thp-tiny-portrait{width:90px;height:90px;border-radius:50%;background:radial-gradient(circle at 50% 38%,#f7dac3 0 29%,#403026 30% 64%,#151515 65%);display:flex;gap:8px;align-items:center;justify-content:center;color:#f4c83b;font-size:22px;border:3px solid #e2bc6a}
 @media(max-width:650px){.thp-grid,.thp-tutorial-grid{grid-template-columns:1fr}.thp-member-form-panel,.thp-tutorial{padding:17px}.thp-approval-mark{display:none}.thp-tiny-footer{grid-template-columns:72px 1fr}.thp-tiny-portrait{width:66px;height:66px}.thp-screen{min-height:155px}}
+
+.thp-guide-artwork{display:block;width:100%;height:auto;max-width:960px;margin:15px auto 8px;border-radius:15px}
+.thp-guide-large{display:inline-block;margin:6px 0;color:#2b6141;font-weight:750;text-decoration:underline}
