@@ -107,3 +107,23 @@ test('Secret ending requires archived clues AND the final stage classified lette
  game.choices.coverupFileFound=false;
  assert.notEqual(choose(game,archive)('classified'),'classified');
 });
+
+
+test('Evidence hunt names all four objects and updates the visual checklist',()=>{
+ assert.match(script,/const coverEvidence=\[/);
+ assert.match(script,/short:'FUR'/);
+ assert.match(script,/short:'KEYS'/);
+ assert.match(script,/short:'GLOVES'/);
+ assert.match(script,/short:'LETTER'/);
+ assert.match(script,/id="evidenceInventory"/);
+ assert.match(html,/\.evidence-inventory/);
+ assert.match(html,/\.evidence-target\.found/);
+ assert.match(script,/const target=\$\('evidence-'\+item\.id\)/);
+ assert.match(script,/target\.classList\.add\('found'\)/);
+ assert.match(script,/evidence-found-pop/);
+ assert.match(script,/function hintCleanupClue\(run\)/);
+ assert.match(script,/target\.el\.classList\.add\('hint'\)/);
+ assert.match(script,/nextHintAt=now\+9000/);
+ assert.match(script,/\['💡 HINT',\(\)=>hintCleanupClue\(run\)/);
+ assert.match(script,/Leave Noosh’s trophy alone/);
+});
