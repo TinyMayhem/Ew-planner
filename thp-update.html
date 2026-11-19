@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#09291f">
+<title>THP Update | UTW Members Den</title>
+<link rel="stylesheet" href="/assets/hub.css"><link rel="stylesheet" href="/assets/forest.css">
+<link rel="stylesheet" href="/assets/thp-update.css?version=20261118-v1">
+</head><body>
+<header><div class="container"><a class="brand" href="/">✦ UTW <span class="brand-gold">HUB</span><small>UNITED · TOGETHER · WE WIN</small></a>
+<nav><a href="/members.html">Member Den</a><a href="/buddies.html">Buddy Board</a></nav></div></header>
+<section class="hero thp-member-hero"><div class="container"><span class="eyebrow">🔒 UTW MEMBERS DEN</span>
+<h1>Update Your THP</h1><p>Send your latest Total Hero Power and main squad details. R4 reviews your name before updating the tracker. No account needed.</p></div></section>
+<main class="container thp-member-main">
+<section id="thp-gate" class="panel thp-member-gate" hidden>
+<h2>Unlock UTW member tools</h2><p>Enter the same four-character alliance passcode used for Buddy Board and Train Calendar.</p>
+<form id="thp-gate-form"><label for="thp-passcode">Alliance passcode</label>
+<input id="thp-passcode" type="password" minlength="4" maxlength="4" required autocomplete="current-password">
+<button class="btn primary" type="submit">Unlock THP Update</button></form><p id="thp-gate-status" role="status"></p>
+</section>
+<section id="thp-form-section" hidden>
+<div class="panel thp-member-form-panel">
+<div class="thp-section-title"><div><span class="eyebrow">SELF-SERVICE · R4 APPROVAL</span><h2>Tell us your numbers</h2><p class="thp-muted">This only sends a pending request. Your live THP won't change until R4 approves it.</p></div><span class="thp-approval-mark">✓ R4 checked</span></div>
+<form id="thp-member-form" enctype="multipart/form-data">
+<div class="thp-grid">
+<label class="thp-name-wrap">Your in-game name <span class="thp-required">*</span>
+<input name="name" id="thp-game-name" maxlength="100" required placeholder="Exactly as shown in the game" autocomplete="off" aria-controls="thp-name-suggestions" aria-expanded="false">
+<div id="thp-name-suggestions" class="thp-name-suggestions" hidden></div>
+<small>Start typing to see matching names or old nicknames. R4 confirms the match.</small></label>
+<label>Main squad type <span class="thp-required">*</span>
+<select name="squadType" required><option value="">Choose squad</option><option value="tank">Tank</option><option value="air">Air</option><option value="missile">Missile</option></select></label>
+<label>Main squad power <span class="thp-required">*</span>
+<input id="thp-squad-power" name="squadPower" inputmode="decimal" maxlength="30" required placeholder="52.78M">
+<small id="thp-squad-preview">Example: 52.78M = 52,780,000</small></label>
+<label>Total Hero Power (THP) <span class="thp-required">*</span>
+<input id="thp-hero-power" name="heroPower" inputmode="decimal" maxlength="30" required placeholder="159.89M">
+<small id="thp-hero-preview">Power Details → Hero Power. Not overall commander power!</small></label>
+</div>
+<label>Optional proof screenshot
+<input name="screenshot" id="thp-proof" type="file" accept="image/jpeg,image/png,image/webp">
+<small>Screenshot of Power Details is helpful, but optional. JPG, PNG or WebP, 3 MB maximum.</small></label>
+<p id="thp-proof-preview" class="thp-muted" role="status"></p>
+<label>Previous name or note (optional)<textarea name="note" rows="3" maxlength="500" placeholder="I recently changed my name from..."></textarea></label>
+<input type="text" name="website" class="thp-hidden-honeypot" tabindex="-1" autocomplete="off" aria-hidden="true">
+<button id="thp-submit" class="btn primary thp-submit" type="submit">Send THP Update</button>
+<p id="thp-submit-status" role="status" aria-live="polite"></p>
+</form>
+</div>
+<section class="panel thp-tutorial" aria-label="How to find Hero Power in Last War">
+<div class="thp-guide-intro"><div><span class="eyebrow">TINY'S CHAOS-PROOF GUIDE</span><h2>Where do I find my THP?</h2><p>Two taps. One correct number. Absolutely no raccoon accounting.</p></div><span class="thp-guide-star">★</span></div>
+<div class="thp-tutorial-grid">
+<article class="thp-guide-step"><span class="thp-step-number">1</span><h3>Open your Power Details</h3>
+<p>On your commander screen, tap the power number beside the gold badge, like the red circle in the example.</p>
+<div class="thp-screen thp-screen-overall"><span class="thp-power-label">Commander power</span><strong>240,538,823</strong><span class="thp-screen-circle"></span></div>
+<p class="thp-caution">Don't submit this first number. It is your overall power, not THP.</p></article>
+<article class="thp-guide-step"><span class="thp-step-number">2</span><h3>Look for Hero Power</h3>
+<p>Inside <strong>Power Details</strong>, find the <strong>Hero Power</strong> row near the top. This is the value R4 needs.</p>
+<div class="thp-screen thp-screen-breakdown"><strong class="thp-screen-title">POWER DETAILS</strong><div><strong>Hero Power</strong><b>159,890,405</b></div><small>Drone Power &nbsp; 11,924,168</small><span class="thp-screen-circle"></span></div>
+<p class="thp-success">Correct THP in the example: <strong>159,890,405</strong></p></article>
+</div>
+<div class="thp-tiny-footer"><div class="thp-tiny-portrait" role="img" aria-label="Chibi Tiny points upward to the Hero Power guide"><span>★</span><span>♥</span></div><div><h3>Tiny says:</h3><p>“Hi chaos gremlins! Please copy the <strong>Hero Power</strong> from Power Details, not your overall number. Check your squad type, add your name, and send it over. R4 will make sure the aliases behave.”</p></div></div>
+</section>
+</section>
+<p id="thp-load-status" class="thp-muted" role="status">Checking Members Den access…</p>
+</main><footer class="footer"><div class="container">UTW · A little chaos. A lot of correct numbers.</div></footer>
+<script src="/assets/thp-update.js?version=20261118-v1" type="module"></script>
+</body></html>
