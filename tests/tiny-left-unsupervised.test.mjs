@@ -135,3 +135,29 @@ test('Stage 4 remains a local game, saving its checkpoint without sharing U-Dodg
   assert.match(script,/phase==='train'\|\|phase==='trainPanic'/);
   assert.doesNotMatch(script,/fetch\(['"]\/api\/arcade/);
 });
+
+
+test('Stage 4 uses an actual conductor cabin view with three visible perspective tracks',()=>{
+  assert.match(html,/class="cabin-window"/);
+  assert.match(html,/\.cabin-perspective/);
+  assert.match(html,/\.cabin-crew\.tiny/);
+  assert.match(html,/\.cabin-crew\.devi/);
+  assert.match(script,/function showTrainBoard\(run,hazard\)/);
+  assert.match(script,/cabin-lane/);
+  assert.match(script,/cabin-dash/);
+  assert.match(script,/cabin-pressure/);
+  assert.match(script,/character\('devi'\)/);
+});
+
+test('Boiler pressure rises during driving, vent lowers it, and overheat has a comic penalty',()=>{
+  assert.match(script,/function trainPressureTick\(dt,braking\)/);
+  assert.match(script,/function ventSteam\(\)/);
+  assert.match(script,/function renderTrainPressure\(\)/);
+  assert.match(script,/trainPressure=Math\.min\(103,trainPressure\+dt/);
+  assert.match(script,/braking\?6\.5:0/);
+  assert.match(script,/trainPressure=Math\.max\(10,trainPressure-39\)/);
+  assert.match(script,/if\(trainPressure>=100\)/);
+  assert.match(script,/game\.trainSteamBlasts=/);
+  assert.match(script,/Devi: Tiny\. We are operating a train, not a kettle/);
+  assert.match(script,/steamVent.*addEventListener\('click',ventSteam\)/);
+});
