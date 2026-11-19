@@ -203,3 +203,17 @@ test('Baba fight supports powers, story consequences, saved checkpoint, and Stag
   assert.match(script,/The Ultimate Cover-Up/);
   assert.doesNotMatch(script,/fetch\(['"]\/api\/arcade/);
 });
+
+
+test('Every stage has a concise spoiler-free first-time how-to guide',()=>{
+  assert.match(script,/const stageGuides=\{/);
+  assert.match(script,/function showStageGuide\(stage\)/);
+  assert.match(script,/setCharacters\(\);ui\(\);save\(\);showStageGuide\(stage\)/);
+  assert.match(script,/seenGuides:\[\]/);
+  assert.match(script,/game\.seenGuides\.includes\(stage\)/);
+  assert.match(script,/game\.seenGuides\.push\(stage\);save\(\)/);
+  assert.match(html,/guide-controls/);
+  assert.match(script,/GOT IT • LET’S PLAY/);
+  for(let i=1;i<=6;i++) assert.match(script,new RegExp("\\\\b"+i+":\\{title:"));
+  assert.doesNotMatch(script,/stageGuides\[[^\]]+\]\.plotTwist/);
+});
