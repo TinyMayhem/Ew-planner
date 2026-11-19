@@ -102,3 +102,11 @@ Player feedback confirmed the raccoon net stage and tactile throne scrubbing wor
 - The existing net-catching game, finger-scrub stain cleaning, Noosh countdown, consequences, secret envelope clue, and final interrogation are unchanged.
 
 Validation: 28 regression checks passed. Simulated UI confirmed the checklist exists, one hint highlights an uncleared object, the corresponding checklist entry turns green on collection, the floating feedback appears, and the cooldown blocks repeat hint spam. User mobile acceptance remains pending.
+
+## Raccoon net game reaction-time adjustment
+
+The fast key-carrying raccoon was too difficult to net and the stage began too abruptly. The updated Stage 3 now displays a large **3, 2, 1, GO!** overlay **before every wave**. No raccoons spawn and no taps can catch anything until GO has finished. The 3.65-second readiness/GO animation happens **before** the 17-second catching clock starts. It freezes correctly during pause.
+
+The key carrier now stays up for **2,500 ms** at standard speed, up from **850 ms**, and hops every roughly **780 to 980 ms** instead of every 220 to 320 ms. It still moves faster than a normal raccoon and still spawns simultaneously with another raccoon. Normal raccoons also have a little more reaction time, while the nuggie and sprint strategies maintain their existing speed effects. Multi-touch catch, nine holes, net animation, train-key clue, three waves and scoring remain unchanged.
+
+Validation: 29 static/deterministic checks pass. Simulated full three-wave gameplay confirmed the countdown blocks spawns before GO, pauses without consuming the countdown, all 12 raccoons can be netted, and the key carrier appears paired with another raccoon and remains catchable for 2.5 seconds at default speed. This is still an unmerged gameplay preview requiring Tiny's phone review.
