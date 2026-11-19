@@ -110,3 +110,16 @@ The fast key-carrying raccoon was too difficult to net and the stage began too a
 The key carrier now stays up for **2,500 ms** at standard speed, up from **850 ms**, and hops every roughly **780 to 980 ms** instead of every 220 to 320 ms. It still moves faster than a normal raccoon and still spawns simultaneously with another raccoon. Normal raccoons also have a little more reaction time, while the nuggie and sprint strategies maintain their existing speed effects. Multi-touch catch, nine holes, net animation, train-key clue, three waves and scoring remain unchanged.
 
 Validation: 29 static/deterministic checks pass. Simulated full three-wave gameplay confirmed the countdown blocks spawns before GO, pauses without consuming the countdown, all 12 raccoons can be netted, and the key carrier appears paired with another raccoon and remains catchable for 2.5 seconds at default speed. This is still an unmerged gameplay preview requiring Tiny's phone review.
+
+## Detailed art pass 1: Tiny, Noosh and the Stage 1 palace
+
+Stage 1 has a dedicated, more detailed original chibi vector-art treatment. This is the **first iterative art pass**, not the final reference-quality illustration overhaul for every stage.
+
+- **Tiny:** New high-detail scalable SVG with layered long dark-brown wavy hair and highlights, black bow labelled "Tiny", heart jewellery, oversized dark top, boots, large expressive eyes, blush, and alternate smiling, sly and startled mouth expressions. Hair and bow sway; the character blinks and gently breathes.
+- **Noosh:** New chibi white dog SVG with upright pink-lined ears, pale blue-green eyes, muddy brown muzzle, teal collar and gold tag, skeptical brows, and an alternate surprised face. Ears twitch and eyes blink.
+- **Stage 1 throne room:** Burgundy velvet curtains, golden banners, a carpet, candlelight and extra throne highlights, with restrained ambient motion. These decorations are stage-specific and never cover the existing action controls.
+- **Mechanics preserved:** Noosh's unpredictable watch/look-away warning cycle, five timed licks, sneaking timing, three optional Chaos Powers, saved checkpoints, and dialogue outcomes.
+- **Scope isolation:** The SVG replacements and palace styling activate only in Stage 1; Stages 2 through 6 retain their currently approved graphics and controls. No server calls, backend functions, private member data or leaderboard writes have been added.
+- **Accessibility/performance:** Inlined SVG rather than external images, no font asset downloads; CSS animations obey reduced-motion preferences and include landscape-phone adjustments.
+
+Validation: the source passes a JavaScript compilation check; 30 static/regression checks pass; a simulated browser DOM run verified detailed Tiny/Noosh rendering, expression changes, detailed Noosh peek in the lick challenge and that entering Stage 2 reverts to the existing character art. The **visual quality still needs Tiny's review on an actual phone** before the style is rolled out to the other stages.
