@@ -333,6 +333,17 @@
 @media(max-height:450px){.raccoon-board{left:20%;top:29%;width:60%;height:49%}.raccoon-field{top:22%;height:67%}.mole-hole .pop-body{width:clamp(33px,5vw,42px);height:clamp(33px,5vw,42px)}}
 @media(prefers-reduced-motion:reduce){.mole-hole.active .pop-body,.net-swoosh{animation:none}}
 
+
+/* Stage 6 evidence checklist: shows what to find without showing where. */
+.evidence-inventory{position:absolute;z-index:11;top:15%;left:24%;width:52%;min-height:8%;display:flex;gap:4px;align-items:center;justify-content:center;pointer-events:none}
+.evidence-target{display:flex;align-items:center;justify-content:center;gap:3px;flex:1;min-width:0;border:1px solid #e8bf90a9;border-radius:7px;background:#2c203be7;color:#fff3dd;white-space:nowrap;font-size:clamp(8px,1.04vw,12px);font-weight:950;line-height:1.1;padding:5px 2px;transition:background .2s,opacity .2s}
+.evidence-target.found{background:#285f51e8;color:#e4fff6;border-color:#92ffcf}
+.throne-clue.hint{border:2px dashed #ffe7a4;border-radius:50%;background:radial-gradient(circle,#ffe7887b,transparent 75%);animation:cluePulse .65s ease-in-out infinite alternate;filter:drop-shadow(0 0 13px #ffdc88)}
+@keyframes cluePulse{from{transform:scale(.9)}to{transform:scale(1.17)}}
+.evidence-found-pop{position:absolute;z-index:12;pointer-events:none;color:#194836;font-size:clamp(11px,1.35vw,17px);font-weight:1000;background:#c4ffe1;border:2px solid #f5fff9;border-radius:9px;padding:4px 8px;white-space:nowrap;box-shadow:0 3px 9px #11241bb5;animation:foundRise 1.2s ease-out forwards}
+@keyframes foundRise{0%{opacity:0;transform:translateY(10px) scale(.7)}20%{opacity:1;transform:translateY(0) scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-30px)}}
+@media(max-height:450px){.evidence-inventory{top:16%;left:25%;width:50%;gap:2px}.evidence-target{font-size:8px;padding:3px 1px;border-radius:5px}}
+@media(prefers-reduced-motion:reduce){.throne-clue.hint,.evidence-found-pop{animation:none}}
 </style>
 </head>
 <body>
@@ -368,7 +379,7 @@ const stageGuides={
  3:{title:'Net the Popping Raccoons',icon:'🦝',goal:'Catch raccoons as they pop out of their holes.',controls:'Tap each raccoon with your net, even two at once. Avoid fake hats. The key-carrier hops much faster.'},
  4:{title:'Drive from the Conductor Cabin',icon:'🚂',goal:'Keep the train moving without hitting blocked tracks.',controls:'Switch to a clear track, DUCK under low hazards, hold BRAKE to slow down, and VENT when pressure rises.'},
  5:{title:'Read Baba’s Next Move',icon:'🥊',goal:'Match the cue before the countdown ends.',controls:'Choose PUNCH, DODGE, or SASS. For two-move combos, tap the actions in order.'},
- 6:{title:'Find the Evidence, Clean the Throne',icon:'🧴',goal:'Spot small suspicious objects scattered around the royal throne and scrub away the stains.',controls:'Tap each hidden object to pocket it. Choose SPRAY, tap a throne stain, then use your finger to WIPE until it disappears.'}
+ 6:{title:'Find the Evidence, Clean the Throne',icon:'🧴',goal:'Find four things that prove what happened: raccoon fur, train keys, boxing gloves, and a sealed letter.',controls:'Tap the four small objects to hide them. Leave Noosh’s trophy alone! Then SPRAY the throne stains and WIPE with your finger. Use HINT if you get stuck.'}
 };
 function showStageGuide(stage){
  const guide=stageGuides[stage];if(!guide)return;
@@ -1052,10 +1063,10 @@ function stage5End(){hideChallenge();phase='stage5End';game.phase=phase;game.com
 // Stage 6: The Ultimate Cover-Up. Story never game-overs and no online writes occur.
 // Stage 6: each run hides evidence in different pieces of room furniture.
 const coverEvidence=[
- {id:'raccoon-fur',icon:'🦝',label:'Raccoon fur'},
- {id:'train-keys',icon:'🔑',label:'Train keys'},
- {id:'boxing-gloves',icon:'🥊',label:'Boxing gloves'},
- {id:'sealed-order',icon:'✉️',label:'Sealed letter',clue:true}
+ {id:'raccoon-fur',icon:'🦝',label:'Raccoon fur',short:'FUR'},
+ {id:'train-keys',icon:'🔑',label:'Train keys',short:'KEYS'},
+ {id:'boxing-gloves',icon:'🥊',label:'Boxing gloves',short:'GLOVES'},
+ {id:'sealed-order',icon:'✉️',label:'Sealed letter',short:'LETTER',clue:true}
 ];
 // Item coordinates are scattered in the throne room, not in labeled hotspots.
 // A subset is chosen per run; every location is a plausible hiding place.
@@ -1090,13 +1101,13 @@ function startStage6(){
  game.coverupHidden=0;game.coverupMissed=0;game.coverupDecoys=0;game.coverupTrust=0;
  game.choices.coverupAnswers=[];game.choices.coverupFileFound=false;
  setCharacters('tiny','mo');bubble('Mo: You have ONE CHANCE to clean this up.');
- setText('The Ultimate Cover-Up','Noosh is returning. The throne is wet, the raccoons are loose, and someone has left boxing gloves on the floor.','STAGE 6 • THE FINAL DISASTER');
+ setText('The Ultimate Cover-Up','Noosh is returning! Find the raccoon fur, train keys, boxing gloves, and sealed letter. Hide them, then clean the throne.','STAGE 6 • THE FINAL DISASTER');
  choices([['START THE EMERGENCY CLEANUP ▸',coverupPlan,'gold']]);save()
 }
 function coverupPlan(){
  phase='coverupChoice';game.phase=phase;showPower(true);setCharacters('tiny','mo');
  bubble('Baba: I can distract him! This seems like a terrific plan.');
- setText('Choose your cover story crew','Search the actual throne room for four tiny, out-of-place clues. Spray the stains on the throne, then scrub them clean with your finger.','OPERATION: HIDE THE EVIDENCE');
+ setText('Choose your cover story crew','Find these four evidence items: 🦝 fur, 🔑 train keys, 🥊 boxing gloves, ✉️ sealed letter. Tap each one to hide it. The trophy is innocent! Spray and scrub the throne stains.','OPERATION: HIDE THE EVIDENCE');
  choices([
  ['MO, ORGANIZE THE CLEANUP',()=>startCleanup('mo'),'gold'],
  ['BABA, DISTRACT NOOSH',()=>startCleanup('baba')],
@@ -1116,12 +1127,14 @@ function startCleanup(plan){
  if(plan==='mo')game.influence.mo+=3;else if(plan==='baba')game.influence.baba+=3;else game.influence.catalyst+=3;
  const board=$('cleanupBoard');board.classList.remove('hidden');const objects=buildCleanupRoom();
  const total=plan==='mo'?108000:plan==='baba'?102000:98000;
- const run={id:++cleanupRunId,objects,until:performance.now()+total,last:performance.now(),duration:total,finished:false,alerted:false,mode:'look'};
+ const run={id:++cleanupRunId,objects,until:performance.now()+total,last:performance.now(),duration:total,finished:false,alerted:false,mode:'look',nextHintAt:0};
  cleanupRun=run;
  board.innerHTML='<div class="cleanup-top"><span>🔎 <strong id="cleanupEvidence">0/4</strong> CLUES</span>'+
  '<span>🧴 <strong id="cleanupStains">0/3</strong> STAINS</span>'+
  '<span>👣 <strong class="cleanup-clock" id="cleanupClock">108.0</strong></span></div>'+
- '<div class="cleanup-progress"><i id="cleanupProgress"></i></div>';
+ '<div class="cleanup-progress"><i id="cleanupProgress"></i></div>'+
+ '<div class="evidence-inventory" id="evidenceInventory" aria-label="Evidence to find: raccoon fur, train keys, boxing gloves, sealed letter">'+
+ coverEvidence.map(e=>'<span class="evidence-target" id="evidence-'+e.id+'">'+e.icon+' '+e.short+'</span>').join('')+'</div>';
  for(const decor of throneRoomDecor){
   const el=document.createElement('div');el.className='throne-search-prop '+decor.kind;
   el.style.left=decor.x+'%';el.style.top=decor.y+'%';el.style.width=decor.w+'%';el.style.height=decor.h+'%';
@@ -1145,14 +1158,14 @@ function startCleanup(plan){
   }else{
    btn.className='throne-clue'+(item.kind==='decoy'?' decoy':'');
    btn.style.setProperty('--tilt',item.tilt+'deg');
-   btn.setAttribute('aria-label','Small object in the throne room');
+   btn.setAttribute('aria-label',item.kind==='decoy'?'Noosh trophy. Leave this object alone.':'Find and hide '+item.label);
    btn.innerHTML='<span class="glyph">'+item.icon+'</span>';
    btn.addEventListener('click',()=>hideCoverItem(item,run));
   }
   board.append(btn);item.el=btn;
  }
- setText('FIND THE LITTLE CLUES','Four suspicious things are tucked into the room. Tap them to hide them. Three marks on the throne need SPRAY, then finger scrubbing with WIPE.','NOOSH IS COMING BACK • 7 TASKS');
- cleanupTools(run);notify('🔎 Search the throne room. Objects are hidden in plain sight!');
+ setText('FIND FOUR PIECES OF EVIDENCE','🦝 Fur, 🔑 train keys, 🥊 boxing gloves, ✉️ sealed letter. Tap each to hide it. Use HINT for a nudge. Then SPRAY and WIPE the throne stains.','NOOSH IS COMING BACK • 7 TASKS');
+ cleanupTools(run);notify('🔎 Look for the four items listed above the throne!',2400);
  interact={
   extend:()=>{if(cleanupRun!==run)return;run.until+=8000;notify('🥺 Noosh is distracted! +8 seconds')},
   auto:()=>{const target=run.objects.find(o=>!o.done&&o.kind==='evidence')||run.objects.find(o=>!o.done&&o.kind==='stain');
@@ -1171,15 +1184,27 @@ function startCleanup(plan){
  activeFrame=requestAnimationFrame(frame);save()
 }
 function cleanupTools(run){
- choices([['🔎 LOOK FOR CLUES',()=>setCleanupTool('look'),'gold'],
+ choices([['💡 HINT',()=>hintCleanupClue(run),'gold'],
           ['🧴 SPRAY',()=>setCleanupTool('spray')],
           ['🧽 WIPE',()=>setCleanupTool('wipe')]]);
  setCleanupTool(run.mode);
 }
+function hintCleanupClue(run){
+ if(phase!=='cleanup'||cleanupRun!==run||run.finished||paused)return;
+ const target=run.objects.find(o=>o.kind==='evidence'&&!o.done);
+ if(!target){notify('✅ All four objects found! Clean the stains next.');return}
+ const now=performance.now();
+ if(now<run.nextHintAt){notify('✨ Hint cooling down. Keep scanning the throne room!');return}
+ run.nextHintAt=now+9000;
+ target.el.classList.add('hint');
+ const area=target.x<36?'left side':target.x>65?'right side':'centre of the room';
+ notify('✨ Check the '+area+' for something suspicious!',2400);
+ setTimeout(()=>target.el?.classList.remove('hint'),2300);
+}
 function setCleanupTool(mode){
  const run=cleanupRun;if(phase!=='cleanup'||!run||paused)return;
  run.mode=mode;
- [...$('controls').children].forEach((btn,i)=>btn.classList.toggle('tool-selected',['look','spray','wipe'][i]===mode));
+ [...$('controls').children].forEach((btn,i)=>btn.classList.toggle('tool-selected',i>0&&['look','spray','wipe'][i]===mode));
 }
 function scrubCleanupStain(item,run,amount){
  if(phase!=='cleanup'||paused||cleanupRun!==run||run.finished||item.done||!item.sprayed||run.mode!=='wipe')return;
@@ -1209,6 +1234,11 @@ function hideCoverItem(item,run,assisted=false){
  const found=run.objects.filter(o=>o.done&&o.kind==='evidence').length;
  const clean=run.objects.filter(o=>o.done&&o.kind==='stain').length;
  if($('cleanupEvidence'))$('cleanupEvidence').textContent=found+'/4';
+ if(item.kind==='evidence'){
+  const target=$('evidence-'+item.id);if(target){target.classList.add('found');target.textContent='✓ '+item.short;target.setAttribute('aria-label','Hidden: '+item.label)}
+  const pop=document.createElement('span');pop.className='evidence-found-pop';pop.textContent='✓ FOUND: '+item.label.toUpperCase();
+  pop.style.left=Math.min(70,item.x)+'%';pop.style.top=item.y+'%';$('cleanupBoard').append(pop);setTimeout(()=>pop.remove(),1250);
+ }
  if($('cleanupStains'))$('cleanupStains').textContent=clean+'/3';
  if(item.clue){game.choices.coverupFileFound=true;clue('sealed-order');notify('✉️ A classified envelope! This belongs in the archives.')}
  else if(item.id==='train-keys')notify('🔑 Train keys hidden. Devi would be relieved.');
