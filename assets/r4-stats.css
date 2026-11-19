@@ -317,3 +317,21 @@
 
 /* Show each member's actual latest THP measurement date distinctly from entry date. */
 .stat-thp-last-date{display:block;font-size:12px;font-weight:750;color:#275940;margin-top:4px}
+
+/* Private member-submitted THP review queue. */
+.thp-review-box{margin-top:22px;padding-top:20px;border-top:2px solid #d9c6a1}
+.thp-review-box h2{margin:0 0 8px}
+.thp-review-card{background:#fffefa;border:1px solid #cdbc94;border-radius:15px;padding:17px;margin:14px 0}
+.thp-review-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.thp-review-head h3{margin:0 0 2px;color:#245039}
+.thp-review-head small{display:block;color:#68806a;font-size:12px}
+.thp-review-facts{font-weight:750;color:#255b44;padding:10px 12px;background:#e9f2e8;border-radius:9px}
+.thp-review-note{font-size:13px;color:#736046}
+.thp-review-fields{display:grid;gap:11px}
+.thp-review-fields label{display:block;font-size:13px;font-weight:750;color:#2b533d}
+.thp-review-fields input,.thp-review-fields select,.thp-review-fields textarea{width:100%;display:block;padding:10px;margin-top:6px;min-height:42px;background:#fffefa;border:1px solid #bfae88;border-radius:10px;color:#224632;font:inherit}
+.thp-review-history{font-size:12px;color:#446450;line-height:1.4;padding:9px 11px;background:#f1eedf;border-radius:8px}
+.thp-review-edit{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.thp-review-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
+.thp-review-feedback{font-size:13px;color:#245a3e}
+@media(max-width:680px){.thp-review-edit{grid-template-columns:1fr}.thp-review-card{padding:12px}}
