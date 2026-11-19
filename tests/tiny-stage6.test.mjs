@@ -1,0 +1,80 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import {readFileSync} from 'node:fs';
+
+const html=readFileSync(new URL('../tiny-left-unsupervised.html',import.meta.url),'utf8');
+const script=html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+function source(a,b){const start=script.indexOf(a),end=script.indexOf(b,start+a.length);assert.ok(start>=0&&end>start,'Missing '+a+' to '+b);return script.slice(start,end)}
+
+test('Stage 5 move deck is varied, keeps beginner cues, two combos and final move',()=>{
+ const saved=new Map();let seed=16497;
+ const math=Object.create(Math);math.random=()=>{seed=(1664525*seed+1013904223)>>>0;return seed/4294967296};
+ const code=source('function mixDeck(', 'const dodgePrompts=[')+'\n'+source('const fightMoves=[','const fightResponses=');
+ const ctx={Math:math,fromStorage:(k,d)=>saved.get(k)??d,toStorage:(k,v)=>{saved.set(k,v);return true}};
+ const gen=vm.runInNewContext(code+'\n({buildFightDeck})',ctx);const orders=[];
+ for(let i=0;i<65;i++){
+  const deck=gen.buildFightDeck();orders.push(deck.map(m=>m.title).join('|'));
+  assert.equal(deck.length,10);
+  assert.equal(new Set(deck.map(m=>m.title)).size,10);
+  assert.ok(deck.slice(0,4).every(m=>['punch','dodge','sass'].includes(m.type)));
+  assert.equal(deck.filter(m=>m.type==='combo').length,2);
+  assert.equal(deck[9].type,'finish');
+ }
+ assert.ok(new Set(orders).size>25);
+ for(let i=1;i<orders.length;i++)assert.notEqual(orders[i],orders[i-1]);
+});
+
+test('Finale has visible evidence hunt, timer, a safe decoy and pauses correctly',()=>{
+ assert.match(html,/id="cleanupBoard"/);
+ assert.match(html,/\.cleanup-board/);
+ assert.match(html,/\.cover-item/);
+ assert.match(script,/function startCleanup\(plan\)/);
+ assert.match(script,/function hideCoverItem\(item,run,assisted=false\)/);
+ assert.match(script,/function sweepCover\(side\)/);
+ assert.match(script,/function cleanupVerdict\(run\)/);
+ assert.match(script,/run\.until\+=shift/);
+ assert.match(script,/phase!=='cleanup'&&cleanupRun!==run/);
+ assert.match(script,/item\.decoy/);
+ assert.match(script,/game\.coverupMissed=remaining\.length/);
+ assert.match(script,/if\(remaining<=0\|\|run\.objects\.every/);
+ assert.match(script,/clue\('sealed-order'\)/);
+ assert.match(script,/if\(phase!=='raccoons'&&phase!=='train'&&phase!=='fight'&&phase!=='cleanup'\)/);
+});
+
+test('Noosh interrogation branches through three questions and five possible endings',()=>{
+ assert.match(script,/function askQuestion\(index\)/);
+ assert.match(script,/function answerQuestion\(index,j\)/);
+ assert.match(script,/function finalDefense\(\)/);
+ assert.match(script,/function chooseEnding\(defense\)/);
+ assert.match(script,/function resolveEnding\(defense\)/);
+ assert.match(script,/function finishPrototype\(\)/);
+ assert.match(script,/game\.completed,6/);
+ assert.match(script,/archive\.endings\.push\(id\)/);
+ assert.match(script,/stage:6,phase:'storyComplete'/);
+ assert.match(script,/if\(game\.completed\?\.includes\(6\)\)/);
+ assert.match(script,/id==='classified'/);
+ assert.match(html,/TINY:.*LEFT UNSUPERVISED/s);
+});
+
+function choose(game,archive){
+ const context={game,archive};
+ const code=source('function chooseEnding(defense){','const endingText=');
+ return vm.runInNewContext(code+'\nchooseEnding',context);
+}
+test('Four regular endings respond to choice, prior score, allies and trust',()=>{
+ const archive={clues:[]},game={score:6000,coverupHidden:7,coverupTrust:3,raccoonsEscaped:1,influence:{baba:6},choices:{coverupAnswers:[],raccoonPlan:'cat',coverupFileFound:false}};
+ const get=choose(game,archive);
+ assert.equal(get('crown'),'queen');
+ assert.equal(get('baba'),'baba');
+ assert.equal(get('puppy'),'noosh');
+ assert.equal(get('raccoons'),'raccoons');
+});
+
+test('Secret ending requires archived clues AND the final stage classified letter',()=>{
+ const game={score:6000,coverupHidden:7,coverupTrust:3,raccoonsEscaped:1,influence:{baba:6},choices:{coverupAnswers:[],raccoonPlan:'cat',coverupFileFound:true}};
+ const archive={clues:['royal-crest','raccoon-key','glasses']};
+ assert.equal(choose(game,archive)('classified'),'classified');
+ game.choices.coverupFileFound=false;
+ assert.notEqual(choose(game,archive)('classified'),'classified');
+});
