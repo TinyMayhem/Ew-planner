@@ -314,3 +314,6 @@
 .stat-squad-controls .stat-button{min-height:40px;white-space:nowrap}
 .stat-squad-feedback{color:#7a4d25;font-size:12px;flex-basis:100%;min-height:0}
 @media(max-width:720px){.stat-thp-controls input{flex:1 1 140px}.stat-squad-controls label{flex:1 1 140px}.stat-squad-controls .stat-button{flex:1 1 100%}}
+
+/* Show each member's actual latest THP measurement date distinctly from entry date. */
+.stat-thp-last-date{display:block;font-size:12px;font-weight:750;color:#275940;margin-top:4px}
