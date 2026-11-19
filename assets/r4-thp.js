@@ -46,12 +46,12 @@ function renderMembers(){
  summary.replaceChildren();
  for(const [title,value] of [
   ['Members on VS roster',fmt(roster.length)],
-  ['Latest THP available as of '+state.date,fmt(available.length)+' / '+fmt(roster.length)],
+  ['Members with saved THP',fmt(available.length)+' / '+fmt(roster.length)],
   ['No THP recorded yet',fmt(roster.length-available.length)],
   ['Latest saved THP total',fmt(total)]
  ]){const box=text('div',null,'stat-summary');box.append(text('b',value),text('span',title));summary.append(box)}
  status.textContent=state.roster.length
-  ?'Roster: '+(state.source||'Alliance Duel')+'. No daily THP updates needed. Train Desk automatically uses the latest saved THP for each member. This date selects the historical snapshot to review or update.'
+  ?'Roster: '+(state.source||'Alliance Duel')+'. Each member displays their latest recorded THP and last update date. The date picker is only for adding, editing, or clearing a dated THP entry. No daily updates needed.'
   :'Live roster not available. Showing saved THP names; try refreshing the Alliance Duel connection.';
  root.replaceChildren();
  if(!shown.length){root.append(text('p',searched?'No matching names.':'No VS roster or saved THP records available.','stat-empty'));return}
@@ -64,13 +64,14 @@ function renderMembers(){
   else info.append(text('span','THP not recorded','stat-thp-unrecorded'));
   if(squad)info.append(text('small','Main squad: '+(squad.squad_type?({tank:'Tank',air:'Air',missile:'Missile'}[squad.squad_type]):'Unspecified')+(squad.squad_power===null?'':' · '+fmt(squad.squad_power)+' power'),'stat-muted'));
 
-  if(current)info.append(text('small','Recorded '+current.recorded_on+' · '+(current.entry_source||'manual')+' · updated '+new Date(current.updated_at).toLocaleString(),'stat-muted'));
-  else if(prior)info.append(text('small','Latest saved THP '+fmt(prior.thp)+' from '+prior.recorded_on+'. No new entry required for '+state.date+'.','stat-muted'));
-  else info.append(text('small','No THP recorded on or before '+state.date+'.','stat-muted'));
+  if(prior){
+   info.append(text('small','Last THP update: '+prior.recorded_on,'stat-thp-last-date'));
+   if(prior.updated_at)info.append(text('small','Saved/edited: '+new Date(prior.updated_at).toLocaleString()+(prior.entry_source?' · '+prior.entry_source:''),'stat-muted'));
+  }else info.append(text('small','No THP recorded yet.','stat-muted'));
   const controls=text('div',null,'stat-thp-controls'),input=document.createElement('input');
   input.type='text';input.inputMode='decimal';input.autocomplete='off';input.maxLength=35;
-  input.setAttribute('aria-label','THP for '+member.name+' measured on '+state.date);
-  input.placeholder='e.g. 142M';input.value=current?fmt(current.thp):'';
+  input.setAttribute('aria-label','THP for '+member.name+' on selected edit date '+state.date);
+  input.placeholder='THP for '+state.date+' (e.g. 142M)';input.value=current?fmt(current.thp):'';
   const save=text('button','Save THP','stat-button primary'),clear=text('button','Clear','stat-button');
   save.type='button';clear.type='button';clear.disabled=!current;save.disabled=!state.ready;
   const feedback=text('small','','stat-thp-feedback');feedback.setAttribute('role','status');
@@ -92,7 +93,7 @@ function renderMembers(){
   save.addEventListener('click',()=>void change('save'));
   clear.addEventListener('click',()=>void change('clear'));
   input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();void change('save')}});
-  controls.append(input,save,clear,feedback);
+  controls.append(text('small','Entry date: '+state.date+(current?' · existing entry':' · new entry'),'stat-muted'),input,save,clear,feedback);
   const squadControls=text('div',null,'stat-squad-controls');
   const typeLabel=text('label','Main squad (optional)'),typeSelect=document.createElement('select');
   typeSelect.setAttribute('aria-label','Main squad type for '+member.name);
