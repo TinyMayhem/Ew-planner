@@ -1,13 +1,8 @@
+import {powerFromInput} from './thp-power.mjs';
 // Private R4 review queue for Members Den self-service THP submissions.
 const $=id=>document.getElementById(id);
 const fmt=n=>Number(n).toLocaleString('en-CA');
 const norm=v=>String(v||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'');
-const readPower=value=>{
- const match=String(value||'').replaceAll(',','').replace(/\s+/g,'').match(/^(\d+(?:\.\d{1,3})?)([kmb])?$/i);
- if(!match)return null;
- const power=Number(match[1])*({k:1e3,m:1e6,b:1e9}[String(match[2]||'').toLowerCase()]||1);
- return Number.isSafeInteger(Math.round(power))&&power>0&&Math.abs(power-Math.round(power))<.001?Math.round(power):null;
-};
 let latestResponse=null;
 async function api(url,body){
  const options=body?{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{credentials:'same-origin',cache:'no-store'};
@@ -89,7 +84,7 @@ function renderCard(item,response){
  const approve=node('button','Approve & update THP','stat-button primary'),reject=node('button','Reject','stat-button');
  approve.type='button';reject.type='button';
  async function send(decision){
-  const id=choose.value,power=readPower(hero.value),squad=readPower(squadPower.value);
+  const id=choose.value,power=powerFromInput(hero.value),squad=powerFromInput(squadPower.value);
   if(decision==='approved'&&(!id||power===null||squad===null)){
    feedback.textContent='Choose the correct member and verify both power values first.';return;
   }
