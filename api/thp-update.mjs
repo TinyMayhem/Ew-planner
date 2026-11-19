@@ -69,7 +69,7 @@ async function uploadEvidence(id,file){
  const bytes=await file.arrayBuffer(),mime=imageType(file,bytes);
  const {url,key}=dbConfig(),path='proof/'+id+'.'+mime.ext;
  const res=await fetch(url+'/storage/v1/object/'+bucket+'/'+path,{
-  method:'POST',headers:{apikey:key,Authorization:'Bearer '+key,'Content-Type':mime.type,'x-upsert':'false'},
+  method:'POST',headers:{apikey:key,'Content-Type':mime.type,'x-upsert':'false'},
   body:bytes,signal:AbortSignal.timeout(20000)
  });
  if(!res.ok)throw Error('Screenshot could not be stored privately. Try again.');
