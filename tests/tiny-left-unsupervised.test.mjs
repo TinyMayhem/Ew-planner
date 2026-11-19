@@ -89,7 +89,8 @@ test('Stage 3 shows nine whack-a-mole holes with independent touch netting',()=>
   assert.match(script,/function netEffect\(hole\)/);
   assert.match(script,/const keyIndex=queue\.findIndex\(o=>o\.key\)/);
   assert.match(script,/if\(next\.key\)/);
-  assert.match(script,/o\.key\?850/);
+  assert.match(script,/o\.key\?2500/);
+  assert.match(script,/o\.hopAt=now\+780\+Math\.random\(\)\*200/);
   assert.match(script,/if\(now>=o\.endAt\)expire\(o\)/);
   assert.match(script,/raccoonWaveEnd\(wave,run\)/);
 });
@@ -222,4 +223,20 @@ test('Every stage has a concise spoiler-free first-time how-to guide',()=>{
   assert.match(script,/GOT IT • LET’S PLAY/);
   for(let i=1;i<=6;i++) assert.ok(script.includes(" "+i+":{title:"));
   assert.doesNotMatch(script,/stageGuides\[[^\]]+\]\.plotTwist/);
+});
+
+
+test('Every raccoon wave has a visible 3-2-1-GO countdown with no early spawns or catches',()=>{
+ assert.match(html,/id="raccoonCountdown"/);
+ assert.match(html,/\.raccoon-countdown/);
+ assert.match(script,/countdownUntil=readyAt\+3000,goUntil=countdownUntil\+650/);
+ assert.match(script,/spawnAt:goUntil\+280/);
+ assert.match(script,/until:goUntil\+17000/);
+ assert.match(script,/now<run\.countdownUntil/);
+ assert.match(script,/Math\.ceil\(\(run\.countdownUntil-now\)\/1000\)/);
+ assert.match(script,/now<run\.goUntil/);
+ assert.match(script,/countdown\.textContent='GO!'/);
+ assert.match(script,/run\.countdownUntil\+=delay;run\.goUntil\+=delay/);
+ assert.match(script,/performance\.now\(\)<run\.goUntil/);
+ assert.match(script,/performance\.now\(\)<raccoonRun\.goUntil/);
 });
