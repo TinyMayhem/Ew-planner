@@ -47,6 +47,8 @@ function renderCard(item,response){
   link.target='_blank';link.rel='noopener noreferrer';head.append(link);
  }
  root.append(head);
+ const sameName=response.rows.filter(r=>r.status==='pending'&&norm(r.submitted_name)===norm(item.submitted_name));
+ if(sameName.length>1)root.append(node('p','Possible duplicate: '+sameName.length+' pending submissions under this in-game name. Check dates and numbers before approving.','thp-review-note'));
  const facts=node('p','Submitted: '+fmt(item.hero_power)+' Hero Power · '+item.squad_type.toUpperCase()+' · '+fmt(item.squad_power)+' squad power','thp-review-facts');
  root.append(facts);
  if(item.member_note)root.append(node('p','Member note: '+item.member_note,'thp-review-note'));
