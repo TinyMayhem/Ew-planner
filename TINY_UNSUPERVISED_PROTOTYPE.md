@@ -4,7 +4,7 @@ A browser-only preview of the first two stages, on a separate feature branch. No
 
 - Open `/tiny-left-unsupervised.html` in the preview deployment.
 - Landscape phones recommended. Fullscreen button is available, with desktop keyboard controls.
-- Stage 1: opening story, sneaking timing challenge, throne-licking challenge, optional crest clue.
+- Stage 1: opening story, sneaking timing challenge, **five separate stealth licks while Noosh looks away**, random Noosh peeks with a yellow warning, funny consequences if caught, and optional crest clue.
 - Stage 2: branching forbidden-button choices, surprise panic decision, five quick dodge prompts, raccoon teaser.
 - Earn energy from successful challenges and spend it on Puppy Eyes (30), Raccoon Army (60), or Dino Nuggie Rage (100).
 - Score, energy, choices, and evidence are checkpointed after Stage 1 in the browser's local storage; completed achievements and clues are stored separately.
