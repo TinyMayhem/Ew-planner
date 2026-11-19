@@ -9,7 +9,7 @@
 3. **Release the Raccoons:** Catch 12 moving raccoons across three randomized waves. Avoid Baba's fake hats, uncover the train-key clue, and face Mo's judgment.
 4. **Tiny & Devi's Unauthorized Train Ride:** Look ahead through the conductor cabin windshield and switch among three tracks. Watch approaching objects, duck low bridges, hold the brake, and manage rising boiler pressure with the steam vent. Tequila bottle and empty shot glass appear as visual jokes, not gameplay or driving mechanics. Devi remains Tiny's copilot.
 5. **Tiny vs Baba:** 10 rounds of playful PUNCH, DODGE, and SASS challenges. The first four cues use simple actions, later rounds include two-step DODGE → PUNCH combos, and the finisher is last. The specific attack order changes with each run.
-6. **The Ultimate Cover-Up:** Timed, clickable evidence cleanup followed by Noosh's three untimed interrogation questions and Tiny's final defense. Sweep either side or tap individual objects to hide seven pieces of evidence, without accidentally hiding Noosh's trophy. Earlier choices, character influence, chaos score, cleanup results, and the final defense determine the outcome.
+6. **The Ultimate Cover-Up:** Explore eight interactive pieces of furniture in the palace to discover four hidden objects; each discovered item needs another tap to conceal it. Three separately visible dirt stains require the 🧴 SPRAY BOTTLE and 🧽 WIPE CLOTH tools, with foaming and cleaning visuals and tap/swipe support. Evidence locations shuffle between runs. Noosh's trophy is an innocent decoy: moving it incurs a penalty. A forgiving timed countdown, three untimed Noosh interrogation questions and Tiny's final defense lead to five potential endings. The total remains seven cleanup tasks, preserving score and finale logic.
 
 ## Endings and archive
 
@@ -49,7 +49,7 @@ The Stage 2 hazard order and approach directions, Stage 3 raccoon lanes/decoys/s
 ## Quality checks
 
 - Six-stage source passes JavaScript compilation with a JS engine.
-- Stage 6 interaction flow was exercised with a simulated DOM: evidence was cleared, Noosh's three questions answered, a main ending unlocked and recorded in the archive. It completed without throwing exceptions.
+- Stage 6 interaction flow was exercised with a simulated DOM: searching furniture reveals a hidden object, collecting it needs a second tap, stains must be sprayed and wiped, taking Noosh's trophy incurs a penalty, and seven successful tasks trigger the Noosh interrogation and a saved ending. The secret envelope is preserved. It completed without throwing exceptions.
 - The fight randomizer generated 65 valid, unique ten-move decks with beginner-friendly rounds and later combos.
 - All four main ending choices and the secret ending gate were checked programmatically.
 - Regression tests added under `tests/tiny-left-unsupervised.test.mjs`, `tests/tiny-randomized-stages.test.mjs`, and `tests/tiny-stage6.test.mjs`.
@@ -58,3 +58,9 @@ The Stage 2 hazard order and approach directions, Stage 3 raccoon lanes/decoys/s
 ## Next steps
 
 Review Stage 6 and its endings in the Vercel preview. Then improve chibi sprite fidelity, implement stage practice, add dedicated server-validated scoreboards and Endless Chaos mode, and finally connect the approved game to the public UTW Chaos Arcade. Keep this PR as a draft until gameplay is signed off.
+
+## Stage 6 interactive cleanup revision
+
+The first Stage 6 version displayed all seven evidence objects openly and asked the player to tap/sweep them. That was too passive. The current version hides **four evidence objects** across **eight furniture hotspots** (curtains, vase, bookshelf, crate, rug, chair, portrait, trunk). The remaining hotspots are empty or contain an innocent trophy. The second tap bags discovered evidence. It also places **three separate stains** around the room. Players select **SPRAY BOTTLE**, tap a stain to create foam, then use **WIPE CLOTH** with a tap or swipe to clean it. Both tools are visible in the lower control bar, with the selected tool highlighted. A timer is still active and can be extended by Puppy Eyes; Raccoon Army can automatically clear one task. Story failure is still consequences-not-game-over. Evidence contents are randomly assigned to furniture on each visit; the same seven-task scoring is retained.
+
+Test status: 26 static/deterministic checks passed via JS harness. A simulated DOM end-to-end check verified discover→collect, spray→foam→wipe, trophy penalty, all seven tasks, classified clue, interrogation, ending archive, and report. **User mobile acceptance and visual polish are still pending.**
