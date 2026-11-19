@@ -14,7 +14,7 @@ test('Tiny prototype is a self-contained public browser game',()=>{
   assert.doesNotMatch(html,/fetch\(['"]\/api\/arcade/);
 });
 
-test('first four story stages with Stage 5 held for later',()=>{
+test('first five story stages with Stage 6 held for later',()=>{
   assert.match(script,/function opening\(/);
   assert.match(script,/function sneakRound\(/);
   assert.match(script,/function startLick\(/);
@@ -29,7 +29,10 @@ test('first four story stages with Stage 5 held for later',()=>{
   assert.match(script,/function startTrainHazard\(/);
   assert.match(script,/function trainPanic\(/);
   assert.match(script,/function stage4End\(/);
-  assert.doesNotMatch(script,/function startStage5\(/);
+  assert.match(script,/function startStage5\(/);
+  assert.match(script,/function startFightBeat\(index\)/);
+  assert.match(script,/function stage5End\(/);
+  assert.doesNotMatch(script,/function startStage6\(/);
 });
 
 test('energy powers and local checkpoints are represented',()=>{
@@ -96,7 +99,7 @@ test('Stage 3 failure produces Mo’s consequence rather than game over',()=>{
 
 test('Stage 3 supports pause and saves between stages without altering arcade API',()=>{
   assert.match(script,/run\.until\+=delay;run\.spawnAt\+=delay/);
-  assert.match(script,/if\(phase!=='raccoons'&&phase!=='train'\)hideChallenge\(\)/);
+  assert.match(script,/if\(phase!=='raccoons'&&phase!=='train'&&phase!=='fight'\)hideChallenge\(\)/);
   assert.match(script,/toStorage\(CHECKPOINT,\{\.\.\.game,stage:3,phase:'raccoonIntro'\}\)/);
   assert.match(script,/toStorage\(CHECKPOINT,\{\.\.\.game,stage:4,phase:'trainTeaser'\}\)/);
   assert.doesNotMatch(script,/fetch\(['"]\/api\/arcade/);
@@ -127,11 +130,11 @@ test('Stage 4 features Tiny and Devi, tequila props and consequences not game ov
   assert.match(script,/function stage4Verdict\(/);
   assert.match(script,/function stage4End\(/);
   assert.match(script,/game\.completed,4/);
-  assert.match(script,/stage:5,phase:'babaTeaser'/);
+  assert.match(script,/stage:5,phase:'fightIntro'/);
 });
 
 test('Stage 4 remains a local game, saving its checkpoint without sharing U-Dodge scores',()=>{
-  assert.match(script,/saved\.completed\?\.includes\(3\)\)\{startStage4\(\)/);
+  assert.match(script,/game\.completed\?\.includes\(3\)\)\{startStage4\(\)/);
   assert.match(script,/phase==='train'\|\|phase==='trainPanic'/);
   assert.doesNotMatch(script,/fetch\(['"]\/api\/arcade/);
 });
@@ -160,4 +163,40 @@ test('Boiler pressure rises during driving, vent lowers it, and overheat has a c
   assert.match(script,/game\.trainSteamBlasts=/);
   assert.match(script,/Devi: Tiny\. We are operating a train, not a kettle/);
   assert.match(script,/steamVent.*addEventListener\('click',ventSteam\)/);
+});
+
+
+test('Stage 4 dialogue does not replace Devi with Baba or duplicate cabin portraits',()=>{
+  assert.match(script,/else if\(key==='tiny'&&game\.stage===4\)setCharacters\('tiny','devi'\)/);
+  assert.match(html,/\.train-active\.cabin-driving > \.char/);
+  assert.match(html,/\.train-active\.cabin-driving > \.name-tag/);
+  assert.match(script,/classList\.add\('cabin-driving'\)/);
+  assert.match(script,/classList\.remove\('cabin-driving'\)/);
+  assert.match(script,/trainProp='none';setCharacters\('tiny','devi'\)/);
+});
+
+test('Stage 5 offers punch, dodge, sass and two-step combos with clear timing',()=>{
+  assert.match(html,/id="fightBoard"/);
+  assert.match(html,/id="fightPatience"/);
+  assert.match(html,/\.fight-board/);
+  assert.match(script,/function startStage5\(\)/);
+  assert.match(script,/function startFightBeat\(index\)/);
+  assert.match(script,/function fightAction\(kind\)/);
+  assert.match(script,/function finishFightBeat\(run,correct,kind\)/);
+  assert.match(script,/function fightVerdict\(\)/);
+  assert.match(script,/move\.type==='combo'/);
+  assert.match(script,/SECOND MOVE: 👊 PUNCH!/);
+  assert.match(script,/game\.fightBonks\+\+/);
+  assert.match(script,/function stage5End\(\)/);
+});
+
+test('Baba fight supports powers, story consequences, saved checkpoint, and Stage 6 teaser',()=>{
+  assert.match(script,/phase==='fight'/);
+  assert.match(script,/phase==='fight'\)interact\?\.auto\?\.\(\)/);
+  assert.match(script,/phase==='fight'\)interact\?\.extend\?\.\(\)/);
+  assert.match(script,/game\.completed,5/);
+  assert.match(script,/stage:6,phase:'coverupTeaser'/);
+  assert.match(script,/game\.completed\?\.includes\(4\)\)\{startStage5\(\)/);
+  assert.match(script,/The Ultimate Cover-Up/);
+  assert.doesNotMatch(script,/fetch\(['"]\/api\/arcade/);
 });
