@@ -338,13 +338,29 @@ function startLick(how){
 }
 
 function stage1End(){hideChallenge();phase='stage1End';game.phase='stage1End';$('pedestal').classList.remove('hidden');$('throne').classList.add('hidden');game.completed=[...new Set([...game.completed,1])];game.stageResults[1]={score:game.score,misses:game.misses};achievement('unsupervised','Five Minutes Unsupervised');toStorage(CHECKPOINT,{...game,stage:2,phase:'buttonIntro'});bubble('Tiny: Oh. There’s a giant red button.');setText('Stage 1 Complete!','Naturally, this can only end well. Checkpoint saved.','DISASTER LEVEL INCREASED');mark('❗');save();choices([['STAGE 2: DO NOT PRESS ▸',startStage2,'gold']])}
-function startStage2(){beginScene(2);bubble('Baba: I have absolutely no regrets.');setText('DO NOT PRESS','A mysterious button has appeared beneath the throne.','STAGE 2 • FORBIDDEN BUTTON');save();playDialogue(script2,buttonChoice)}
+function startStage2(){dodgeSequence=buildDodgeSequence();beginScene(2);bubble('Baba: I have absolutely no regrets.');setText('DO NOT PRESS','A mysterious button has appeared beneath the throne.','STAGE 2 • FORBIDDEN BUTTON');save();playDialogue(script2,buttonChoice)}
 function buttonChoice(){phase='buttonChoice';game.phase='buttonChoice';showPower(true);bubble('Tiny: Somebody should definitely investigate this.');setText('How should Tiny investigate?','All answers are technically terrible.','THE BIG RED BUTTON');choices([['POKE IT',()=>buttonDecision('poke'),'gold'],['USE MY ELBOW',()=>buttonDecision('elbow')],['MAKE BABA DO IT',()=>buttonDecision('baba')]]);save()}
 function buttonDecision(choice){game.choices.button=choice;game.influence.baba+=choice==='baba'?3:1;addScore(choice==='baba'?100:140);earn(12);bubble(choice==='baba'?'Baba: Wait, why am I suddenly responsible?':choice==='elbow'?'Tiny: Technically, my finger never touched it.':'Tiny: Just a tiny little poke.');mark('🔴');$('dangerButton').classList.add('pressed');audio('alarm');save();setText('ALARM! ALARM!','The button has activated something VERY expensive.','PANIC DECISION INCOMING');setTimeout(()=>panicChoice(),650)}
 function panicChoice(){phase='panic';game.phase='panic';promptUsed=false;let timeLeft=3,limit=performance.now()+3000;showPower(true);bubble('🚨 NOOSH WILL BE BACK ANY SECOND!');$('challenge').classList.remove('hidden');setText('Panic Decision!','Choose an excuse before the timer expires.','THINK FAST!');const draw=()=>$('challenge').innerHTML='<h3>🚨 PANIC DECISION</h3><div class="timer">'+Math.max(0,timeLeft).toFixed(1)+'</div><p>NOOSH IS COMING</p>';draw();activeTimer=setInterval(()=>{if(paused)return;timeLeft=(limit-performance.now())/1000;draw();if(timeLeft<=0){hideChallenge();game.misses++;game.choices.panic='freeze';bubble('Tiny: I HAVE NO IDEA WHAT TO DO.');mark('💦');save();startDodge(0)}},60);choices([['HIDE THE SIGN',()=>panicResult('hide')],['BLAME BABA',()=>panicResult('blame')],['RUN!',()=>panicResult('run'),'gold']]);interact={extend:()=>{limit+=3000;notify('🥺 Noosh hesitates. +3 seconds!')}}}
 function panicResult(which){if(phase!=='panic')return;hideChallenge();game.choices.panic=which;if(which==='hide')game.evidence.button=true;if(which==='blame')game.influence.baba+=2;addScore(180);earn(10);game.perfects++;bubble({hide:'Tiny: If there is no warning sign, there is no crime.',blame:'Baba: I DID NOT AGREE TO THIS.',run:'Tiny: STRATEGIC RETREAT!'}[which]);audio('success');save();setTimeout(()=>startDodge(0),600)}
 // A visible three-lane scanner. The incoming prop is animated in the danger zone.
 // Unlike the original text-only prompt, the safe movement can be inferred from the screen.
+// Replay variation: sample a fresh balanced deck for each stage, retaining only the
+// previous order signature to prevent the exact same round sequence twice.
+function mixDeck(items){const result=items.slice();for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]]}return result}
+function freshDeck(deck,key,identify){const store='utw:tiny:previous-deck:v1:'+key,previous=fromStorage(store,'');
+ const signature=()=>deck.map(identify).join('|');
+ if(previous===signature()&&deck.length>1){[deck[0],deck[1]]=[deck[1],deck[0]]}
+ toStorage(store,signature());return deck}
+let dodgeSequence=null;
+function buildDodgeSequence(){
+ const sequence=freshDeck(mixDeck(dodgePrompts),'dodge',h=>h.name);
+ // Move sideways obstacles to a different approach side on every run.
+ return sequence.map(h=>{if(h.from==='overhead')return {...h};
+ const from=Math.random()<.5?'left':'right',correct=from==='left'?'RIGHT':'LEFT';
+ return {...h,from,correct,message:h.name+' COMING FROM THE '+from.toUpperCase()+'!'}
+ });
+}
 const dodgePrompts=[
  {icon:'💡',name:'CHANDELIER',message:'THE CHANDELIER IS FALLING!',correct:'DUCK',from:'overhead'},
  {icon:'🪣',name:'BUCKET',message:'BUCKET COMING FROM THE RIGHT!',correct:'LEFT',from:'right'},
@@ -365,13 +381,14 @@ function showDodgeLanes(hazard){
  board.innerHTML='<div class="dodge-heading">⚠ INCOMING <strong>'+hazard.name+'</strong></div><div class="dodge-lanes">'+lanes+'</div><div class="dodge-object '+position+'" id="fallingObject" aria-hidden="true"><span class="dodge-emoji">'+hazard.icon+'</span><span class="dodge-object-label">'+hazard.name+'</span></div><div class="dodge-footer'+(duck?' duck':'')+'">'+(duck?'⬇ DUCK! IT COVERS EVERY LANE':'✅ OPEN LANE: '+hazard.correct+' ◀▶')+'</div>';
 }
 function startDodge(index){
- if(index>=dodgePrompts.length){stage2End();return}
+ if(!dodgeSequence)dodgeSequence=buildDodgeSequence();
+ if(index>=dodgeSequence.length){stage2End();return}
  phase='dodge';game.phase='dodge';hideChallenge();showPower(true);
  setCharacters('tiny',index%2?'savvy':'baba');round=index;
- const hazard=dodgePrompts[index],correct=hazard.correct;
+ const hazard=dodgeSequence[index],correct=hazard.correct;
  let duration=[4.4,4.1,3.8,3.6,3.4][index],deadline=performance.now()+duration*1000;
  expectedKey=correct;promptUsed=false;
- setText('Dodge the incoming object!','WATCH THE LANES: red = danger, green = safe. If all lanes are red, DUCK!','REFLEX CHALLENGE • '+(index+1)+'/'+dodgePrompts.length);
+ setText('Dodge the incoming object!','WATCH THE LANES: red = danger, green = safe. If all lanes are red, DUCK!','REFLEX CHALLENGE • '+(index+1)+'/'+dodgeSequence.length);
  bubble(hazard.message);showDodgeLanes(hazard);
  const challenge=$('challenge');challenge.className='challenge dodge-timer';
  challenge.innerHTML='<h3>⚠ LOOK OUT!</h3><div class="timer" id="dodgeClock">'+duration.toFixed(1)+'</div><div class="dodge-progress"><i id="dodgeProgress"></i></div><p>SWIPE OR TAP!</p>';
@@ -407,7 +424,7 @@ function resolveDodge(choice){
 }
 function stage2End(){hideChallenge();phase='stage2End';game.phase=phase;game.completed=[...new Set([...game.completed,2])];game.stageResults[2]={score:game.score,misses:game.misses};$('crate').classList.remove('hidden');$('crate').classList.add('jitter');bubble('Tiny: ...Why is that crate MOVING?');setText('THE RACCOONS ARE FREE','The button opened the enclosure. Something just ran away with the train keys.','STAGE 2 COMPLETE');mark('🦝');achievement('button','Definitely Should Not Have Pressed It');if(game.misses===0)achievement('flawless','Absolutely No Regrets');toStorage(CHECKPOINT,{...game,stage:3,phase:'raccoonIntro'});save();choices([['STAGE 3: RELEASE THE RACCOONS ▸',startStage3,'gold']])}
 
-function startStage3(){hideChallenge();beginScene(3);bubble('Tiny: Those are NOT trained security raccoons.');setCharacters('tiny','catalyst');setText('Release the Raccoons','Tiny accidentally unleashed an army of tiny bandits. One stole the train keys.','STAGE 3 • RACCOON RECAPTURE');save();playDialogue(script3,raccoonChoice)}
+function startStage3(){raccoonLayout=buildRaccoonLayout();hideChallenge();beginScene(3);bubble('Tiny: Those are NOT trained security raccoons.');setCharacters('tiny','catalyst');setText('Release the Raccoons','Tiny accidentally unleashed an army of tiny bandits. One stole the train keys.','STAGE 3 • RACCOON RECAPTURE');save();playDialogue(script3,raccoonChoice)}
 function raccoonChoice(){phase='raccoonChoice';game.phase=phase;showPower(true);setCharacters('tiny','catalyst');bubble('Cat: Relax, darlin’. My cousins like a good chase.');setText('How should Tiny catch them?','Each plan changes how fast the raccoons run and how everyone reacts.','QUESTIONABLE RACCOON STRATEGY');choices([
  ['BRIBE WITH DINO NUGGIES',()=>raccoonPlan('nuggies'),'gold'],
  ['CAT, CALL YOUR COUSINS',()=>raccoonPlan('cat')],
@@ -424,21 +441,34 @@ const raccoonWaves=[
  [{row:1,dir:-1},{row:0,dir:1,decoy:true},{row:2,dir:1},{row:0,dir:-1},{row:1,dir:1}],
  [{row:2,dir:1},{row:0,dir:-1},{row:1,dir:1,key:true},{row:2,dir:-1,decoy:true},{row:0,dir:1}]
 ];
+let raccoonLayout=null;
+function buildRaccoonLayout(){
+ const waves=raccoonWaves.map(template=>{
+  const rows=mixDeck([0,1,2,Math.floor(Math.random()*3),Math.floor(Math.random()*3)]);
+  return mixDeck(template.map((c,i)=>({...c,row:rows[i],dir:Math.random()<.5?-1:1,key:false})));
+ });
+ // Exactly one train key, carried by a real raccoon in any of the three waves.
+ const wave=waves[Math.floor(Math.random()*waves.length)],real=wave.filter(o=>!o.decoy);
+ real[Math.floor(Math.random()*real.length)].key=true;
+ const store='utw:tiny:previous-raccoon-layout:v1',signature=()=>waves.map(w=>w.map(o=>o.row+':'+o.dir+':'+(o.decoy?'H':o.key?'K':'R')).join(',')).join('|');
+ if(signature()===fromStorage(store,'')){waves[0][0].dir*=-1}
+ toStorage(store,signature());return waves;
+}
 function startRaccoonWave(wave){hideChallenge();phase='raccoons';game.phase=phase;round=wave;showPower(true);
  setCharacters('tiny',wave===0?'catalyst':wave===1?'mo':'savvy');
  const speedScale=game.choices.raccoonPlan==='nuggies'?.80:game.choices.raccoonPlan==='sprint'?1.16:1;
  const field=$('raccoonField'),board=$('raccoonBoard');board.classList.remove('hidden');
- const waves=raccoonWaves[wave],run={id:raccoonRunId,objects:[],next:0,spawnAt:performance.now()+320,last:performance.now(),wave,caught:0,missed:0,decoys:0,complete:false,until:performance.now()+15500,netAt:0};raccoonRun=run;
+ const waves=(raccoonLayout||(raccoonLayout=buildRaccoonLayout()))[wave],run={id:raccoonRunId,objects:[],next:0,spawnAt:performance.now()+320,last:performance.now(),wave,caught:0,missed:0,decoys:0,complete:false,until:performance.now()+15500,netAt:0};raccoonRun=run;
  $('raccoonCount').textContent=game.raccoonsCaught+' / 12';$('raccoonEscaped').textContent=game.raccoonsEscaped;
  bubble(["Cat: Catch 'em. They're fast, not subtle.","Mo: If that dog catches them first, YOU'RE cleaning up.","Savvy: *A sigh audible across three alliances.*"][wave]);
  setText('Tap the moving raccoons!','Watch their actual positions. You can tap them directly or sweep the left/right half. Avoid 🎩 decoys.','RACCOON CHASE • WAVE '+(wave+1)+'/3');
  choices([['🧺 SWEEP LEFT',()=>raccoonSweep('left'),'gold'],['🧺 SWEEP RIGHT',()=>raccoonSweep('right'),'gold']]);
  function spawn(config,index){const el=document.createElement('button');el.className='raccoon-runner'+(config.decoy?' decoy':'')+(config.key?' key-carrier':'');el.setAttribute('aria-label',config.decoy?'Baba’s decoy hat, do not catch':config.key?'Glittering raccoon carrying a key':'Moving raccoon, tap to catch');el.innerHTML=raccoonArt(Boolean(config.decoy))+(config.key?'<span class="key">🔑</span>':'');field.append(el);
- const object={id:index,el,row:config.row,dir:config.dir,x:config.dir===1?-10:110,speed:(28+wave*5+index*2)*speedScale,decoy:Boolean(config.decoy),key:Boolean(config.key),caught:false};
+ const object={id:index,el,row:config.row,dir:config.dir,x:config.dir===1?-10:110,speed:(28+wave*5+index*2)*speedScale*(.9+Math.random()*.2),decoy:Boolean(config.decoy),key:Boolean(config.key),caught:false};
  el.addEventListener('click',e=>{e.stopPropagation();catchRaccoon(object)});run.objects.push(object);return object}
  function frame(now){if(phase!=='raccoons'||raccoonRun!==run)return;if(paused){const delay=Math.max(0,now-run.last);run.until+=delay;run.spawnAt+=delay;run.last=now;activeFrame=requestAnimationFrame(frame);return;}
   const dt=Math.min((now-run.last)/1000,.08);run.last=now;
-  while(run.next<waves.length&&now>=run.spawnAt){spawn(waves[run.next],run.next);run.next++;run.spawnAt+=1250-speedScale*90}
+  while(run.next<waves.length&&now>=run.spawnAt){spawn(waves[run.next],run.next);run.next++;run.spawnAt+=1040+Math.random()*320-speedScale*90}
   for(const o of run.objects){if(o.caught)continue;o.x+=o.dir*o.speed*dt;o.el.style.left=o.x+'%';o.el.style.top=(16.7+o.row*33.33)+'%';
    if(game.autoClear>0&&!o.decoy&&o.x>=44&&o.x<=56){game.autoClear--;catchRaccoon(o,true);notify('🦝 Raccoon Army helped scoop up a runaway!')}
    if((o.dir===1&&o.x>112)||(o.dir===-1&&o.x< -12)){o.caught=true;o.el.remove();if(!o.decoy){run.missed++;game.raccoonsEscaped++;game.misses++;game.evidence.raccoons=true;$('raccoonEscaped').textContent=game.raccoonsEscaped;mark('💨')} }
@@ -497,6 +527,31 @@ const trainHazards=[
  {name:'LOW BANNER',icon:'🎏',blocked:[0,1,2],duck:true,text:'Another low banner! DUCK, TINY!',bonus:-1},
  {name:'UNATTENDED TROLLEY',icon:'🚋',blocked:[1],text:'A trolley is stopped in the CENTRE. Switch tracks!',bonus:0}
 ];
+let trainSequence=null;
+function buildTrainSequence(){
+ // Start with readable one-track problems; keep a low bridge before the
+ // signal panic, then mix harder multi-track hazards into the final five.
+ const single=mixDeck(trainHazards.filter(h=>!h.duck&&h.blocked.length===1));
+ const dual=mixDeck(trainHazards.filter(h=>!h.duck&&h.blocked.length===2));
+ const overhead=mixDeck(trainHazards.filter(h=>h.duck));
+ const third=Math.random()<.5?single[2]:dual[0];
+ const opening=[single[0],single[1],third,overhead[0]],used=new Set(opening);
+ const ordered=opening.concat(mixDeck(trainHazards.filter(h=>!used.has(h))));
+ const deck=ordered.map(h=>{
+  const next={...h,blocked:[...h.blocked]};if(h.duck)return next;
+  const lanes=['LEFT','CENTRE','RIGHT'];
+  if(h.blocked.length===1){
+    const danger=Math.floor(Math.random()*3);next.blocked=[danger];
+    const clear=[0,1,2].filter(i=>i!==danger);next.bonus=clear[Math.floor(Math.random()*clear.length)];
+    next.text=h.name+' on the '+lanes[danger]+' track! Pick a clear lane!';
+  }else{
+    const clear=Math.floor(Math.random()*3);next.blocked=[0,1,2].filter(i=>i!==clear);
+    next.bonus=clear;next.text=h.name+'! Only the '+lanes[clear]+' track is clear!';
+  }
+  return next;
+ });
+ return freshDeck(deck,'train',h=>h.name+':'+h.blocked.join(','));
+}
 function drawHeldTequila(){
  const root=$('leftChar');if(!root)return;root.querySelector('.held-tequila')?.remove();
  if(game.stage!==4||phase==='train'||phase==='trainResult'||phase==='result')return;
@@ -506,7 +561,7 @@ function drawHeldTequila(){
  :'<svg viewBox="0 0 75 135"><rect x="29" y="5" width="18" height="21" rx="3" fill="#cea66a" stroke="#ecda9f" stroke-width="4"/><path d="M27 23H49V43Q64 48 63 64V116Q63 128 50 129H23Q12 129 12 116V64Q12 49 27 43Z" fill="#b5d7b5" stroke="#e9f8d7" stroke-width="5"/><rect x="18" y="67" width="40" height="43" rx="4" fill="#efd9a1" stroke="#855f57" stroke-width="3"/><text x="38" y="83" font-size="12" font-weight="900" text-anchor="middle" fill="#694b45">TINY</text><text x="38" y="96" font-size="11" font-weight="900" text-anchor="middle" fill="#694b45">TEQUILA</text><path d="M22 118H54" stroke="#e4bd6c" stroke-width="4"/></svg>';
  root.append(holder)
 }
-function startStage4(){hideChallenge();beginScene(4);trainPressure=37;trainLastVent=0;phase='trainIntro';game.phase=phase;trainProp='bottle';setCharacters('tiny','devi');drawHeldTequila();bubble('Devi: Why do I have a feeling this is about to get expensive?');setText('The Unauthorized Train Ride','One raccoon stole the keys. Tiny and Devi have ended up in the cab of a very real train.','STAGE 4 • TINY + DEVI');save();playDialogue(script4,trainPlanChoice)}
+function startStage4(){trainSequence=buildTrainSequence();hideChallenge();beginScene(4);trainPressure=37;trainLastVent=0;phase='trainIntro';game.phase=phase;trainProp='bottle';setCharacters('tiny','devi');drawHeldTequila();bubble('Devi: Why do I have a feeling this is about to get expensive?');setText('The Unauthorized Train Ride','One raccoon stole the keys. Tiny and Devi have ended up in the cab of a very real train.','STAGE 4 • TINY + DEVI');save();playDialogue(script4,trainPlanChoice)}
 function trainPlanChoice(){phase='trainChoice';game.phase=phase;setCharacters('tiny','devi');drawHeldTequila();showPower(true);setText('Who is driving this thing?','Pick a very questionable approach. The bottle stays sealed and out of the controls.','CHOOSE YOUR RAILWAY STRATEGY');bubble('Devi: I am going to regret this, affectionately.');choices([
  ['TINY TAKES THE WHEEL',()=>trainPlan('tiny'),'gold'],
  ['DEVI, READ THE SIGNALS',()=>trainPlan('devi')],
@@ -571,10 +626,11 @@ function trainButtons(){choices([
  ['◀ LEFT',()=>chooseTrainLane(0)],['● CENTRE',()=>chooseTrainLane(1)],['RIGHT ▶',()=>chooseTrainLane(2)],['▼ DUCK',duckTrain,'gold']
 ])}
 function startTrainHazard(index){
- if(index>=trainHazards.length){stage4Verdict();return}
+ if(!trainSequence)trainSequence=buildTrainSequence();
+ if(index>=trainSequence.length){stage4Verdict();return}
  hideChallenge();phase='train';game.phase=phase;game.stage=4;
  setCharacters('tiny','devi');
- showPower(true);const hazard=trainHazards[index];const run={id:++trainRunId,index,lane:(trainRun?.lane??1),progress:0,duration:Math.max(2.65,4.3-index*.19),brakeMeter:100,brake:false,duckUntil:0,skip:false,lastTime:performance.now(),resolved:false,extra:0};
+ showPower(true);const hazard=trainSequence[index];const run={id:++trainRunId,index,lane:(trainRun?.lane??1),progress:0,duration:Math.max(2.65,4.3-index*.19),brakeMeter:100,brake:false,duckUntil:0,skip:false,lastTime:performance.now(),resolved:false,extra:0};
  // Preserve the last chosen track between obstacles, even as the board is rebuilt.
  run.lane=Number.isInteger(game.choices.lastTrainLane)?game.choices.lastTrainLane:1;
  trainRun=run;setText('INSIDE THE CONDUCTOR CAB','Three tracks ahead! Find the green track, DUCK under low bridges, and VENT the boiler when it gets hot.','TRAIN DISASTER • '+(index+1)+'/'+trainHazards.length);
