@@ -103,18 +103,16 @@ export async function GET(request){
   if(query.has('review')){
    const actor=await reviewAllowed(request);
    if(!actor)return json({error:'R4 sign-in required'},401);
-   const [rows,roster,latest,squads]=await Promise.all([
-    list('utw_thp_submissions',{
-     select:'id,submitted_name,squad_type,squad_power,hero_power,measurement_date,evidence_path,member_note,status,submitted_at,reviewed_at,reviewed_by,review_note,approved_source_member_id,approved_member_name',
-     order:'submitted_at.desc',limit:'300'
-    }),
+   const columns='id,submitted_name,squad_type,squad_power,hero_power,measurement_date,evidence_path,member_note,status,submitted_at,reviewed_at,reviewed_by,review_note,approved_source_member_id,approved_member_name';
+   const [pending,reviewed,roster,latest,squads]=await Promise.all([
+    list('utw_thp_submissions',{select:columns,status:'eq.pending',order:'submitted_at.desc',limit:'500'}),
+    list('utw_thp_submissions',{select:columns,status:'in.(approved,rejected)',order:'reviewed_at.desc',limit:'20'}),
     getRoster(),
     db('rpc/utw_r4_thp_latest',{method:'POST',body:JSON.stringify({p_date:todayServer()})}),
     list('utw_r4_member_squad_profiles',{select:'source_member_id,squad_type,squad_power,updated_at',limit:'1000'})
    ]);
-   if(!Array.isArray(rows)||!Array.isArray(latest)||!Array.isArray(squads))throw Error('THP reviewer data is unavailable');
-   return json({rows,roster:roster.members,aliases:roster.aliases,latest,squads,
-    pending:rows.filter(r=>r.status==='pending').length});
+   if(![pending,reviewed,latest,squads].every(Array.isArray))throw Error('THP reviewer data is unavailable');
+   return json({rows:[...pending,...reviewed],roster:roster.members,aliases:roster.aliases,latest,squads,pending:pending.length});
   }
   if(query.has('evidence')){
    const id=query.get('evidence');
@@ -142,8 +140,9 @@ export async function POST(request){
   if(type.startsWith('application/json')){
    const actor=await reviewAllowed(request);
    if(!actor)return json({error:'R4 sign-in required'},401);
-   if(Number(request.headers.get('content-length')||0)>6000)return json({error:'Review request too large'},413);
-   const body=await request.json();
+   const raw=await request.text();
+   if(raw.length>6000)return json({error:'Review request too large'},413);
+   let body;try{body=JSON.parse(raw)}catch{return json({error:'Invalid review request'},400)}
    if(body?.action!=='review'||!validId(body.id)||!['approved','rejected'].includes(body.decision))
     return json({error:'Select a pending THP submission and review decision'},400);
    await limited(request,'review',60);
@@ -189,8 +188,10 @@ export async function POST(request){
   }catch(e){await deleteEvidence(path);throw e}
  }catch(e){
   const message=e.message||'Unable to submit THP';
-  const invalid=/^(Enter |Choose |Keep |Please |Screenshot |Too many |Reviewer |Invalid |This )/.test(message);
-  console.error('THP submission failed:',invalid?message:'Storage error');
-  return json({error:invalid?message:'Could not complete the THP request. Please try again.'},invalid?400:503);
+  const conflict=/Submission already reviewed|A newer THP measurement already exists/.test(message);
+  const invalid=/^(Enter |Choose |Keep |Please |Screenshot |Too many |Reviewer |Invalid |This |Member is missing)/.test(message);
+  console.error('THP submission failed:',invalid||conflict?message:'Storage error');
+  const safe=conflict||invalid?message:'Could not complete the THP request. Please try again.';
+  return json({error:safe},conflict?409:message.startsWith('Too many')?429:invalid?400:503);
  }
 }
