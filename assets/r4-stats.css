@@ -335,3 +335,50 @@
 .thp-review-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:4px}
 .thp-review-feedback{font-size:13px;color:#245a3e}
 @media(max-width:680px){.thp-review-edit{grid-template-columns:1fr}.thp-review-card{padding:12px}}
+
+/* Read-only full-history Train Desk checker and longest-wait comparison. */
+.train-checker-card{position:relative}
+.train-check-inputs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(150px,190px) auto;align-items:end;gap:12px;margin:16px 0 12px}
+.train-check-field{position:relative;min-width:0}
+.train-check-field>label{display:block;margin-bottom:6px;font-size:13px;font-weight:750;color:#2c543e}
+.train-check-field>input,.train-check-field>select{width:100%;min-width:0;box-sizing:border-box;min-height:44px;background:#fffefa;color:#254932;border:1px solid #bca478;border-radius:9px;padding:10px 11px;font:inherit}
+.train-check-inputs>.stat-button{align-self:end;min-height:44px}
+.train-check-suggestions{position:absolute;left:0;right:0;top:100%;z-index:35;background:#fffefa;border:1px solid #bfa778;border-radius:10px;box-shadow:0 12px 24px #20412b30;max-height:275px;overflow-y:auto}
+.train-check-suggestions[hidden]{display:none}
+.train-check-option{display:block;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid #ebe0ca;padding:10px 12px;color:#285239;font:inherit;cursor:pointer;min-height:42px}
+.train-check-option:last-child{border-bottom:0}
+.train-check-option strong,.train-check-option small{display:block}
+.train-check-option small{font-size:12px;color:#6a806d;margin-top:2px}
+.train-check-option:hover,.train-check-option[aria-selected="true"]{background:#e7f2e5}
+.train-check-no-match{font-size:13px;padding:10px 12px;color:#75816f;margin:0}
+.train-check-results-grid,.train-check-compare-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.train-check-results-grid:has(> :only-child){grid-template-columns:1fr}
+.train-check-person{border:1px solid #d1c3a1;background:#fffefa;padding:16px;border-radius:13px;min-width:0}
+.train-check-person h3{margin:0 0 12px;color:#235239;font-size:21px}
+.train-check-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.train-check-stat{padding:11px 8px;background:#f0f3e9;border-radius:9px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.train-check-stat small,.train-check-stat strong,.train-check-stat span{display:block}
+.train-check-stat small{font-size:11px;color:#607467;font-weight:650}
+.train-check-stat strong{font-size:14px;margin:6px 0 3px;color:#245a3f}
+.train-check-stat span{font-size:11px;color:#59785c}
+.train-check-counts{font-size:12px;color:#647864;margin:12px 0 9px}
+.train-check-comparison{padding:16px;border:1px solid #d5bb81;background:#fff7e1;border-radius:13px;margin:12px 0 17px}
+.train-check-comparison-title{display:block;color:#654a23;margin-bottom:12px}
+.train-check-compare-person{background:#fffcf6;border:1px solid #e5d7b9;border-radius:10px;padding:12px}
+.train-check-compare-person strong,.train-check-compare-person span,.train-check-compare-person small{display:block}
+.train-check-compare-person strong{color:#274a36}
+.train-check-compare-person span{font-size:19px;font-weight:750;margin:7px 0;color:#355844}
+.train-check-compare-person small{color:#657762;font-size:11px}
+.train-check-longest{border:2px solid #7f9f5d;background:#f0f6e8}
+.train-check-verdict{font-weight:800;color:#315d3f;margin:13px 0 4px}
+.train-check-caution{color:#9b5932;font-size:13px;font-weight:650}
+.train-check-details{margin-top:10px;border:1px solid #dfd4b8;border-radius:10px;background:#fffdf6}
+.train-check-details>summary{padding:11px 13px;font-weight:750;color:#365e42;cursor:pointer}
+.train-check-entries{max-height:330px;overflow-y:auto;padding:0 12px 8px}
+.train-check-entry{padding:10px 0;border-top:1px solid #e8e1d0;overflow-wrap:anywhere}
+.train-check-entry-heading{display:flex;justify-content:space-between;flex-wrap:wrap;gap:5px;color:#254c37;font-size:13px}
+.train-check-entry-heading small{font-size:11px;color:#7d7359}
+.train-check-slot{color:#334f3f;font-size:13px;margin:4px 0}
+.train-check-entry>.stat-muted{display:block;font-size:11px}
+@media(max-width:1060px){.train-check-inputs{grid-template-columns:repeat(2,minmax(0,1fr))}.train-check-inputs>.stat-button{justify-self:start}}
+@media(max-width:640px){.train-check-inputs,.train-check-results-grid,.train-check-compare-grid{grid-template-columns:1fr}.train-check-stats{grid-template-columns:1fr 1fr}.train-check-stat{padding:9px}.train-check-person{padding:12px}}
