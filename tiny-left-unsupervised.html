@@ -284,7 +284,7 @@
 .coverup-active .panel .story{max-width:31%}
 .coverup-active .controls{max-width:69%;gap:6px}
 .coverup-active .controls .btn{min-width:110px;max-width:160px}
-.coverup-active .power-row{left:1%;bottom:25%;z-index:8}
+.coverup-active .power-row{left:1%;top:38%;bottom:auto;z-index:8;display:flex;flex-direction:column;width:14%;gap:4px}.coverup-active .power-row .power{font-size:clamp(8px,1vw,13px);padding:3px 5px}
 .throne-search-prop{position:absolute;z-index:1;display:grid;place-items:center;pointer-events:none;filter:drop-shadow(0 4px 4px #1d1020a6);user-select:none;font-size:clamp(21px,3.5vw,46px);opacity:.92}
 .throne-search-prop.curtain{top:15%;height:65%;width:13%;background:repeating-linear-gradient(90deg,#763d62,#ae6880 20%,#663653 36%);border-inline:4px solid #d8a66a;border-radius:0 0 45% 6%;box-shadow:inset 8px 0 #e5b07566}
 .throne-search-prop.curtain.right{border-radius:0 0 6% 45%}
@@ -1225,7 +1225,7 @@ function cleanupVerdict(run){
  else{game.coverupTrust-=Math.min(3,remaining.length);game.misses+=Math.min(3,remaining.length)}
  hideChallenge();phase='cleanupVerdict';game.phase=phase;showPower(false);setCharacters('tiny','noosh');
  bubble(remaining.length?'Noosh: I CAN LITERALLY SEE THE EVIDENCE.':'Noosh: ...Why does everything smell like cleaning spray?');
- setText('NOOSH HAS RETURNED','You cleared '+game.coverupHidden+' of 7 evidence items and stains. '+remaining.length+' were left in plain sight. The investigation begins.','EVIDENCE REPORT');
+ setText('NOOSH HAS RETURNED',(remaining.length?'Noosh: I CAN LITERALLY SEE THE EVIDENCE. ':'Noosh: Why does everything smell like cleaning spray? ')+'You cleared '+game.coverupHidden+' of 7.','EVIDENCE REPORT');
  choices([['FACE NOOSH’S QUESTIONS ▸',startInterrogation,'gold']]);save()
 }
 const questions=[
@@ -1251,7 +1251,7 @@ const questions=[
 function startInterrogation(){
  hideChallenge();phase='interrogation';game.phase=phase;showPower(true);setCharacters('tiny','noosh');
  bubble('Noosh: SIT. ALL OF YOU. I AM NOT LEAVING UNTIL I HAVE ANSWERS.');
- setText('The Great UTW Interrogation','Noosh has questions. Your choices, allies and the evidence from earlier stages affect the verdict.','THREE QUESTIONS • UNTIL NOOSH IS SATISFIED');
+ setText('The Great UTW Interrogation','Noosh: SIT. ALL OF YOU. I AM NOT LEAVING UNTIL I HAVE ANSWERS.','THREE QUESTIONS • UNTIL NOOSH IS SATISFIED');
  choices([['LET THE QUESTIONING BEGIN ▸',()=>askQuestion(0),'gold']]);save()
 }
 function askQuestion(index){
@@ -1273,7 +1273,7 @@ function answerQuestion(index,j){
 function finalDefense(){
  phase='finalDefense';game.phase=phase;showPower(false);setCharacters('tiny','noosh');
  bubble('Noosh: ONE FINAL QUESTION. WHAT DO YOU HAVE TO SAY FOR YOURSELF?');
- setText('Tiny’s Final Defense','Choose the argument that matches the allies you made, the chaos you caused, and the clues you uncovered.','YOUR LAST CHANCE');
+ setText('Tiny’s Final Defense','Noosh: ONE FINAL QUESTION. WHAT DO YOU HAVE TO SAY FOR YOURSELF?','YOUR LAST CHANCE');
  const options=[
  ['I SHOULD RUN THIS PLACE',()=>resolveEnding('crown'),'gold'],
  ['BABA MADE ME DO IT',()=>resolveEnding('baba')],
