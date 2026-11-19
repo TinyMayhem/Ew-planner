@@ -121,7 +121,7 @@ test('Stage 4 features Tiny and Devi, tequila props and consequences not game ov
   assert.match(script,/Closed tequila bottle/);
   assert.match(script,/Empty shot glass/);
   assert.match(script,/trainProp='shot'/);
-  assert.match(script,/Devi:.*tequila/);
+  assert.match(script,/bottle of tequila onto the locomotive/);
   assert.match(script,/trainHits\+\+/);
   assert.match(script,/function trainPanicResult\(/);
   assert.match(script,/function stage4Verdict\(/);
