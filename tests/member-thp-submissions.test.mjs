@@ -31,6 +31,7 @@ async function fixture(fn){
   if(path.endsWith('/rpc/utw_r4_thp_latest'))return Response.json([]);
   if(path.endsWith('/utw_r4_member_squad_profiles'))return Response.json([]);
   if(path.endsWith('/rpc/utw_review_member_thp'))return Response.json({id:'afea1c74-46cc-4f0b-9af3-66913e6d5d10',status:'approved'});
+  if(path.includes('/storage/v1/object/utw-thp-evidence/'))return Response.json({ok:true});
   throw Error('Unexpected fetch path '+path);
  };
  try{await fn(calls)}finally{
@@ -79,6 +80,23 @@ test('THP API needs existing member passcode, without requiring individual accou
  assert.equal(written.submitted_name,'Tiny');
  assert.ok(!calls.some(x=>x.path.endsWith('/utw_r4_member_thp_history')),'Member submission must not write live THP');
 }));
+test('Private screenshots upload with the member submission and are not publicly readable',()=>fixture(async calls=>{
+ const cookie='utw_page='+sessionToken('page'),form=new FormData();
+ for(const [key,value] of Object.entries({name:'Tiny',squadType:'tank',squadPower:'52.78M',heroPower:'159890405',note:''}))form.set(key,value);
+ const png=new Uint8Array([137,80,78,71,13,10,26,10,0,0,0,0]);
+ form.set('screenshot',new File([png],'power.png',{type:'image/png'}));
+ const response=await POST(new Request(site+'/api/thp-update',{method:'POST',headers:{Origin:site,Cookie:cookie},body:form}));
+ assert.equal(response.status,201);
+ const storage=calls.find(x=>x.path.includes('/storage/v1/object/utw-thp-evidence/proof/'));
+ assert.ok(storage,'Screenshot should be uploaded only through the server');
+ assert.equal(storage.options.headers['Content-Type'],'image/png');
+ const dbCall=calls.find(x=>x.path.endsWith('/utw_thp_submissions')&&x.options.method==='POST');
+ const record=JSON.parse(dbCall.options.body)[0];
+ assert.match(record.evidence_path,/^proof\/[0-9a-f-]{36}\.png$/);
+ const denied=await GET(new Request(site+'/api/thp-update?evidence='+record.id));
+ assert.equal(denied.status,401);
+}));
+
 test('THP review is R4-only and records an explicit member match',()=>fixture(async calls=>{
  const denied=await GET(new Request(site+'/api/thp-update?review=1'));
  assert.equal(denied.status,401);
@@ -108,6 +126,10 @@ test('Member Den and private R4 Tracker both include THP entrypoints and guide',
  assert.match(page,/240,538,823/);
  assert.match(page,/159,890,405/);
  assert.match(page,/TINY'S CHAOS-PROOF GUIDE/);
+ const svg=readFileSync('assets/thp-guide.svg','utf8');
+ assert.equal((svg.match(/data:image\/webp;base64,/g)||[]).length,3,'Actual user screenshots and generated Tiny should be embedded');
+ assert.match(svg,/159,890,405/);
+ assert.match(page,/assets\/thp-guide\.svg/);
  assert.match(stats,/id="thp-review-panel"/);
  assert.match(stats,/assets\/thp-review\.js/);
  for(const path of ['api/thp-update.mjs','assets/thp-update.js','assets/thp-review.js','lib/thp-submission-utils.mjs']){
