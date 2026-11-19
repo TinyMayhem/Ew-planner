@@ -265,6 +265,12 @@
 @media(max-height:450px){.cleanup-board{top:20%;height:51%;left:20%;width:62%}.room-prop{height:22%}.room-prop .emoji{font-size:17px}.stain-target{height:17%}.cleanup-footer{display:none}.cleanup-tool-tag{bottom:1%;font-size:8px}}
 @media(prefers-reduced-motion:reduce){.stain-target.foamy{animation:none}}
 
+
+/* Brief, first-time instructions before each stage. No story spoilers. */
+.guide-goal{font-weight:950;color:#ffe8b6;font-size:clamp(13px,1.7vw,20px)}
+.guide-controls{background:#24182f;border:1px solid #fbdca387;border-radius:12px;padding:10px 14px;max-width:520px;margin:11px auto;font-size:clamp(12px,1.45vw,17px);line-height:1.4}
+@media(max-height:450px){.guide-controls{padding:5px 9px;margin:5px auto}.guide-goal{font-size:clamp(12px,1.5vw,16px)}}
+
 </style>
 </head>
 <body>
@@ -280,7 +286,7 @@
 const $=id=>document.getElementById(id);
 const SAVE='utw:tiny-unsupervised:prototype-save:v1',CHECKPOINT='utw:tiny-unsupervised:prototype-checkpoint:v1',ARCH='utw:tiny-unsupervised:prototype-archive:v1';
 const fromStorage=(key,def)=>{try{return JSON.parse(localStorage.getItem(key))||def}catch{return def}},toStorage=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));return true}catch{return false}};
-const blank=()=>({version:1,stage:1,phase:'opening',score:0,energy:0,choices:{},influence:{baba:0,noosh:0,catalyst:0,mo:0,savvy:0,devi:0},evidence:{throne:false,button:false,raccoons:false,train:false,clues:[]},achievements:[],outfit:'black',stageResults:{},completed:[],perfects:0,misses:0,shield:0,autoClear:0,rage:0,raccoonsCaught:0,raccoonsEscaped:0,raccoonDecoys:0,trainHits:0,trainSafe:0,trainBonus:0,fightWins:0,fightBonks:0,fightCombos:0,coverupHidden:0,coverupMissed:0,coverupDecoys:0,coverupTrust:0,endingId:null});
+const blank=()=>({version:1,stage:1,phase:'opening',score:0,energy:0,choices:{},influence:{baba:0,noosh:0,catalyst:0,mo:0,savvy:0,devi:0},evidence:{throne:false,button:false,raccoons:false,train:false,clues:[]},achievements:[],outfit:'black',stageResults:{},completed:[],perfects:0,misses:0,shield:0,autoClear:0,rage:0,raccoonsCaught:0,raccoonsEscaped:0,raccoonDecoys:0,trainHits:0,trainSafe:0,trainBonus:0,fightWins:0,fightBonks:0,fightCombos:0,seenGuides:[],coverupHidden:0,coverupMissed:0,coverupDecoys:0,coverupTrust:0,endingId:null});
 let game=blank(),archive=fromStorage(ARCH,{achievements:[],clues:[],completed:[]}),phase='menu',dialogIndex=0,dialogDone=null,locked=false,activeTimer=null,activeFrame=null,expectedKey='',challengeStarted=0,round=0,promptUsed=false,interact=null,soundOn=true,paused=false,offTime=0,currentModal='menu',raccoonRun=null,raccoonRunId=0,trainRun=null,trainRunId=0,trainProp='bottle',trainPanicDeadline=0,trainPressure=37,trainLastVent=0,fightRun=null,fightRunId=0,fightBeat=0,fightStreak=0,fightSequence=null,cleanupRun=null,cleanupRunId=0;
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function save(){toStorage(SAVE,game)}function saveArchive(){toStorage(ARCH,archive)}
@@ -292,6 +298,29 @@ function achievement(id,label){if(!archive.achievements.includes(id)){archive.ac
 function clue(id){if(!archive.clues.includes(id)){archive.clues.push(id);saveArchive();notify('🔎 A suspicious clue was archived!',1900)}if(!game.evidence.clues.includes(id))game.evidence.clues.push(id)}
 function button(label,fn,kind=''){let b=document.createElement('button');b.className='btn '+kind;b.textContent=label;b.addEventListener('click',()=>{if(locked||paused)return;audio('tap');fn()});return b}
 function choices(options){const c=$('controls');c.replaceChildren();options.forEach(([label,fn,kind])=>c.append(button(label,fn,kind||'')))}
+// Explain the controls before each stage without disclosing upcoming story events.
+// Each card appears once per stage per story run, including resumed checkpoints.
+const stageGuides={
+ 1:{title:'Keep an Eye on Noosh',icon:'👀',goal:'Time your actions while Noosh is looking away.',controls:'Watch for the safe moment, then tap. Freeze when he checks back.'},
+ 2:{title:'Watch the Danger Lanes',icon:'↔️',goal:'Avoid the incoming objects before they reach Tiny.',controls:'Go toward the GREEN safe lane. If every lane is red, DUCK.'},
+ 3:{title:'Catch the Moving Raccoons',icon:'🦝',goal:'Catch as many as you can in each short wave.',controls:'Tap raccoons or use LEFT/RIGHT sweeps. Avoid the fake hats.'},
+ 4:{title:'Drive from the Conductor Cabin',icon:'🚂',goal:'Keep the train moving without hitting blocked tracks.',controls:'Switch to a clear track, DUCK under low hazards, hold BRAKE to slow down, and VENT when pressure rises.'},
+ 5:{title:'Read Baba’s Next Move',icon:'🥊',goal:'Match the cue before the countdown ends.',controls:'Choose PUNCH, DODGE, or SASS. For two-move combos, tap the actions in order.'},
+ 6:{title:'Search, Hide, and Scrub',icon:'🧴',goal:'Find and conceal the evidence, then clean every stain.',controls:'Investigate hiding places, tap discovered items to stash them, then SPRAY and WIPE stains with your finger.'}
+};
+function showStageGuide(stage){
+ const guide=stageGuides[stage];if(!guide)return;
+ if(!Array.isArray(game.seenGuides))game.seenGuides=[];
+ if(game.seenGuides.includes(stage))return;
+ game.seenGuides.push(stage);save();
+ showModal('<div class="modal-kicker">STAGE '+stage+' • QUICK HOW-TO</div>'+
+  '<h2>'+guide.icon+' '+guide.title+'</h2>'+
+  '<p class="guide-goal">'+guide.goal+'</p><p class="guide-controls">'+guide.controls+'</p>'+
+  '<p class="tooltip">No spoilers. The rest is yours to discover.</p>'+
+  '<button class="btn gold" id="guideContinue">GOT IT • LET’S PLAY ▸</button>');
+ const proceed=$('guideContinue');if(proceed)proceed.onclick=()=>hideModal();
+}
+
 function setText(title,body,kicker='A TERRIBLE IDEA'){$('panelTitle').textContent=title;$('panelText').textContent=body;$('panelKicker').textContent=kicker}
 function bubble(s){$('bubble').textContent=s}
 function showPower(on){$('powerRow').classList.toggle('hidden',!on);ui()}
@@ -299,7 +328,7 @@ function hideChallenge(){cleanupRun=null;cleanupRunId++;$('cleanupBoard').classL
 function mark(s){const el=$('actionMark');el.textContent=s;el.classList.remove('show');void el.offsetWidth;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),670)}
 function react(id){const el=$(id);el.classList.remove('nudge');void el.offsetWidth;el.classList.add('nudge')}
 function setCharacters(l='tiny',r='baba'){$('leftChar').innerHTML=character(l==='tiny'&&game.outfit==='tan-bear'?'tiny-bear':l);$('rightChar').innerHTML=character(r);$('leftName').textContent=l.toUpperCase();$('rightName').textContent=r.toUpperCase();$('rightChar').classList.remove('gone');$('leftChar').classList.remove('gone');drawHeldTequila()}
-function beginScene(stage){game.stage=stage;game.phase=stage===1?'opening':stage===2?'buttonIntro':stage===3?'raccoonIntro':stage===4?'trainIntro':stage===5?'fightIntro':'coverupIntro';$('scene').classList.toggle('train-room',stage===2);$('scene').classList.toggle('raccoon-room',stage===3);$('scene').classList.toggle('railway-room',stage===4);$('scene').classList.toggle('fight-room',stage===5);$('scene').classList.toggle('coverup-room',stage===6);document.querySelector('.castle-title').textContent=stage===4?'UTW RAILWAY OF TERRIBLE IDEAS':stage===5?'UTW OFFICIAL SPARRING CLUB':stage===6?'UTW INCIDENT CONTROL':'UTW PALACE OF QUESTIONABLE DECISIONS';$('gameplay').classList.toggle('raccoon-active',stage===3);$('gameplay').classList.toggle('train-active',stage===4);$('gameplay').classList.toggle('fight-active',stage===5);$('gameplay').classList.toggle('coverup-active',stage===6);$('throne').classList.toggle('hidden',stage!==1&&stage!==6);$('pedestal').classList.toggle('hidden',stage!==2);$('crate').classList.toggle('hidden',stage!==3);$('crate').classList.toggle('jitter',stage===3);$('throne').classList.toggle('wet',Boolean(game.evidence.throne));$('challenge').classList.add('hidden');$('nooshPeek').className='noosh-peek hidden';$('note').classList.add('hidden');$('confetti').classList.add('hidden');showPower(false);setCharacters();ui();save()}
+function beginScene(stage){game.stage=stage;game.phase=stage===1?'opening':stage===2?'buttonIntro':stage===3?'raccoonIntro':stage===4?'trainIntro':stage===5?'fightIntro':'coverupIntro';$('scene').classList.toggle('train-room',stage===2);$('scene').classList.toggle('raccoon-room',stage===3);$('scene').classList.toggle('railway-room',stage===4);$('scene').classList.toggle('fight-room',stage===5);$('scene').classList.toggle('coverup-room',stage===6);document.querySelector('.castle-title').textContent=stage===4?'UTW RAILWAY OF TERRIBLE IDEAS':stage===5?'UTW OFFICIAL SPARRING CLUB':stage===6?'UTW INCIDENT CONTROL':'UTW PALACE OF QUESTIONABLE DECISIONS';$('gameplay').classList.toggle('raccoon-active',stage===3);$('gameplay').classList.toggle('train-active',stage===4);$('gameplay').classList.toggle('fight-active',stage===5);$('gameplay').classList.toggle('coverup-active',stage===6);$('throne').classList.toggle('hidden',stage!==1&&stage!==6);$('pedestal').classList.toggle('hidden',stage!==2);$('crate').classList.toggle('hidden',stage!==3);$('crate').classList.toggle('jitter',stage===3);$('throne').classList.toggle('wet',Boolean(game.evidence.throne));$('challenge').classList.add('hidden');$('nooshPeek').className='noosh-peek hidden';$('note').classList.add('hidden');$('confetti').classList.add('hidden');showPower(false);setCharacters();ui();save();showStageGuide(stage)}
 const script1=[['Noosh','Tiny. I am leaving for FIVE minutes. Please behave.','noosh'],['Tiny','I am a responsible and entirely trustworthy individual.','tiny'],['Savvy','*The longest sigh in UTW history.*','savvy'],['Baba','Don’t worry, Noosh. I’ll watch her.','baba'],['Noosh','That is literally what I’m worried about.','noosh'],['Tiny','So... nobody is guarding the throne?','tiny'],['Baba','You’re thinking what I’m thinking.','baba']];
 const script3=[['Tiny','Okay, who opened the raccoon enclosure?','tiny'],['Baba','Technically the button did. I merely encouraged it.','baba'],['Catalyst','Those are my cousins. They do this.','catalyst'],['Mo','Tiny. The corner. NOW.','mo'],['Savvy','*SIGH.*','savvy'],['Tiny','WAIT. ONE OF THEM HAS THE TRAIN KEYS!','tiny']];
 const script2=[['Baba','That noise was... probably normal.','baba'],['Tiny','Why is there a button under the throne?','tiny'],['Baba','Only one way to find out.','baba'],['Tiny','It specifically says DO NOT PRESS.','tiny'],['Baba','Those sound like suggestions to me.','baba']];
