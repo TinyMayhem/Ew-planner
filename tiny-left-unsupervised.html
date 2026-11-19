@@ -311,13 +311,35 @@
 @keyframes netPop{from{opacity:1;transform:translate(-50%,-50%) scale(.5)}to{opacity:0;transform:translate(-50%,-70%) scale(1.4)}}
 @media(max-height:450px){.coverup-active .cleanup-board{inset:10% 0 21%;height:69%;width:100%}.coverup-active .cleanup-top{top:0;height:13%;left:26%;right:26%;width:48%;font-size:9px}.coverup-active .controls .btn{min-width:92px;font-size:11px}.coverup-active .panel .story{max-width:31%}}
 
+
+/* Pop-up net-catching: independent holes support multiple simultaneous fingers. */
+.raccoon-board{left:20%;top:27%;width:60%;height:51%;background:linear-gradient(#3c4d46,#254044);border:3px solid #efcd96}
+.raccoon-field{left:2%;right:2%;top:20%;height:71%;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:1px;background:radial-gradient(ellipse at center,#658e6b,#284d57 80%);overflow:hidden}
+.raccoon-field:before{display:none}
+.mole-hole{position:relative;width:100%;height:100%;border:1px solid #ffffff18;border-radius:0;background:radial-gradient(ellipse 46% 24% at 50% 72%,#131b25 10%,#26312e 90%,transparent 100%);display:grid;place-items:center;overflow:hidden;touch-action:manipulation;padding:0;cursor:pointer;color:#fff4de}
+.mole-hole:after{content:"";position:absolute;left:12%;right:12%;height:17%;bottom:4%;background:#7b664b;border:2px solid #ad9765;border-radius:50%;pointer-events:none;z-index:4}
+.mole-hole .pop-body{position:absolute;z-index:3;width:clamp(33px,5.2vw,66px);height:clamp(33px,5.2vw,66px);top:4%;left:50%;transform:translateX(-50%) translateY(102%);opacity:0;pointer-events:none}
+.mole-hole.active .pop-body{opacity:1;transform:translateX(-50%) translateY(0);animation:popUp .2s ease-out}
+.mole-hole .pop-body svg{width:100%;height:100%;pointer-events:none}
+.mole-hole .pop-body.key{filter:drop-shadow(0 0 7px #f6df77)}
+.mole-hole .pop-body.key:after{content:'🔑';position:absolute;top:-4px;right:-5px;font-size:clamp(14px,1.8vw,22px)}
+.mole-hole .pop-body.decoy{font-size:clamp(26px,3vw,38px)}
+.mole-hole:active .pop-body{transform:translateX(-50%) translateY(3px) scale(.9)}
+.net-swoosh{position:absolute;z-index:9;left:50%;top:18%;transform:translate(-50%,-20%) rotate(-28deg);width:clamp(40px,6vw,75px);height:clamp(40px,6vw,75px);pointer-events:none;animation:netWhack .33s ease-out forwards}
+.net-swoosh svg{width:100%;height:100%;filter:drop-shadow(0 2px 3px #0008)}
+@keyframes popUp{from{transform:translateX(-50%) translateY(100%)}to{transform:translateX(-50%) translateY(0)}}
+@keyframes netWhack{0%{opacity:1;transform:translate(-50%,-70%) rotate(-55deg) scale(1.3)}50%{opacity:1;transform:translate(-50%,0) rotate(-12deg)}100%{opacity:0;transform:translate(-50%,-5%) rotate(10deg) scale(.85)}}
+.raccoon-footer{font-size:clamp(9px,1.1vw,14px)}
+@media(max-height:450px){.raccoon-board{left:20%;top:29%;width:60%;height:49%}.raccoon-field{top:22%;height:67%}.mole-hole .pop-body{width:clamp(33px,5vw,42px);height:clamp(33px,5vw,42px)}}
+@media(prefers-reduced-motion:reduce){.mole-hole.active .pop-body,.net-swoosh{animation:none}}
+
 </style>
 </head>
 <body>
 <div id="app"><main class="screen" id="screen" aria-label="Tiny: Left Unsupervised arcade game">
  <div id="gameplay" class="hidden"><div class="scene" id="scene"><div class="lamp"></div><div class="lamp r"></div><div class="castle-title">UTW PALACE OF QUESTIONABLE DECISIONS</div><div class="sparkles"></div><div class="throne" id="throne"><div class="back"></div><div class="seat"></div><div class="leg l"></div><div class="leg r"></div></div><div class="button-pedestal hidden" id="pedestal"><div class="pedestal"></div><div class="danger-button" id="dangerButton"></div><div class="warning-label">DO NOT PRESS</div></div><div class="crate hidden" id="crate">🦝📦</div><div class="noosh-peek hidden" id="nooshPeek" aria-hidden="true"></div><div class="confetti hidden" id="confetti"></div></div>
  <header class="hud"><span class="logo">🎀 TINY <small>LEFT UNSUPERVISED</small></span><span class="chip" id="stageChip">STAGE 1</span><span class="chip">CHAOS <strong id="score">0</strong></span><div class="energy-mini"><b>⚡ <span id="energy">0</span>/100</b><div class="bar"><i id="energyFill"></i></div></div><div class="hud-spacer"></div><button class="icon-btn" id="pauseBtn" aria-label="Pause">Ⅱ</button><button class="icon-btn" id="soundBtn" aria-label="Sound settings">♫</button><button class="icon-btn" id="fullBtn" aria-label="Fullscreen">⛶</button></header>
- <span class="stage-label" id="stageLabel">THE THRONE INCIDENT</span><div class="bubble" id="bubble" aria-live="polite">Five minutes. What could possibly go wrong?</div><div class="char left" id="leftChar"></div><div class="char right" id="rightChar"></div><span class="name-tag left" id="leftName">TINY</span><span class="name-tag right" id="rightName">BABA</span><div class="action-mark" id="actionMark">💥</div><div class="dodge-board hidden" id="dodgeBoard" role="group" aria-label="Incoming obstacles and safe lanes"></div><div class="raccoon-board hidden" id="raccoonBoard" aria-label="Raccoon chase: tap moving raccoons, avoid the fake hats"><div class="raccoon-heading"><span>🦝 <strong id="raccoonCount">0 / 12</strong></span><span>ESCAPED <strong id="raccoonEscaped">0</strong></span><span>⏱ <strong id="raccoonClock">0</strong></span></div><div class="raccoon-field" id="raccoonField"></div><div class="raccoon-net" id="raccoonNet"></div><div class="raccoon-footer">TAP RACCOONS OR SWEEP THE SIDE THEY’RE ON • AVOID 🎩</div></div><div class="cleanup-board hidden" id="cleanupBoard" role="group" aria-label="Search the throne room for scattered evidence and scrub stains on the throne"></div><div class="fight-board hidden" id="fightBoard" role="group" aria-label="Baba and Tiny cartoon sparring challenge"></div><div class="fight-patience hidden" id="fightPatience" aria-label="Baba composure"><div class="fight-patience-title"><span>😎 BABA’S COMPOSURE</span><span id="fightComposureLabel">100%</span></div><div class="fight-patience-meter"><i id="fightComposureBar"></i></div></div><div class="train-board hidden" id="trainBoard" role="group" aria-label="Railway: red tracks are blocked, green tracks are safe"></div><div class="train-brake hidden" id="trainBrakeWrap"><button id="trainBrake" type="button">✋ HOLD BRAKE</button><label>BRAKE <span id="trainBrakeAmount">100</span>%</label><div class="train-brake-meter"><i id="trainBrakeFill"></i></div></div><div class="challenge hidden" id="challenge"></div><div class="power-row hidden" id="powerRow"><button class="power" id="puppy" title="Puppy Eyes costs 30">🥺 Puppy Eyes <b>30</b></button><button class="power" id="raccoon" title="Raccoon Army costs 60">🦝 Raccoons <b>60</b></button><button class="power" id="nuggie" title="Dino Nuggie Rage costs 100">🍗 Nuggie Rage <b>100</b></button></div><div class="note hidden" id="note"></div><footer class="panel"><div class="story"><div class="eyebrow" id="panelKicker">THE ADVENTURE BEGINS</div><h2 id="panelTitle">Five Minutes Unsupervised</h2><p id="panelText">Tiny has promised to behave.</p></div><div class="controls" id="controls"><button class="btn gold" id="continueBtn">CONTINUE</button></div></footer></div>
+ <span class="stage-label" id="stageLabel">THE THRONE INCIDENT</span><div class="bubble" id="bubble" aria-live="polite">Five minutes. What could possibly go wrong?</div><div class="char left" id="leftChar"></div><div class="char right" id="rightChar"></div><span class="name-tag left" id="leftName">TINY</span><span class="name-tag right" id="rightName">BABA</span><div class="action-mark" id="actionMark">💥</div><div class="dodge-board hidden" id="dodgeBoard" role="group" aria-label="Incoming obstacles and safe lanes"></div><div class="raccoon-board hidden" id="raccoonBoard" aria-label="Raccoon net game: tap popping-up raccoons in individual holes, avoid hats"><div class="raccoon-heading"><span>🦝 <strong id="raccoonCount">0 / 12</strong></span><span>ESCAPED <strong id="raccoonEscaped">0</strong></span><span>⏱ <strong id="raccoonClock">0</strong></span></div><div class="raccoon-field" id="raccoonField"></div><div class="raccoon-net" id="raccoonNet"></div><div class="raccoon-footer">TAP EACH RACCOON WITH YOUR NET • CATCH TWO AT ONCE • AVOID 🎩</div></div><div class="cleanup-board hidden" id="cleanupBoard" role="group" aria-label="Search the throne room for scattered evidence and scrub stains on the throne"></div><div class="fight-board hidden" id="fightBoard" role="group" aria-label="Baba and Tiny cartoon sparring challenge"></div><div class="fight-patience hidden" id="fightPatience" aria-label="Baba composure"><div class="fight-patience-title"><span>😎 BABA’S COMPOSURE</span><span id="fightComposureLabel">100%</span></div><div class="fight-patience-meter"><i id="fightComposureBar"></i></div></div><div class="train-board hidden" id="trainBoard" role="group" aria-label="Railway: red tracks are blocked, green tracks are safe"></div><div class="train-brake hidden" id="trainBrakeWrap"><button id="trainBrake" type="button">✋ HOLD BRAKE</button><label>BRAKE <span id="trainBrakeAmount">100</span>%</label><div class="train-brake-meter"><i id="trainBrakeFill"></i></div></div><div class="challenge hidden" id="challenge"></div><div class="power-row hidden" id="powerRow"><button class="power" id="puppy" title="Puppy Eyes costs 30">🥺 Puppy Eyes <b>30</b></button><button class="power" id="raccoon" title="Raccoon Army costs 60">🦝 Raccoons <b>60</b></button><button class="power" id="nuggie" title="Dino Nuggie Rage costs 100">🍗 Nuggie Rage <b>100</b></button></div><div class="note hidden" id="note"></div><footer class="panel"><div class="story"><div class="eyebrow" id="panelKicker">THE ADVENTURE BEGINS</div><h2 id="panelTitle">Five Minutes Unsupervised</h2><p id="panelText">Tiny has promised to behave.</p></div><div class="controls" id="controls"><button class="btn gold" id="continueBtn">CONTINUE</button></div></footer></div>
  <div class="modal" id="modal"><div class="modal-card" id="modalBody"></div></div>
  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 </main></div><div class="rotate"><span>📱↻</span><h2>Turn your phone sideways!</h2><p>Tiny needs room to cause problems.</p><small>Landscape mode works best. Fullscreen is available inside the game.</small></div>
@@ -343,7 +365,7 @@ function choices(options){const c=$('controls');c.replaceChildren();options.forE
 const stageGuides={
  1:{title:'Keep an Eye on Noosh',icon:'👀',goal:'Time your actions while Noosh is looking away.',controls:'Watch for the safe moment, then tap. Freeze when he checks back.'},
  2:{title:'Watch the Danger Lanes',icon:'↔️',goal:'Avoid the incoming objects before they reach Tiny.',controls:'Go toward the GREEN safe lane. If every lane is red, DUCK.'},
- 3:{title:'Catch the Moving Raccoons',icon:'🦝',goal:'Catch as many as you can in each short wave.',controls:'Tap raccoons or use LEFT/RIGHT sweeps. Avoid the fake hats.'},
+ 3:{title:'Net the Popping Raccoons',icon:'🦝',goal:'Catch raccoons as they pop out of their holes.',controls:'Tap each raccoon with your net, even two at once. Avoid fake hats. The key-carrier hops much faster.'},
  4:{title:'Drive from the Conductor Cabin',icon:'🚂',goal:'Keep the train moving without hitting blocked tracks.',controls:'Switch to a clear track, DUCK under low hazards, hold BRAKE to slow down, and VENT when pressure rises.'},
  5:{title:'Read Baba’s Next Move',icon:'🥊',goal:'Match the cue before the countdown ends.',controls:'Choose PUNCH, DODGE, or SASS. For two-move combos, tap the actions in order.'},
  6:{title:'Find the Evidence, Clean the Throne',icon:'🧴',goal:'Spot small suspicious objects scattered around the royal throne and scrub away the stains.',controls:'Tap each hidden object to pocket it. Choose SPRAY, tap a throne stain, then use your finger to WIPE until it disappears.'}
@@ -581,41 +603,121 @@ function buildRaccoonLayout(){
  if(signature()===fromStorage(store,'')){waves[0][0].dir*=-1}
  toStorage(store,signature());return waves;
 }
-function startRaccoonWave(wave){hideChallenge();phase='raccoons';game.phase=phase;round=wave;showPower(true);
+function startRaccoonWave(wave){
+ hideChallenge();phase='raccoons';game.phase=phase;round=wave;showPower(true);
  setCharacters('tiny',wave===0?'catalyst':wave===1?'mo':'savvy');
- const speedScale=game.choices.raccoonPlan==='nuggies'?.80:game.choices.raccoonPlan==='sprint'?1.16:1;
+ const speedScale=game.choices.raccoonPlan==='nuggies'?.86:game.choices.raccoonPlan==='sprint'?1.16:1;
  const field=$('raccoonField'),board=$('raccoonBoard');board.classList.remove('hidden');
- const waves=(raccoonLayout||(raccoonLayout=buildRaccoonLayout()))[wave],run={id:raccoonRunId,objects:[],next:0,spawnAt:performance.now()+320,last:performance.now(),wave,caught:0,missed:0,decoys:0,complete:false,until:performance.now()+15500,netAt:0};raccoonRun=run;
+ const config=(raccoonLayout||(raccoonLayout=buildRaccoonLayout()))[wave];
+ const queue=config.map(o=>({...o}));
+ // The key carrier always pops alongside another raccoon, never alone.
+ const keyIndex=queue.findIndex(o=>o.key);
+ if(keyIndex>=0&&keyIndex>2){const [key]=queue.splice(keyIndex,1);queue.splice(1,0,key)}
+ const run={id:++raccoonRunId,objects:[],queue,next:0,spawnAt:performance.now()+380,last:performance.now(),
+  wave,caught:0,missed:0,decoys:0,complete:false,until:performance.now()+15000,netAt:-Infinity,cells:[],popCount:0};
+ raccoonRun=run;
  $('raccoonCount').textContent=game.raccoonsCaught+' / 12';$('raccoonEscaped').textContent=game.raccoonsEscaped;
- bubble(["Cat: Catch 'em. They're fast, not subtle.","Mo: If that dog catches them first, YOU'RE cleaning up.","Savvy: *A sigh audible across three alliances.*"][wave]);
- setText('Tap the moving raccoons!','Watch their actual positions. You can tap them directly or sweep the left/right half. Avoid 🎩 decoys.','RACCOON CHASE • WAVE '+(wave+1)+'/3');
- choices([['🧺 SWEEP LEFT',()=>raccoonSweep('left'),'gold'],['🧺 SWEEP RIGHT',()=>raccoonSweep('right'),'gold']]);
- function spawn(config,index){const el=document.createElement('button');el.className='raccoon-runner'+(config.decoy?' decoy':'')+(config.key?' key-carrier':'');el.setAttribute('aria-label',config.decoy?'Baba’s decoy hat, do not catch':config.key?'Glittering raccoon carrying a key':'Moving raccoon, tap to catch');el.innerHTML=raccoonArt(Boolean(config.decoy))+(config.key?'<span class="key">🔑</span>':'');field.append(el);
- const object={id:index,el,row:config.row,dir:config.dir,x:config.dir===1?-10:110,speed:(28+wave*5+index*2)*speedScale*(.9+Math.random()*.2),decoy:Boolean(config.decoy),key:Boolean(config.key),caught:false};
- el.addEventListener('click',e=>{e.stopPropagation();catchRaccoon(object)});run.objects.push(object);return object}
- function frame(now){if(phase!=='raccoons'||raccoonRun!==run)return;if(paused){const delay=Math.max(0,now-run.last);run.until+=delay;run.spawnAt+=delay;run.last=now;activeFrame=requestAnimationFrame(frame);return;}
-  const dt=Math.min((now-run.last)/1000,.08);run.last=now;
-  while(run.next<waves.length&&now>=run.spawnAt){spawn(waves[run.next],run.next);run.next++;run.spawnAt+=1040+Math.random()*320-speedScale*90}
-  for(const o of run.objects){if(o.caught)continue;o.x+=o.dir*o.speed*dt;o.el.style.left=o.x+'%';o.el.style.top=(16.7+o.row*33.33)+'%';
-   if(game.autoClear>0&&!o.decoy&&o.x>=44&&o.x<=56){game.autoClear--;catchRaccoon(o,true);notify('🦝 Raccoon Army helped scoop up a runaway!')}
-   if((o.dir===1&&o.x>112)||(o.dir===-1&&o.x< -12)){o.caught=true;o.el.remove();if(!o.decoy){run.missed++;game.raccoonsEscaped++;game.misses++;game.evidence.raccoons=true;$('raccoonEscaped').textContent=game.raccoonsEscaped;mark('💨')} }
+ bubble(["Cat: Net ready. Those bandits are everywhere!","Mo: BOTH HANDS, TINY. DON'T LET THEM ESCAPE.","Savvy: *A sigh audible across three alliances.*"][wave]);
+ setText('NET THE POPPING RACCOONS','Tap them the moment they pop up! You can catch two at the same time. The one holding a key hops quickly. Avoid Baba’s hats.','RACCOON NET • WAVE '+(wave+1)+'/3');
+ choices([]);
+ for(let i=0;i<9;i++){
+  const hole=document.createElement('button');hole.className='mole-hole';hole.type='button';
+  hole.setAttribute('aria-label','Empty raccoon hole '+(i+1));hole.dataset.slot=String(i);hole.current=null;
+  hole.addEventListener('pointerdown',e=>{if(hole.current&&!paused){e.preventDefault();catchRaccoon(hole.current)}});
+  hole.addEventListener('click',()=>{if(hole.current&&!paused)catchRaccoon(hole.current)});
+  field.append(hole);run.cells.push(hole);
+ }
+ function clearCell(o){const hole=run.cells[o.slot];if(hole?.current===o){hole.current=null;hole.classList.remove('active');hole.innerHTML='';hole.setAttribute('aria-label','Empty raccoon hole '+(o.slot+1))}}
+ function display(o,slot){
+  if(o.slot!==undefined)clearCell(o);
+  const hole=run.cells[slot];hole.current=o;o.slot=slot;hole.classList.add('active');
+  hole.setAttribute('aria-label',o.decoy?'Baba’s hat decoy':o.key?'FAST key raccoon! Tap to net it!':'Raccoon! Tap to net it!');
+  hole.innerHTML='<span class="pop-body'+(o.key?' key':'')+(o.decoy?' decoy':'')+'">'+raccoonArt(o.decoy)+'</span>'
+ }
+ function spawn(o,now){
+  const free=run.cells.map((h,i)=>h.current===null?i:-1).filter(i=>i>=0);
+  if(!free.length)return false;
+  const slot=free[Math.floor(Math.random()*free.length)];
+  const obj={...o,slot:undefined,caught:false,active:true,start:now,
+   endAt:now+(o.key?850:o.decoy?1630:Math.max(1240,1960-wave*100))*1/speedScale,
+   hopAt:now+260+Math.random()*80};
+  run.objects.push(obj);display(obj,slot);return true
+ }
+ function expire(o){
+  if(o.caught)return;o.caught=true;clearCell(o);
+  if(!o.decoy){run.missed++;game.raccoonsEscaped++;game.misses++;game.evidence.raccoons=true;
+   $('raccoonEscaped').textContent=game.raccoonsEscaped;mark('💨')}
+ }
+ function popNext(now){
+  if(!run.queue.length)return;
+  const next=run.queue.shift();
+  if(!spawn(next,now)){run.queue.unshift(next);return}
+  // A second raccoon appears during the key-carrier's short window.
+  if(next.key){
+   const companion=run.queue.findIndex(x=>!x.decoy&&!x.key);
+   if(companion>=0){const [mate]=run.queue.splice(companion,1);spawn(mate,now)}
+   notify('🔑 KEY RACCOON! TWO TARGETS AT ONCE!');
+  }
+  run.next++;run.spawnAt=now+(940+Math.random()*240)/speedScale
+ }
+ function frame(now){
+  if(phase!=='raccoons'||raccoonRun!==run||run.complete)return;
+  if(paused){const delay=Math.max(0,now-run.last);run.until+=delay;run.spawnAt+=delay;
+   for(const o of run.objects)if(!o.caught){o.endAt+=delay;o.hopAt+=delay}
+   run.last=now;activeFrame=requestAnimationFrame(frame);return}
+  run.last=now;
+  if(run.queue.length&&now>=run.spawnAt)popNext(now);
+  for(const o of run.objects){
+   if(o.caught)continue;
+   if(o.key&&now>=o.hopAt){
+    const free=run.cells.map((h,i)=>h.current===null?i:-1).filter(i=>i>=0);
+    if(free.length){display(o,free[Math.floor(Math.random()*free.length)]);o.hopAt=now+220+Math.random()*100}
+   }
+   if(game.autoClear>0&&!o.decoy){game.autoClear--;catchRaccoon(o,true);notify('🦝 Raccoon Army netted one!')}
+   if(now>=o.endAt)expire(o)
   }
   $('raccoonClock').textContent=Math.max(0,(run.until-now)/1000).toFixed(1)+'s';
-  if((run.next>=waves.length&&run.objects.every(o=>o.caught))||now>run.until){raccoonWaveEnd(wave,run);return}
+  if((run.queue.length===0&&run.objects.every(o=>o.caught))||now>run.until){
+   if(now>run.until)for(const o of run.objects)if(!o.caught)expire(o);
+   raccoonWaveEnd(wave,run);return
+  }
   activeFrame=requestAnimationFrame(frame)
  }
- activeFrame=requestAnimationFrame(frame);
- interact={extend:()=>{run.until+=4500;for(const o of run.objects)if(!o.caught)o.speed*=.79;notify('🥺 +4.5 seconds! The raccoons slow down.')},auto:()=>{const o=run.objects.find(o=>!o.caught&&!o.decoy);if(o)catchRaccoon(o,true);else game.autoClear++}};
- function catchRaccoon(obj,assisted=false){if(phase!=='raccoons'||raccoonRun!==run||obj.caught)return;obj.caught=true;obj.el.remove();if(obj.decoy){run.decoys++;game.raccoonDecoys++;game.misses++;bubble('Baba: ...Did you just catch my HAT?');mark('🎩');audio('oops');notify('🎩 THAT WAS BABA’S DECOY!');}
- else{run.caught++;game.raccoonsCaught++;addScore(obj.key?260:170);earn(obj.key?19:12);game.perfects++;if(game.rage>0)game.rage--;if(obj.key){clue('raccoon-key');game.choices.foundKey=true;bubble('Tiny: That key has a tiny paw-print stamp... suspicious.');mark('🔑')}else{bubble(assisted?'Tiny: My raccoon army is unexpectedly competent.': ['Tiny: GOTCHA!','Cat: That one owes me money.','Mo: Don’t you DARE release it again.'][game.raccoonsCaught%3]);mark('✨')}audio('success');if(game.raccoonsCaught>=8)achievement('raccoon-wrangler','Certified Raccoon Wrangler');$('raccoonCount').textContent=game.raccoonsCaught+' / 12';}
-  save();ui()}
+ function netEffect(hole){
+  if(!hole)return;
+  const flash=document.createElement('span');flash.className='net-swoosh';flash.setAttribute('aria-hidden','true');
+  flash.innerHTML='<svg viewBox="0 0 65 70"><path d="M42 43L63 66" stroke="#ad7b4c" stroke-width="8" stroke-linecap="round"/>'+
+   '<ellipse cx="29" cy="28" rx="25" ry="24" fill="#b9fff43a" stroke="#f4ebce" stroke-width="5"/>'+
+   '<path d="M10 14L50 42M6 28L38 49M21 5L52 28M48 10L11 42M36 4L6 30M53 25L24 52" stroke="#e0fef0" stroke-width="2" fill="none"/></svg>';
+  hole.append(flash);setTimeout(()=>flash.remove(),360)
+ }
+ function catchRaccoon(o,assisted=false){
+  if(phase!=='raccoons'||raccoonRun!==run||o.caught||paused)return;
+  o.caught=true;const hole=run.cells[o.slot];netEffect(hole);clearCell(o);
+  if(o.decoy){run.decoys++;game.raccoonDecoys++;game.misses++;notify('🎩 BABA’S HAT! NOT A RACCOON!');mark('🎩');audio('oops')}
+  else{
+   run.caught++;game.raccoonsCaught++;addScore(o.key?320:170);earn(o.key?19:12);game.perfects++;
+   if(game.rage>0)game.rage--;
+   if(o.key){clue('raccoon-key');game.choices.foundKey=true;notify('🔑 YOU NETTED THE FAST KEY RACCOON!');mark('🔑')}
+   else mark('🥅');
+   audio('success');if(game.raccoonsCaught>=8)achievement('raccoon-wrangler','Certified Raccoon Wrangler');
+   $('raccoonCount').textContent=game.raccoonsCaught+' / 12';
+  }
+  save();ui()
+ }
  run.catchRaccoon=catchRaccoon;
+ run.clearCell=clearCell;
+ activeFrame=requestAnimationFrame(frame);
+ interact={extend:()=>{run.until+=5000;for(const o of run.objects)if(!o.caught)o.endAt+=1400;notify('🥺 +5 seconds! More time to catch the raccoons.')},
+  auto:()=>{const o=run.objects.find(o=>!o.caught&&!o.decoy);if(o)catchRaccoon(o,true);else game.autoClear++}};
 }
-function raccoonSweep(side){if(phase!=='raccoons'||!raccoonRun)return;const run=raccoonRun;const now=performance.now();if(now-run.netAt<950)return;run.netAt=now;
- const net=$('raccoonNet');net.className='raccoon-net '+(side==='right'?'right ':'')+'show';setTimeout(()=>net.classList.remove('show'),250);
- const candidate=run.objects.filter(o=>!o.caught&&(side==='left'?o.x<50:o.x>=50)&&o.x>0&&o.x<100).sort((a,b)=>Math.abs(a.x-50)-Math.abs(b.x-50))[0];
- if(candidate){run.catchRaccoon(candidate)}else{bubble('Tiny: EMPTY NET! THEY’RE MOCKING ME.');audio('sneak')}
+function raccoonSweep(side){ // Desktop keyboard fallback; touch players net individual pop-ups.
+ if(phase!=='raccoons'||!raccoonRun||paused)return;
+ const run=raccoonRun,now=performance.now();if(now-run.netAt<400)return;run.netAt=now;
+ const candidate=run.objects.find(o=>!o.caught&&!o.decoy&&(side==='left'?o.slot%3<2:o.slot%3>0));
+ if(candidate)run.catchRaccoon(candidate);else notify('🥅 No raccoon in that half. Watch the holes!')
 }
+
 function raccoonWaveEnd(wave,run){if(phase!=='raccoons'||raccoonRun!==run||run.complete)return;run.complete=true;hideChallenge();phase='raccoonInterlude';game.phase=phase;
  game.stageResults['raccoonWave'+(wave+1)]={caught:run.caught,escaped:run.missed,decoys:run.decoys};save();
  const reaction=run.caught>=3?'Tiny: I AM BASICALLY A PROFESSIONAL RACCOON WRANGLER.':'Mo: Please tell me you know where they went.';
