@@ -1,10 +1,61 @@
+import {editTokenFromHash,readRememberedToken,rememberToken,forgetRememberedToken} from './buddy-access.mjs';
 const $=id=>document.getElementById(id),NAMES={winwin:'Win-Win',hospital:'Hospital Aid'};
+const deviceStorage=(()=>{try{return window.localStorage;}catch{return null;}})();
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let board={ready:false,members:[],pairings:[],revision:0,admin:false},editToken=new URLSearchParams(location.hash.slice(1)).get('edit'),editingId=null,adminEditing=false;
+let board={ready:false,members:[],pairings:[],revision:0,admin:false},editToken=editTokenFromHash(location.hash)||readRememberedToken(deviceStorage),editingId=null,adminEditing=false;
 function toast(message){$('toast').textContent=message;$('toast').classList.remove('hidden');setTimeout(()=>$('toast').classList.add('hidden'),3500);}
 function message(id,text,error=false){$(id).textContent=text;$(id).className='notice'+(error?' error':'');}
 async function api(body){const response=await fetch('/api/buddies',{method:body?'POST':'GET',headers:{'Content-Type':'application/json',...(editToken&&!body?{Authorization:'Bearer '+editToken}:{})},body:body?JSON.stringify({...body,revision:board.revision}):undefined,cache:'no-store'});const data=await response.json();if(!response.ok)throw new Error(data.error||'Could not reach the board.');return data;}
-async function refresh(){try{board={ready:false,members:[],pairings:[],revision:0,admin:false,...await api()};$('pageGate').classList.toggle('hidden',!board.locked);$('boardContent').classList.toggle('hidden',Boolean(board.locked));$('memberFields').disabled=!board.ready;$('serviceStatus').textContent=board.ready?'Shared board connected. Updates are saved for everyone.':board.message||'The shared board is temporarily unavailable.';$('serviceStatus').classList.toggle('error',!board.ready);if(board.myMember&&!editingId)fillForm(board.myMember,false);render();}catch(error){message('serviceStatus',error.message,true);$('memberFields').disabled=true;}}
+function refreshAccessUI(){
+ const mine=Boolean(board.myMember&&editToken);
+ $('myProfileLink').textContent=mine?'Edit my Buddy Profile':'Join / update my profile';
+ $('returningProfile').classList.toggle('hidden',!mine);
+ if(mine)$('returningProfile').innerHTML='<strong>Welcome back, '+esc(board.myMember.ign)+'!</strong> Update your profession and buddy details below, then tap Update entry. No personal code needed on this device.';
+ $('accessHelp').classList.toggle('hidden',mine);
+ $('forgetDevice').classList.toggle('hidden',!readRememberedToken(deviceStorage));
+}
+function rememberAccess(){
+ if(!editToken)return;
+ if($('rememberDevice').checked){
+  if(rememberToken(deviceStorage,editToken)){
+   // The shareable secret remains in the backup link, not in the address bar.
+   if(location.hash)history.replaceState(null,'',location.pathname+location.search);
+  }else{
+   $('rememberDevice').checked=false;
+   message('formMessage','This browser cannot remember your profile. Copy your private backup link before leaving.',true);
+  }
+ }else forgetRememberedToken(deviceStorage);
+ refreshAccessUI();
+}
+async function refresh(){try{
+ board={ready:false,members:[],pairings:[],revision:0,admin:false,...await api()};
+ $('pageGate').classList.toggle('hidden',!board.locked);
+ $('boardContent').classList.toggle('hidden',Boolean(board.locked));
+ $('memberFields').disabled=!board.ready;
+ $('serviceStatus').textContent=board.ready?'Shared board connected. Updates are saved for everyone.':board.message||'The shared board is temporarily unavailable.';
+ $('serviceStatus').classList.toggle('error',!board.ready);
+ if(board.myMember&&!editingId)fillForm(board.myMember,false);
+ if(board.myMember&&editToken)rememberAccess();
+ refreshAccessUI();
+ render();
+ }catch(error){
+  if(editToken&&/edit link is invalid/i.test(error.message)){
+   const saved=readRememberedToken(deviceStorage);
+   // An invalid incoming link should not erase a different, valid saved profile.
+   if(saved&&saved!==editToken){
+    editToken=saved;editingId=null;adminEditing=false;
+    history.replaceState(null,'',location.pathname+location.search);
+    await refresh();return;
+   }
+   forgetRememberedToken(deviceStorage);editToken=null;editingId=null;adminEditing=false;
+   history.replaceState(null,'',location.pathname+location.search);
+   $('editLinkPanel').classList.add('hidden');
+   await refresh();
+   message('formMessage','Your previous edit link no longer works. Ask Tiny to recover your entry; there is no need to register again.',true);
+   return;
+  }
+  message('serviceStatus',error.message,true);$('memberFields').disabled=true;
+ }}
 function currentPair(id,skill){return board.pairings.find(p=>p.skill===skill&&p.status==='active'&&(p.providerId===id||p.recipientId===id));}
 function member(id){return board.members.find(m=>m.id===id);}
 function skillStatus(m,skill){const pair=currentPair(m.id,skill);if(pair){const providing=pair.providerId===m.id,other=member(providing?pair.recipientId:pair.providerId);return {status:'active',text:(providing?'Providing to ':'Receiving from ')+(other?.ign||'Removed member')};}const stale=board.pairings.filter(p=>p.skill===skill&&p.status==='reassign'&&p.wasPublished&&(p.providerId===m.id||p.recipientId===m.id)).at(-1);if(stale&&(m.skills[skill].need||m.skills[skill].provide))return {status:'reassign',text:stale.reason||'Needs reassignment'};if(m.skills[skill].need)return {status:'waiting',text:'Waiting for a buddy'};if(m.skills[skill].provide)return {status:'available',text:'Available to provide'};return {status:'none',text:'Not requested / not offered'};}
@@ -46,9 +97,19 @@ function renderAdmin(){renderBuddySuggestions();const taken=(id,skill,role)=>boa
 function renderPairOptions(){const skill=$('pairSkill').value,used=(id,role)=>board.pairings.some(p=>p.skill===skill&&['draft','active'].includes(p.status)&&p[role]===id);const providers=board.members.filter(m=>m.profession==='engineer'&&m.skills[skill].provide&&!used(m.id,'providerId'));$('provider').innerHTML='<option value="">Choose Engineer</option>'+providers.map(m=>`<option value="${m.id}">${esc(m.ign)} · ${esc(m.alliance)}</option>`).join('');recipientOptions();}
 function recipientOptions(){const skill=$('pairSkill').value,provider=member($('provider').value);const recipients=board.members.filter(m=>m.skills[skill].need&&m.id!==provider?.id&&(!provider||m.alliance===provider.alliance)&&!board.pairings.some(p=>p.skill===skill&&['draft','active'].includes(p.status)&&p.recipientId===m.id));$('recipient').innerHTML='<option value="">Choose recipient</option>'+recipients.map(m=>`<option value="${m.id}">${esc(m.ign)} · ${esc(m.alliance)}</option>`).join('');}
 $('profession').addEventListener('change',professionUI);professionUI();
-$('memberForm').addEventListener('submit',async e=>{e.preventDefault();const raw={ign:$('ign').value,alliance:$('alliance').value,profession:$('profession').value,hasBuddies:Object.fromEntries(Object.keys(NAMES).map(s=>[s,$(s+'HasBuddy').checked])),currentBuddies:Object.fromEntries(Object.keys(NAMES).map(s=>[s,$(s+'HasBuddy').checked?$(s+'CurrentBuddy').value:''])),skills:Object.fromEntries(Object.keys(NAMES).map(s=>[s,{provide:$(s+'Provide').checked,need:$(s+'Need').checked||$(s+'HasBuddy').checked}]))};const original=member(editingId);if(original&&original.profession!==raw.profession&&!confirm('Update profession? Affected buddy pairings will need reassignment.'))return;$('submitMember').disabled=true;try{const data=await api({action:editingId?'update':'register',member:raw,id:editingId,token:adminEditing?undefined:editToken,website:$('website').value});if(data.token){editToken=data.token;editingId=data.member.id;history.replaceState(null,'',location.pathname+'#edit='+editToken);showEditLink(editToken);}message('formMessage','Saved. Your current skills are on the shared board.');await refresh();if(data.member)fillForm(data.member,adminEditing);}catch(error){message('formMessage',error.message,true);if(error.message.includes('board changed'))await refresh();}finally{$('submitMember').disabled=false;}});
-$('newEntry').addEventListener('click',()=>{editToken=null;editingId=null;adminEditing=false;history.replaceState(null,'',location.pathname);$('memberForm').reset();$('formTitle').textContent='Join the buddy board';$('submitMember').textContent='Save my entry';$('newEntry').classList.add('hidden');$('editLinkPanel').classList.add('hidden');$('formMessage').textContent='';professionUI();});
+$('memberForm').addEventListener('submit',async e=>{e.preventDefault();const raw={ign:$('ign').value,alliance:$('alliance').value,profession:$('profession').value,hasBuddies:Object.fromEntries(Object.keys(NAMES).map(s=>[s,$(s+'HasBuddy').checked])),currentBuddies:Object.fromEntries(Object.keys(NAMES).map(s=>[s,$(s+'HasBuddy').checked?$(s+'CurrentBuddy').value:''])),skills:Object.fromEntries(Object.keys(NAMES).map(s=>[s,{provide:$(s+'Provide').checked,need:$(s+'Need').checked||$(s+'HasBuddy').checked}]))};const original=member(editingId);if(original&&original.profession!==raw.profession&&!confirm('Update profession? Affected buddy pairings will need reassignment.'))return;$('submitMember').disabled=true;try{const data=await api({action:editingId?'update':'register',member:raw,id:editingId,token:adminEditing?undefined:editToken,website:$('website').value});if(data.token){editToken=data.token;editingId=data.member.id;showEditLink(editToken);}if(editToken&&!adminEditing)rememberAccess();message('formMessage','Saved. Your current skills are on the shared board.');await refresh();if(data.member)fillForm(data.member,adminEditing);}catch(error){message('formMessage',error.message,true);if(error.message.includes('board changed'))await refresh();}finally{$('submitMember').disabled=false;}});
+$('newEntry').addEventListener('click',()=>{forgetRememberedToken(deviceStorage);editToken=null;editingId=null;adminEditing=false;history.replaceState(null,'',location.pathname+location.search);$('memberForm').reset();$('formTitle').textContent='Join the buddy board';$('submitMember').textContent='Save my entry';$('newEntry').classList.add('hidden');$('editLinkPanel').classList.add('hidden');$('formMessage').textContent='';professionUI();refreshAccessUI();});
 $('copyEditLink').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('editLink').value);toast('Private edit link copied.');}catch{$('editLink').select();toast('Select and copy your private link.');}});
+$('rememberDevice').addEventListener('change',()=>{
+ if(!editToken)return;
+ rememberAccess();
+ if($('rememberDevice').checked)toast('Your profile is remembered on this device.');
+ else toast('Device access cleared. Keep your backup link to return.');
+});
+$('forgetDevice').addEventListener('click',()=>{
+ $('newEntry').click();
+ toast('This device no longer remembers your Buddy Board profile.');
+});
 for(const id of ['search','allianceFilter','statusFilter'])$(id).addEventListener(id==='search'?'input':'change',renderPublic);
 $('refreshBoard').addEventListener('click',refresh);$('adminOpen').addEventListener('click',()=>{if(board.admin){$('adminPanel').scrollIntoView({behavior:'smooth'});return}if(!board.ready){toast('Tiny is connecting the shared board. Admin login opens afterward.');return}$('adminLogin').showModal();});$('cancelLogin').addEventListener('click',()=>$('adminLogin').close());
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();try{await api({action:'login',password:$('adminPassword').value});$('adminPassword').value='';$('adminLogin').close();await refresh();$('adminPanel').scrollIntoView({behavior:'smooth'});}catch(error){$('loginMessage').textContent=error.message;}});
