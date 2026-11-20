@@ -1,4 +1,4 @@
-import {emptyBoard,hash,publicBoard,publicMember,memberByToken,register,update,assign,publish,adminPasswordOK,sessionToken,validSession,invalidatePairs,pagePasswordOK} from '../lib/buddies.mjs';
+import {emptyBoard,hash,publicBoard,publicMember,register,update,assign,publish,adminPasswordOK,sessionToken,validSession,invalidatePairs,snapshotMember,logBuddyChange,undoBuddyChange,pagePasswordOK} from '../lib/buddies.mjs';
 import {stageForDate,stageRange} from '../assets/r4-train-rules.mjs';
 import {GET as arcadeGET,POST as arcadePOST} from '../lib/arcade.mjs';
 // Board access needs the database and a secure signed session. Admin-password policy is enforced separately by adminPasswordOK for admin actions.
@@ -59,7 +59,14 @@ export async function GET(request){if(new URL(request.url).searchParams.get('arc
  const stages=[...new Set([...trains.map(r=>r.stage),...Array.from({length:10},(_,i)=>i+7)])].sort((a,b)=>b-a).map(stageRange);
  // Do not expose private VS scores, reasons for replacements or R4 audit fields.
  return json({ready:true,trains,stages,seasons:[{id:'history-2026',label:'Stages 7–12 · Historical train archive'},...seasons]});
- }const {board}=await readBoard();const token=request.headers.get('authorization')?.replace(/^Bearer /,'');const member=token?memberByToken(board,token):null;if(token&&!member)return json({error:'This edit link is invalid. Ask Tiny to recover your entry.'},401);const admin=validSession(request.headers.get('cookie'));return json({ready:true,admin,...publicBoard(board,admin),myMember:member?publicMember(member):null});}catch(error){console.error('UTW buddy read failed:',error.message);return json({ready:false,error:'The shared board is temporarily unavailable. Try again.'},503);}}
+ }const {board}=await readBoard();
+ const profileId=new URL(request.url).searchParams.get('profile');
+ if(profileId){
+  const member=board.members.find(m=>m.id===profileId);
+  return member?json({ready:true,member:publicMember(member)}):json({error:'Member not found. Refresh the board.'},404);
+ }
+ const admin=validSession(request.headers.get('cookie'));
+ return json({ready:true,admin,...publicBoard(board,admin)});}catch(error){console.error('UTW buddy read failed:',error.message);return json({ready:false,error:'The shared board is temporarily unavailable. Try again.'},503);}}
 export async function POST(request){if(new URL(request.url).searchParams.get('arcade')==='1')return arcadePOST(request);if(!configured())return json({error:'Buddy signup is not open yet. Your submission has not been saved.'},503);const origin=request.headers.get('origin');if(!origin||origin!==new URL(request.url).origin)return json({error:'Request must come from the UTW site.'},403);if(!request.headers.get('content-type')?.startsWith('application/json'))return json({error:'JSON request required.'},415);let body;try{const text=await request.text();if(text.length>12000)return json({error:'Submission is too large.'},413);body=JSON.parse(text);}catch{return json({error:'Invalid submission.'},400);}try{
  if(await limited(request,['login','pageLogin'].includes(body.action)?'login':'write',['login','pageLogin'].includes(body.action)?10:60))return json({error:'Too many attempts. Try again in 15 minutes.'},429);
  const cookieAttributes='; HttpOnly; SameSite=Strict; Path=/'+(new URL(request.url).protocol==='https:'?'; Secure':'');
@@ -68,8 +75,57 @@ export async function POST(request){if(new URL(request.url).searchParams.get('ar
  if(body.action==='login'){if(!adminPasswordOK(body.password))return json({error:'Incorrect admin password.'},401);return json({ok:true},200,{'Set-Cookie':'utw_admin='+sessionToken()+'; Max-Age=28800'+cookieAttributes});}
  if(body.action==='logout')return json({ok:true},200,{'Set-Cookie':'utw_admin=; Max-Age=0'+cookieAttributes});
  const admin=validSession(request.headers.get('cookie'));const {raw,board}=await readBoard();if(body.revision!==board.revision)return json({error:'The board changed. Refresh and try again.'},409);
- let result={};if(body.action==='register'){if(body.website)return json({error:'Invalid submission.'},400);result=register(board,body.member);}
- else if(body.action==='update'){const member=admin?board.members.find(m=>m.id===body.id):memberByToken(board,body.token);if(!member||member.id!==body.id)return json({error:'Your private edit link is required.'},401);result={member:update(board,member.id,body.member)};}
- else {if(!admin)return json({error:'Admin login required.'},401);switch(body.action){case 'assign':result={pair:assign(board,body.pair)};break;case 'publish':publish(board);break;case 'unassign':{const pair=board.pairings.find(p=>p.id===body.id);if(!pair)throw new Error('Pairing not found.');pair.wasPublished=pair.wasPublished||pair.status==='active';pair.status='reassign';pair.reason='Pairing removed by Tiny. Waiting for reassignment.';break;}case 'remove':board.members=board.members.filter(m=>m.id!==body.id);invalidatePairs(board,body.id,'Member removed. Needs reassignment.');break;case 'recover':{const member=board.members.find(m=>m.id===body.id);if(!member)throw new Error('Member not found.');const {randomBytes}=await import('node:crypto');const token=randomBytes(32).toString('base64url');member.editHash=hash(token);result={token,id:member.id};break;}default:return json({error:'Unknown action.'},400);}}
+
+ let result={};
+ if(body.action==='register'){
+  if(body.website)return json({error:'Invalid submission.'},400);
+  const registered=register(board,body.member);
+  result={member:registered.member};
+  logBuddyChange(board,{kind:'Profile registered',profileId:registered.member.id,after:snapshotMember(board.members.find(m=>m.id===registered.member.id))});
+ }else if(body.action==='update'){
+  if(body.website)return json({error:'Invalid submission.'},400);
+  const member=board.members.find(m=>m.id===body.id);
+  if(!member)return json({error:'Member not found. Search for your name again.'},404);
+  const changes=admin?body.member:{...body.member,ign:member.ign,alliance:member.alliance};
+  const before=snapshotMember(member);
+  result={member:update(board,member.id,changes)};
+  const after=snapshotMember(board.members.find(m=>m.id===member.id));
+  const event=logBuddyChange(board,{kind:admin?'Admin profile updated':'Profile updated',profileId:member.id,actor:admin?'Admin':'Member (unverified)',before,after});
+  if(!event)return json({ok:true,noChange:true,revision:board.revision,...result});
+ }else{
+  if(!admin)return json({error:'Admin login required.'},401);
+  switch(body.action){
+   case 'assign':result={pair:assign(board,body.pair)};break;
+   case 'publish':publish(board);break;
+   case 'unassign':{
+    const pair=board.pairings.find(p=>p.id===body.id);
+    if(!pair)throw new Error('Pairing not found.');
+    pair.wasPublished=pair.wasPublished||pair.status==='active';
+    pair.status='reassign';
+    pair.reason='Pairing removed by Tiny. Waiting for reassignment.';
+    break;
+   }
+   case 'remove':{
+    const member=board.members.find(m=>m.id===body.id);
+    if(!member)throw new Error('Member not found.');
+    const before=snapshotMember(member);
+    board.members=board.members.filter(m=>m.id!==body.id);
+    invalidatePairs(board,body.id,'Member removed. Needs reassignment.');
+    logBuddyChange(board,{kind:'Admin profile removed',profileId:body.id,actor:'Admin',before});
+    break;
+   }
+   case 'undo':result={member:undoBuddyChange(board,body.eventId)};break;
+   case 'recover':{
+    const member=board.members.find(m=>m.id===body.id);
+    if(!member)throw new Error('Member not found.');
+    const {randomBytes}=await import('node:crypto');
+    const token=randomBytes(32).toString('base64url');
+    member.editHash=hash(token);
+    result={token,id:member.id};
+    break;
+   }
+   default:return json({error:'Unknown action.'},400);
+  }
+ }
  if(!await save(board,raw))return json({error:'Another update arrived. Refresh and try again.'},409);return json({ok:true,revision:board.revision,...result});
  }catch(error){if(error.message==='Database unavailable.'||error.name==='TimeoutError'){console.error('UTW buddy write failed:',error.message);return json({error:'The shared board is unavailable. Your changes were not saved.'},503);}return json({error:error.message},400);}}
