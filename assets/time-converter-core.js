@@ -1,5 +1,5 @@
 export const LOCATIONS=[
-{id:'vancouver',name:'Canada West · Vancouver / BC',zone:'America/Vancouver',code:'PT',group:'Canada'},
+{id:'vancouver',name:'Canada West · Vancouver / Most of BC',zone:'America/Vancouver',code:'PCT',group:'Canada'},
 {id:'edmonton',name:'Canada Mountain · Alberta',zone:'America/Edmonton',code:'MT',group:'Canada'},
 {id:'winnipeg',name:'Canada Central · Winnipeg',zone:'America/Winnipeg',code:'CT',group:'Canada'},
 {id:'regina',name:'Canada · Saskatchewan',zone:'America/Regina',code:'SK',group:'Canada'},
@@ -31,7 +31,10 @@ export const LOCATIONS=[
 {id:'perth',name:'Australia West · Perth',zone:'Australia/Perth',code:'AWST',group:'Oceania'},
 {id:'auckland',name:'New Zealand · Auckland',zone:'Pacific/Auckland',code:'NZ',group:'Oceania'}
 ];
-function parts(date,zone){return Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));}
+// B.C. kept UTC-7 permanently after the final spring-forward on March 8, 2026.
+// Use an explicit fixed offset so older Node/ICU time-zone databases cannot fall back.
+const BC_PERMANENT_TIME_START=Date.UTC(2026,2,8,10);
+function parts(date,zone){if(zone==='America/Vancouver' && date.getTime()>=BC_PERMANENT_TIME_START)zone='Etc/GMT+7';return Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(date).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));}
 const dateString=p=>p.year+'-'+p.month+'-'+p.day;
 const dayNumber=p=>Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day))/86400000;
 export function parseTime(raw){const text=String(raw||'').trim();let h,m;if(/^\d{1,2}:\d{2}$/.test(text)){[h,m]=text.split(':').map(Number);}else if(/^\d{1,4}$/.test(text)){const padded=text.length<=2?text.padStart(2,'0')+'00':text.padStart(4,'0');h=Number(padded.slice(0,2));m=Number(padded.slice(2));}else throw Error('Enter server time as 1200 or 12:00.');if(h>23||m>59)throw Error('Use a time from 0000 to 2359.');return {h,m,text:String(h).padStart(2,'0')+String(m).padStart(2,'0')};}
