@@ -252,7 +252,7 @@ function makeForestCertificateSVG(rawName, rawEnding, rawScore) {
      <path d="M430 381H680M920 381H1170" stroke="#b69a68" stroke-width="3"/>
      <path d="M800 370L812 382L800 394L788 382Z" fill="#c38c9b"/>
      <text x="800" y="425" font-family="Arial,sans-serif" font-size="23" font-weight="700" letter-spacing="4" fill="#90765c">THIS DOCUMENT HEREBY DECLARES</text>
-     <text x="800" y="510" font-family="Georgia,serif" font-size="${nameSize}" font-weight="700" fill="#3c2735" textLength="${maxName>13?850:undefined}" lengthAdjust="spacingAndGlyphs">${name}</text>
+     <text x="800" y="510" font-family="Georgia,serif" font-size="${nameSize}" font-weight="700" fill="#3c2735" ${maxName>13?'textLength="850" lengthAdjust="spacingAndGlyphs"':''}>${name}</text>
      <path d="M515 530H1085" stroke="#b8a281" stroke-width="3"/>
      <text x="800" y="567" font-family="Arial,sans-serif" font-size="22" font-weight="700" letter-spacing="3" fill="#8a725f">THE MOST OFFICIALLY UNOFFICIAL</text>
      <text x="800" y="610" font-family="Georgia,serif" font-size="43" font-weight="700" fill="#7b3f5d">CHAOS MENACE</text>
