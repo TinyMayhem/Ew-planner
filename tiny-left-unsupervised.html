@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"><meta name="theme-color" content="#201027">
 <meta name="description" content="Tiny: Left Unsupervised, the full six-stage UTW Chaos Arcade story.">
-<title>Tiny: Left Unsupervised | Certified Chaos Edition</title>
+<title>Tiny: Left Unsupervised | Certified Woodland Chaos Edition</title>
 <style>
 :root{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color-scheme:dark;--bg:#0e0a19;--panel:#21162c;--panel2:#30203e;--cream:#fff4dd;--gold:#ffd28b;--pink:#f49fc9;--mint:#aef5d1;--dim:#c4b8d0;--border:#775477}
 *{box-sizing:border-box}body{margin:0;min-height:100dvh;background:radial-gradient(ellipse at 50% -20%,#502444 0%,#1a112b 47%,#0a0b16 100%);color:var(--cream);-webkit-tap-highlight-color:transparent}button,input{font:inherit}button{cursor:pointer;border:0;color:inherit}button:disabled{cursor:not-allowed;opacity:.5}a{color:var(--mint)}.hide{display:none!important}
@@ -44,7 +44,16 @@
 @media(max-height:500px){#leaderPanel{max-height:98dvh;padding:10px 16px}.leaderTable th,.leaderTable td{padding:5px 7px}.leaderTabs{margin:6px 0}}
 
 /* Tiny-approved unofficial certificate of mayhem */
-.cert-intro{font-size:11px;color:#f1b7cb;font-weight:900;letter-spacing:2px;text-transform:uppercase;text-align:center}
+.cert-intro{font-size:11px;color:#eac6ce;font-weight:900;letter-spacing:2px;text-transform:uppercase;text-align:center}
+.cert-forest{width:100%;aspect-ratio:16/9;border:2px solid #ae8f65;border-radius:10px;overflow:hidden;background:#162e25;box-shadow:0 9px 24px #0009}
+.cert-forest svg{display:block;width:100%;height:100%}
+#overlayLayer:has(.cert-forest){padding:8px;align-items:flex-start}
+.overlay:has(.cert-forest){max-width:min(980px,100%);padding:12px 14px;max-height:100%;overflow:auto}
+.overlay:has(.cert-forest) .bigrow{justify-content:center;gap:6px}
+.overlay:has(.cert-forest) .bigrow button{padding:8px 12px;font-size:12px;min-height:38px}
+.overlay:has(.cert-forest) .cert-tools{margin:6px auto}
+@media(max-height:460px){.overlay:has(.cert-forest){padding:8px}.overlay:has(.cert-forest) .bigrow button{min-height:32px;padding:5px 8px}.overlay:has(.cert-forest) .cert-tools{margin:4px auto}}
+
 .cert-sheet{position:relative;margin:10px auto 12px;max-width:660px;min-height:270px;padding:19px 24px 16px;background:radial-gradient(ellipse at 49% 45%,#fffefa,#ffeccd 92%);border:6px double #b77a3d;outline:2px solid #f6d39f;outline-offset:-14px;border-radius:6px;box-shadow:inset 0 0 0 1px #a9638d,0 8px 22px #0009;color:#482b3e;text-align:center;overflow:hidden}
 .cert-sheet:before,.cert-sheet:after{position:absolute;color:#c98ca5;opacity:.55;font-size:45px;top:14px}.cert-sheet:before{content:'✦';left:18px}.cert-sheet:after{content:'✦';right:18px}
 .cert-pretitle{font:900 clamp(9px,1.4vw,12px) system-ui,sans-serif;letter-spacing:3px;color:#87506e}
@@ -145,46 +154,149 @@ $('nextBtn').textContent=mode==='practice'?'BACK TO PRACTICE':n===6?'SEE THE INC
 function proceed(){if(mode==='practice'){practiceScreen();return}if(mode!=='story')return;if(stageNum===6){finishScreen();return}launchStage(stageNum+1,false)}
 function showOverlay(markup){document.body.classList.remove('stage-active');$('menuLayer').classList.add('hide');$('stageFrame').classList.add('hide');$('endlessRoom').classList.add('hide');$('completePane').classList.add('hide');$('overlayLayer').classList.remove('hide');$('dynamicOverlay').innerHTML=markup}
 function practiceScreen(){cancelEndless();mode='menu';showOverlay('<div class="eyebrow">NO CONSEQUENCES (PROBABLY)</div><h2>STAGE PRACTICE</h2><p>Replay any illustrated challenge. Practice returns here after each stage and cannot unlock the next story stage. To advance from Stage 1 to Stage 2, select START STORY on the main menu. Achievements and clues count; competitive story scores and endings do not.</p><div id="practiceGrid">'+labelNames.map((nm,i)=>'<button class="stageCard" data-practice="'+(i+1)+'"><span style="font-size:25px">'+icons[i]+'</span><span><strong>STAGE '+(i+1)+'</strong><span>'+nm+'</span></span></button>').join('')+'</div><div class="bigrow" style="margin-top:13px"><button class="secondary" data-nav="menu">⌂ MENU</button></div>')}
+
 function finishScreen(){mode='menu';showCertificate(true)}
 function certificateName(){return cleanAlias(run?.certificateName)||getAlias()}
+function makeForestCertificateSVG(rawName, rawEnding, rawScore) {
+  const escape = x => String(x ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&apos;");
+  const name=escape(String(rawName||"MYSTERY POTATO").slice(0,20));
+  const ending=escape(String(rawEnding||"MANDATORY UTW TRAINING").slice(0,40));
+  const score=escape(String(rawScore??"0"));
+  const crown = `<g transform="translate(800 150) rotate(-7)" filter="url(#softShadow)">
+    <path d="M-92 15L-105 -42L-53 -9L-14 -80L20 -12L80 -61L89 13Z" fill="url(#goldMetal)" stroke="#7e5627" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M-91 15Q0 37 91 15L91 41Q0 58 -91 40Z" fill="#dc9e43" stroke="#654323" stroke-width="5"/>
+    <path d="M-87 33Q0 47 87 33" fill="none" stroke="#fff1ad" stroke-width="4" opacity=".8"/>
+    <circle cx="-48" cy="23" r="10" fill="#a2538c" stroke="#ffdfb0" stroke-width="3"/><circle cx="4" cy="32" r="10" fill="#517b68" stroke="#ffdfb0" stroke-width="3"/><circle cx="52" cy="23" r="10" fill="#a2538c" stroke="#ffdfb0" stroke-width="3"/>
+    <path d="M-90 18Q-64 3 -46 19Q-28 27 -6 18" fill="none" stroke="#51814a" stroke-width="8" stroke-linecap="round"/>
+    <path d="M87 40Q94 56 88 69Q74 62 80 48Z" fill="#b5e0df" stroke="#e2f9f7" stroke-width="3"/>
+    <path d="M-32 45Q-25 55 -32 64Q-41 57 -32 45Z" fill="#a5cfda" stroke="#e8fffc" stroke-width="2"/>
+    <ellipse cx="-13" cy="-23" rx="9" ry="4" fill="#fffbd4" opacity=".58" transform="rotate(-43 -13 -23)"/>
+    <path d="M63 -48Q59 -36 63 -26" stroke="#c6eef0" stroke-width="4" stroke-linecap="round" opacity=".9"/>
+  </g>`;
+  const mushroom=(x,y,scale=1,hue="#b95c64")=>`<g transform="translate(${x} ${y}) scale(${scale})" filter="url(#tinyShadow)">
+   <path d="M-13 0Q-24 -52 -10 -70L13 -70Q27 -44 14 0Z" fill="url(#stalk)" stroke="#977c57" stroke-width="3"/>
+   <path d="M-64 -68Q-58 -126 -5 -133Q50 -130 63 -70Q28 -49 -64 -68Z" fill="${hue}" stroke="#4c3b36" stroke-width="5"/>
+   <path d="M-59 -70Q3 -49 59 -71" fill="none" stroke="#fff1c6" stroke-width="9"/>
+   <ellipse cx="-30" cy="-93" rx="15" ry="9" fill="#ffedce" transform="rotate(-18 -30 -93)"/><ellipse cx="22" cy="-108" rx="12" ry="8" fill="#fff1d0"/><ellipse cx="2" cy="-79" rx="9" ry="6" fill="#ffedce"/>
+   <path d="M-45 -100Q-27 -129 1 -125" fill="none" stroke="#ffc8c0" stroke-width="7" opacity=".44" stroke-linecap="round"/>
+  </g>`;
+  const fern=(x,y,angle=0,scale=1)=>`<g transform="translate(${x} ${y}) rotate(${angle}) scale(${scale})" stroke="#709a60" fill="#467849">
+   <path d="M0 0Q-5 -90 19 -170" fill="none" stroke="#8caa6d" stroke-width="5"/>
+   ${Array.from({length:7},(_,i)=>{let py=-18-i*19,xs=5+i*2;return `<path d="M0 ${py}Q-${28+i*4} ${py-34} -${34+i*3} ${py-15}Q-${24+i*2} ${py+4} 0 ${py+4}Z"/><path d="M4 ${py-6}Q${32+i*3} ${py-41} ${39+i*4} ${py-25}Q${36+i*3} ${py-2} 3 ${py}Z"/>`}).join("")}
+  </g>`;
+  const raccoon=(x,y,mirror=1)=>`<g transform="translate(${x} ${y}) scale(${mirror} 1)" filter="url(#softShadow)">
+    <path d="M-65 159Q-153 126 -145 63Q-125 16 -96 50Q-82 75 -117 87Q-115 121 -63 123Z" fill="#66746d" stroke="#28372f" stroke-width="7"/>
+    <path d="M-136 74Q-111 72 -102 88M-131 105Q-98 98 -88 117" stroke="#293932" stroke-width="19" fill="none" opacity=".9"/>
+    <ellipse cx="-8" cy="158" rx="76" ry="104" fill="url(#raccoonFur)" stroke="#26372e" stroke-width="7"/>
+    <ellipse cx="13" cy="171" rx="53" ry="68" fill="#c2bbaa"/>
+    <path d="M-65 24L-87 -63L-10 -41Z" fill="#65726c" stroke="#2d3c36" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M73 24L88 -62L22 -44Z" fill="#65726c" stroke="#2d3c36" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M-63 -33L-73 -48L-32 -37Z M60 -32L75 -49L35 -38Z" fill="#d7a9a4"/>
+    <ellipse cx="2" cy="26" rx="94" ry="81" fill="url(#raccoonFur)" stroke="#283c35" stroke-width="7"/>
+    <path d="M-85 12Q-53 -17 -5 4Q45 -20 90 13L76 57Q39 47 10 44Q-35 45 -72 57Z" fill="#253733"/>
+    <path d="M-57 21Q-34 4 -10 31Q-25 53 -54 46Z M25 28Q51 6 75 24Q66 52 34 46Z" fill="#162922"/>
+    <ellipse cx="-35" cy="29" rx="11" ry="12" fill="#ecddaa"/><ellipse cx="48" cy="29" rx="11" ry="12" fill="#ecddaa"/>
+    <circle cx="-34" cy="26" r="5" fill="#13231f"/><circle cx="48" cy="26" r="5" fill="#13231f"/><circle cx="-37" cy="22" r="3" fill="#fff"/><circle cx="45" cy="22" r="3" fill="#fff"/>
+    <path d="M-34 72Q0 95 40 70L18 56L-9 53Z" fill="#efe0c8"/>
+    <path d="M-3 55Q10 49 25 58Q12 75 1 65Z" fill="#1c2825"/>
+    <path d="M10 69Q12 82 28 79" fill="none" stroke="#5f3c38" stroke-width="3"/>
+    <ellipse cx="68" cy="171" rx="30" ry="20" transform="rotate(-24 68 171)" fill="#6f8176" stroke="#25372e" stroke-width="6"/>
+    <path d="M62 177L73 182M76 168L87 173" stroke="#293831" stroke-width="4"/>
+    <ellipse cx="-29" cy="238" rx="34" ry="19" fill="#36463e"/><ellipse cx="39" cy="239" rx="34" ry="19" fill="#36463e"/>
+    <path d="M-12 -53Q-2 -73 7 -57" fill="none" stroke="#b6ad9a" stroke-width="4"/>
+  </g>`;
+  const glowDots=Array.from({length:33},(_,i)=>{
+    const x=90+(i*137)%1435,y=90+(i*113)%690;
+    const r=i%4===0?4:2;
+    return `<circle cx="${x}" cy="${y}" r="${r}" fill="${i%3?'#ebd6a0':'#badbc0'}" opacity="${i%4===0?'.84':'.4'}" filter="url(#glow)"/>`;
+  }).join("");
+  const mossPatches=Array.from({length:28},(_,i)=>{
+    const x=88+(i*67)%1440,top=i%2===0,y=top?85:822,r=13+(i*9)%23;
+    return `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${9+(i*5)%12}" fill="${i%3===0?'#759b64':i%2?'#346444':'#51764e'}" opacity=".91"/>`;
+  }).join("");
+  const maxName=String(rawName||"").length;
+  const nameSize=maxName>17?64:maxName>13?76:maxName>9?91:108;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="Unofficial Chaos Menace certificate for ${name}">
+   <defs>
+    <radialGradient id="forest"><stop offset="0" stop-color="#365346"/><stop offset=".63" stop-color="#1b352c"/><stop offset="1" stop-color="#0e221b"/></radialGradient>
+    <radialGradient id="parchment"><stop offset="0" stop-color="#fffaf0"/><stop offset=".66" stop-color="#f1e5c6"/><stop offset="1" stop-color="#dfc89f"/></radialGradient>
+    <linearGradient id="goldMetal"><stop stop-color="#fff1a7"/><stop offset=".28" stop-color="#d49e49"/><stop offset=".58" stop-color="#fbe3a0"/><stop offset="1" stop-color="#8a5b2d"/></linearGradient>
+    <linearGradient id="stalk" x1="0" x2="1"><stop stop-color="#a99268"/><stop offset=".38" stop-color="#f9efdc"/><stop offset="1" stop-color="#c3ad8d"/></linearGradient>
+    <linearGradient id="raccoonFur" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#a5aba0"/><stop offset=".45" stop-color="#667872"/><stop offset="1" stop-color="#3d5549"/></linearGradient>
+    <filter id="softShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="9" stdDeviation="9" flood-color="#08150f" flood-opacity=".55"/></filter>
+    <filter id="tinyShadow" x="-35%" y="-35%" width="170%" height="170%"><feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#071a11" flood-opacity=".55"/></filter>
+    <filter id="glow"><feGaussianBlur stdDeviation="2.5"/></filter>
+   </defs>
+   <rect width="1600" height="900" rx="28" fill="url(#forest)"/>
+   <g fill="#183828" opacity=".63"><path d="M0 220Q120 90 225 185T455 151T765 146T1150 170T1600 129V900H0Z"/><path d="M0 330Q155 155 305 250T620 206T995 247T1320 196T1600 234V900H0Z" fill="#284634"/></g>
+   <g opacity=".4" stroke="#91aa73" stroke-width="8" fill="none"><path d="M56 56Q28 230 94 435Q34 625 61 819"/><path d="M1544 66Q1567 249 1495 415Q1571 631 1532 814"/></g>
+   <rect x="36" y="32" width="1528" height="836" rx="30" fill="none" stroke="#a27f48" stroke-width="15"/>
+   <rect x="61" y="59" width="1478" height="782" rx="23" fill="none" stroke="#e2c387" stroke-width="4" stroke-dasharray="2 11"/>
+   <rect x="232" y="102" width="1136" height="688" rx="39" fill="url(#parchment)" stroke="#aa824b" stroke-width="16" filter="url(#softShadow)"/>
+   <rect x="249" y="119" width="1102" height="654" rx="26" fill="none" stroke="#e7cf9b" stroke-width="6"/>
+   <rect x="263" y="132" width="1074" height="628" rx="18" fill="none" stroke="#9c855e" stroke-width="2" opacity=".65"/>
+   <g fill="none" stroke="#b7a57f" opacity=".3" stroke-width="4"><path d="M317 615Q363 455 329 311M1284 624Q1232 470 1272 312"/><path d="M316 314Q353 329 368 351M1273 314Q1235 334 1224 350"/></g>
+   <g>${glowDots}</g>
+   <g>${mossPatches}</g>
+   <g fill="#4c7450" opacity=".86"><path d="M222 103Q300 72 386 106L353 132L248 131Z"/><path d="M1206 106Q1304 75 1393 109L1360 143L1269 129Z"/><path d="M247 759Q321 725 401 787L241 786Z"/><path d="M1189 792Q1293 724 1357 757L1352 795Z"/></g>
+   ${fern(126,844,-20,1.14)}${fern(1520,853,20,-1.1)}${fern(308,879,-30,.69)}${fern(1311,881,25,-.73)}
+   ${mushroom(129,783,.8,"#ba5360")}${mushroom(229,845,.59,"#ce8493")}${mushroom(336,866,.33,"#9e5e8c")}
+   ${mushroom(1490,797,.84,"#ba5360")}${mushroom(1388,846,.55,"#a772ab")}${mushroom(1270,868,.32,"#d48c83")}
+   ${raccoon(149,558,1)}${raccoon(1455,564,-1)}
+   <g fill="#6d965e" stroke="#3d6847" stroke-width="3"><ellipse cx="302" cy="120" rx="24" ry="10" transform="rotate(22 302 120)"/><ellipse cx="343" cy="116" rx="25" ry="12" transform="rotate(-17 343 116)"/><ellipse cx="1279" cy="121" rx="25" ry="10" transform="rotate(-19 1279 121)"/><ellipse cx="1244" cy="121" rx="20" ry="12" transform="rotate(14 1244 121)"/></g>
+   ${crown}
+   <g text-anchor="middle" fill="#594638">
+     <text x="800" y="255" font-family="Arial, sans-serif" font-size="25" font-weight="800" letter-spacing="7" fill="#69765a">UTW CHAOS ARCADE · SERVER 1395</text>
+     <text x="800" y="308" font-family="Georgia,serif" font-size="37" font-weight="700" fill="#755444" letter-spacing="4">THE CERTIFICATE OF</text>
+     <text x="800" y="360" font-family="Georgia,serif" font-size="60" font-weight="700" fill="#5a364a">UNOFFICIAL MAYHEM</text>
+     <path d="M430 381H680M920 381H1170" stroke="#b69a68" stroke-width="3"/>
+     <path d="M800 370L812 382L800 394L788 382Z" fill="#c38c9b"/>
+     <text x="800" y="425" font-family="Arial,sans-serif" font-size="23" font-weight="700" letter-spacing="4" fill="#90765c">THIS DOCUMENT HEREBY DECLARES</text>
+     <text x="800" y="510" font-family="Georgia,serif" font-size="${nameSize}" font-weight="700" fill="#3c2735" textLength="${maxName>13?850:undefined}" lengthAdjust="spacingAndGlyphs">${name}</text>
+     <path d="M515 530H1085" stroke="#b8a281" stroke-width="3"/>
+     <text x="800" y="567" font-family="Arial,sans-serif" font-size="22" font-weight="700" letter-spacing="3" fill="#8a725f">THE MOST OFFICIALLY UNOFFICIAL</text>
+     <text x="800" y="610" font-family="Georgia,serif" font-size="43" font-weight="700" fill="#7b3f5d">CHAOS MENACE</text>
+     <text x="800" y="645" font-family="Arial,sans-serif" font-size="21" fill="#654d46">For surviving six extremely avoidable incidents with questionable judgment.</text>
+     <text x="800" y="676" font-family="Arial,sans-serif" font-size="21" font-weight="700" fill="#55734d">${score} CHAOS POINTS   ·   ${ending}</text>
+   </g>
+   <g transform="translate(800 724) rotate(-4)">
+    <rect x="-244" y="-33" width="488" height="64" rx="9" fill="#f5d0d9" stroke="#96536e" stroke-width="5"/>
+    <rect x="-236" y="-26" width="472" height="50" rx="5" fill="none" stroke="#d78ba4" stroke-width="2" stroke-dasharray="7 5"/>
+    <text x="0" y="11" font-family="Georgia,serif" font-size="35" font-weight="700" fill="#873a61" text-anchor="middle">TINY APPROVED THIS ✓</text>
+   </g>
+   <g font-family="Arial,sans-serif" font-size="17" font-weight="700" fill="#80684f"><text x="305" y="763">NOOSH WAS NOT CONSULTED</text><text x="1300" y="763" text-anchor="end">UNLICENSED · UNHINGED · UNFORGETTABLE</text></g>
+   <g fill="#e8cd9c" opacity=".65"><path d="M469 215l8 -17 8 17 17 8 -17 8 -8 17 -8 -17 -17 -8Z"/><path d="M1130 202l6 -13 6 13 13 6 -13 6 -6 13 -6 -13 -13 -6Z"/><circle cx="1230" cy="573" r="4"/><circle cx="380" cy="560" r="4"/></g>
+  </svg>`;
+}
 function showCertificate(fresh=false){
  if(!run?.finished||!Array.isArray(run?.completed)||run.completed.length<6){toast('Certificates are awarded only after all six story stages.');return}
- const alias=certificateName();const ending=run.ending||'MANDATORY UTW TRAINING';
- const score=compact(Math.max(0,Number(run.score)||0));
- showOverlay(`<div class="cert-intro">${fresh?'🏁 SIX STAGES COMPLETED • CASE CLOSED':'📜 NOOSH\'S INCIDENT ARCHIVES'}</div>
- <section class="cert-sheet" id="certificatePreview" aria-label="Personalized certificate of unofficial chaos menace">
-   <div class="cert-pretitle">UTW CHAOS ARCADE • SERVER 1395</div>
-   <div class="cert-heading">Certificate of Unofficial Mayhem</div>
-   <div class="cert-sub">HEREBY DECLARES</div>
-   <div class="cert-name" id="certNameText">${escapeHtml(alias)}</div><div class="cert-dash"></div>
-   <div class="cert-description">an <strong>UNOFFICIAL CHAOS MENACE</strong> of exceptional enthusiasm and deeply questionable supervision.<br>Survived six incidents and earned <strong>${score} Chaos Points.</strong></div>
-   <div class="cert-stamp">🎀 TINY APPROVED THIS ✓</div>
-   <div class="cert-foot"><span>Incident verdict: ${escapeHtml(ending)}</span><span>Noosh was not consulted.</span></div>
- </section>
+ const alias=certificateName(),ending=run.ending||'MANDATORY UTW TRAINING',score=compact(Math.max(0,Number(run.score)||0));
+ showOverlay(`<div class="cert-intro">${fresh?'🌿 SIX INCIDENTS SURVIVED • CERTIFICATE AWARDED':'🦝 NOOSH’S INCIDENT ARCHIVES'}</div>
+ <div class="cert-forest" id="certificatePreview" role="img" aria-label="Personalized illustrated woodland chaos certificate">${makeForestCertificateSVG(alias,ending,score)}</div>
  <div class="cert-tools"><label for="certNameInput">Name on certificate</label><input id="certNameInput" maxlength="20" value="${escapeHtml(alias)}" autocomplete="off" aria-label="Name on certificate"><button class="smallbtn" id="certNameApply">UPDATE NAME</button></div>
- <div class="bigrow"><button class="primary" id="downloadCert">⬇ SAVE CERTIFICATE (PNG)</button><button class="secondary" data-nav="endless">♾ ENDLESS CHAOS</button><button class="secondary" data-nav="leaderboard">🏆 LEADERBOARD</button><button class="secondary" data-nav="menu">⌂ MENU</button></div>`);
- const input=$('certNameInput');input.addEventListener('input',()=>{$('certNameText').textContent=cleanAlias(input.value)||'YOUR NAME HERE'});
- $('certNameApply').onclick=()=>{const nickname=cleanAlias(input.value);if(!nickname){toast('Enter a player name for your certificate.');return}run.certificateName=nickname;safeSet(SAVE,run);$('certNameText').textContent=nickname;toast('Certificate issued to '+nickname)};
- $('downloadCert').onclick=()=>{const nickname=cleanAlias(input.value);if(!nickname){toast('Enter a player name first.');return}run.certificateName=nickname;safeSet(SAVE,run);downloadCertificate(nickname,ending,score)};
+ <div class="bigrow"><button class="primary" id="downloadCert">⬇ SAVE WOODLAND CERTIFICATE (PNG)</button><button class="secondary" data-nav="endless">♾ ENDLESS CHAOS</button><button class="secondary" data-nav="leaderboard">🏆 LEADERBOARD</button><button class="secondary" data-nav="menu">⌂ MENU</button></div>`);
+ const input=$('certNameInput'),preview=$('certificatePreview');
+ input.addEventListener('input',()=>{preview.innerHTML=makeForestCertificateSVG(cleanAlias(input.value)||'YOUR NAME HERE',ending,score)});
+ const apply=()=>{const nickname=cleanAlias(input.value);if(!nickname){toast('Enter a player name for your certificate.');return null}run.certificateName=nickname;safeSet(SAVE,run);preview.innerHTML=makeForestCertificateSVG(nickname,ending,score);return nickname};
+ $('certNameApply').onclick=()=>{const nickname=apply();if(nickname)toast('Certificate awarded to '+nickname)};
+ $('downloadCert').onclick=()=>{const nickname=apply();if(nickname)downloadCertificate(nickname,ending,score)};
 }
 function downloadCertificate(name,ending,score){
- const c=document.createElement('canvas');c.width=1600;c.height=900;const ctx=c.getContext('2d');
- if(!ctx){toast('This browser cannot create an image. You can screenshot the certificate instead.');return}
- const g=ctx.createLinearGradient(0,0,1600,900);g.addColorStop(0,'#fff6df');g.addColorStop(.5,'#fffef9');g.addColorStop(1,'#ffe0bd');ctx.fillStyle=g;ctx.fillRect(0,0,1600,900);
- ctx.strokeStyle='#ae7449';ctx.lineWidth=17;ctx.strokeRect(28,28,1544,844);ctx.strokeStyle='#dda7b5';ctx.lineWidth=5;ctx.strokeRect(54,54,1492,792);ctx.strokeStyle='#bd925c';ctx.lineWidth=2;ctx.strokeRect(70,70,1460,760);
- ctx.textAlign='center';ctx.textBaseline='middle';
- ctx.fillStyle='#b481a0';ctx.font='74px Georgia,serif';ctx.fillText('✦',143,128);ctx.fillText('✦',1457,128);ctx.fillText('✦',143,772);ctx.fillText('✦',1457,772);
- ctx.fillStyle='#87506e';ctx.font='bold 29px sans-serif';ctx.fillText('UTW CHAOS ARCADE   •   SERVER 1395',800,155);
- ctx.fillStyle='#7d315a';ctx.font='bold 76px Georgia,serif';ctx.fillText('Certificate of Unofficial Mayhem',800,265);
- ctx.fillStyle='#76556b';ctx.font='bold 26px sans-serif';ctx.fillText('HEREBY DECLARES',800,341);
- let size=100;do{ctx.font='bold '+size+'px Georgia,serif';if(ctx.measureText(name).width<=1350)break;size-=3}while(size>36);
- ctx.fillStyle='#351e39';ctx.fillText(name,800,452);
- ctx.strokeStyle='#b78461';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(390,520);ctx.lineTo(1210,520);ctx.stroke();
- ctx.fillStyle='#584154';ctx.font='bold 29px sans-serif';ctx.fillText('an UNOFFICIAL CHAOS MENACE',800,575);ctx.font='25px sans-serif';ctx.fillText('of exceptional enthusiasm and deeply questionable supervision.',800,616);ctx.fillText('Survived six incidents • '+score+' Chaos Points',800,657);
- ctx.save();ctx.translate(800,737);ctx.rotate(-.065);ctx.fillStyle='#ffe1e7';ctx.fillRect(-241,-38,482,76);ctx.strokeStyle='#9c345f';ctx.lineWidth=7;ctx.strokeRect(-241,-38,482,76);ctx.fillStyle='#8d2854';ctx.font='bold 37px sans-serif';ctx.fillText('TINY APPROVED THIS',0,4);ctx.restore();
- ctx.font='bold 20px sans-serif';ctx.fillStyle='#76556b';ctx.fillText('Incident verdict: '+ending+'     •     Noosh was not consulted.',800,814);
- const filename='tiny-approved-chaos-menace-'+(name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'player')+'.png';
- c.toBlob(blob=>{if(!blob){toast('Image export unavailable. Screenshot the certificate instead.');return}const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),15000)},'image/png');
+ const svg=makeForestCertificateSVG(name,ending,score),filename='tiny-approved-chaos-menace-'+(name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'player')+'.png';
+ const c=document.createElement('canvas');c.width=1600;c.height=900;
+ const ctx=c.getContext('2d');if(!ctx){toast('Certificate export unavailable. Screenshot your certificate instead.');return}
+ const img=new Image(),url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));
+ img.onload=()=>{
+  try{
+   ctx.drawImage(img,0,0,1600,900);
+   c.toBlob(blob=>{URL.revokeObjectURL(url);
+    if(!blob){toast('PNG unavailable. Screenshot your certificate instead.');return}
+    const link=URL.createObjectURL(blob),a=document.createElement('a');a.href=link;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(link),18000);
+   },'image/png');
+  }catch(err){URL.revokeObjectURL(url);console.error(err);toast('PNG unavailable. Screenshot your certificate instead.')}
+ };
+ img.onerror=()=>{URL.revokeObjectURL(url);toast('Image rendering unavailable. Screenshot your certificate instead.')};
+ img.src=url;
 }
 function archiveUI(){let records=archive.storyRecords.length?archive.storyRecords.map((r,i)=>'<div class="record"><span>#'+(i+1)+'</span><span>'+r.ending+'</span><span>'+compact(r.score)+'</span></div>').join(''):'<div class="archiveitem locked">No completed story scores yet.</div>';let survival=archive.endlessRecords.length?archive.endlessRecords.map((r,i)=>'<div class="record"><span>#'+(i+1)+'</span><span>'+r.rounds+' rounds survived</span><span>'+compact(r.score)+'</span></div>').join(''):'<div class="archiveitem locked">Complete the story to unlock Endless Chaos.</div>';
 $('archiveBody').innerHTML='<p class="mini">Noosh commentary: "This folder should not need this many tabs." • '+(archive.completedRuns||0)+' completed story runs</p><div class="archivegrid"><section class="archivebox"><h3>🏁 ENDINGS '+archive.endings.length+'/5</h3>'+endings.map((x,i)=>'<div class="archiveitem '+(archive.endings.includes(x)?'':'locked')+'">'+(archive.endings.includes(x)?'✅ '+x:i===4?'🔒 CLASSIFIED FILE':'🔒 Undiscovered ending')+'</div>').join('')+'</section><section class="archivebox"><h3>🔍 CLUES '+archive.clues.length+'/6</h3>'+hints.map((h,i)=>'<div class="archiveitem '+(archive.clues.includes(h[0])?'':'locked')+'">'+(archive.clues.includes(h[0])?'🔎 '+h[1]:'🔒 Undiscovered evidence, case '+(i+1))+'</div>').join('')+'</section><section class="archivebox"><h3>🏆 ACHIEVEMENTS '+archive.achievements.length+'/'+achievements.length+'</h3>'+achievements.map(x=>'<div class="archiveitem '+(archive.achievements.includes(x[0])?'':'locked')+'">'+(archive.achievements.includes(x[0])?'✅ '+x[1]+'<div class="mini">'+x[2]+'</div>':'🔒 '+x[1])+'</div>').join('')+'</section><section class="archivebox"><h3>📈 LOCAL LEADERBOARDS</h3><div class="mini">HIGHEST STORY CHAOS SCORE</div>'+records+'<div class="mini" style="margin-top:11px">LONGEST ENDLESS SURVIVAL (ROUNDS)</div>'+survival+'<p class="mini">These are device-only records. For local scores with player names, open the Leaderboard. Online rankings require publication.</p></section></div>'}
