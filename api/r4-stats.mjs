@@ -9,6 +9,7 @@ import {GET as nicknamesPage} from '../lib/r4-nicknames-page.mjs';
 import {GET as pollsPage} from '../lib/r4-polls-page.mjs';
 import {GET as pollsGet,POST as pollsPost} from '../lib/r4-polls-handler.mjs';
 import {buildMemberPerformance} from '../lib/member-performance.mjs';
+import {activeMembers} from '../assets/r4-active-members.mjs';
 import {stageRange,stageForDate,weekStart} from '../assets/r4-train-rules.mjs';
 import {buildTrainAdvice,resolveNames,isTopDonationTrain} from '../lib/train-advice.mjs';
 import {activeR4MemberOptions} from '../lib/r4-eligible-members.mjs';
@@ -137,7 +138,8 @@ export async function GET(request){
    if(![members,aliases,awards,legacy].every(Array.isArray))
     throw Error('Train archive is incomplete');
    const lookup=new Map(members.map(m=>[m.id,m.display_name]));
-   if(!lookup.has(first)||(second&&!lookup.has(second)))return json({error:'Member no longer exists in Train Desk. Refresh the member list.'},404);
+   const currentIds=new Set(activeMembers(members).map(m=>m.id));
+   if(!currentIds.has(first)||(second&&!currentIds.has(second)))return json({error:'Member no longer exists in Train Desk. Refresh the member list.'},404);
    const today=latestThpSnapshotDate();
    const combined=trainHistoryRows({awards,legacy,members,aliases});
    const left={name:lookup.get(first),...memberTrainHistory({memberId:first,rows:combined.rows,today})};
@@ -201,12 +203,18 @@ export async function GET(request){
     rosterOnly:q.get('roster')!=='all'
    };
    if(Object.values(settings).some(x=>x===null))return json({error:'Check the minimums and consistency settings'},400);
-   const raw=await db('rpc/utw_stat_member_report_data',{
-    method:'POST',body:JSON.stringify({p_from:from||null,p_to:to||null,p_season:season||null})
-   });
-   if(!raw||!Array.isArray(raw.members)||!Array.isArray(raw.snapshots)||!Array.isArray(raw.observations))
+   const [raw,current]=await Promise.all([
+    db('rpc/utw_stat_member_report_data',{
+     method:'POST',body:JSON.stringify({p_from:from||null,p_to:to||null,p_season:season||null})
+    }),
+    list('utw_stat_members',{select:'id',archived_at:'is.null',limit:'1000'})
+   ]);
+   if(!raw||!Array.isArray(raw.members)||!Array.isArray(raw.snapshots)||!Array.isArray(raw.observations)||!Array.isArray(current))
     throw Error('Invalid report data');
-   return json({from:from||null,to:to||null,season:season||'all',...buildMemberPerformance(raw,settings)});
+   // Keep all saved observations intact; current performance searches exclude ex-members.
+   const currentIds=new Set(current.map(member=>String(member.id)));
+   const activeReport={...raw,members:raw.members.filter(member=>currentIds.has(String(member.id)))};
+   return json({from:from||null,to:to||null,season:season||'all',...buildMemberPerformance(activeReport,settings)});
   }
   if(q.get('nicknames')==='1'){
    const monday=new Date();monday.setUTCHours(0,0,0,0);

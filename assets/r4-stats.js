@@ -1,3 +1,4 @@
+import {activeMembers,searchActiveMembers} from './r4-active-members.mjs';
 import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv} from './r4-csv-utils.mjs';
 import {archivedWeeks,vsWeekSlots,vsLeaderboard,vsMissingDaily,weekOf,scoreFlag} from './r4-vs-archive.mjs';
 import {stageForDate,stageRange,trainWarnings,isR4Train,addDays as trainAddDays} from './r4-train-rules.mjs';
@@ -16,9 +17,10 @@ const serverToday=()=>{const d=new Intl.DateTimeFormat('en-CA',{timeZone:'Americ
 const monday=d=>dateAdd(d,-(new Date(d+'T00:00:00Z').getUTCDay()+6)%7);
 const validDate=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'')&&!Number.isNaN(Date.parse(d+'T00:00:00Z'));
 const normalize=n=>String(n||'').trim().replace(/\s+/g,' ').normalize('NFKC').toLowerCase();
-const members=()=>state.data?.members||[];
+const allMembers=()=>state.data?.members||[];
+const members=()=>activeMembers(allMembers());
 const aliases=()=>state.data?.aliases||[];
-const byId=id=>members().find(m=>m.id===id);
+const byId=id=>allMembers().find(m=>m.id===id);
 const memberName=id=>byId(id)?.display_name||'Unknown member';
 const setConductorSelection=id=>{$('train-member').value=id;conductorSearch?.sync()};
 const departedOn=(id,date)=>!!id&&!!date&&(state.data?.exceptions||[]).some(x=>x.member_id===id&&x.active&&x.scope==='all'&&/^No longer in UTW\b/i.test(x.reason||'')&&x.starts_on<=date&&x.ends_on>=date);
@@ -153,7 +155,7 @@ async function refreshDuelOverview(week){
   renderDuelRows('weekly-vs',data.vs||[],10);
   renderDuelRows('weekly-donations',data.donations||[],20);
   renderDuelDaily(data.daily);
-  setContent('summary',statBox('Members in R4 directory',fmt(state.data.members.length)),
+  setContent('summary',statBox('Members in R4 directory',fmt(members().length)),
    statBox('Missing daily VS entries',fmt(data.daily?.missingEntries||0)),
    statBox('Daily scores under 7.2M',fmt(data.daily?.underEntries||0)));
   status.textContent='Score source: '+(data.source||'Alliance Duel')+' · Week of '+week+'. '+(data.daily?.daysUploaded||0)+'/6 daily VS days available. Select another week or press Refresh to check updated results.';
@@ -266,7 +268,7 @@ function imports(){
 }
 function directory(){
  const query=normalize($('member-search').value),root=$('directory');root.replaceChildren();
- const filtered=members().filter(m=>normalize(m.display_name).includes(query)||aliases().some(a=>a.member_id===m.id&&normalize(a.alias).includes(query)));
+ const filtered=searchActiveMembers(allMembers(),aliases(),query);
  for(const m of filtered.slice(0,300)){const card=text('div',null,'stat-person');card.append(text('b',m.display_name));card.append(text('span',aliases().filter(a=>a.member_id===m.id).map(a=>a.alias).join(' · ')||'No nicknames'));if(departedOn(m.id,serverToday()))card.append(text('small','Former UTW · excluded from new train selections','stat-muted'));root.append(card)}
  if(!filtered.length)root.append(elEmpty('No matching members.'));
 }
@@ -604,7 +606,8 @@ function openLegacyTrainEditor(award,card){
  const form=text('div',null,'train-edit train-legacy-editor');
  const title=text('strong','Edit '+award.train_date+' train','train-edit-heading');
  const known=document.createElement('datalist');known.id='train-names-'+award.train_date;
- const names=[...new Set([...members().map(m=>m.display_name),...(state.data?.trainLegacy||[]).flatMap(r=>[r.driver_name,r.vip_name])])].filter(Boolean);
+ // Autocomplete only active names; the saved historical value remains editable.
+ const names=[...new Set(members().map(m=>m.display_name))].filter(Boolean);
  names.sort((a,b)=>a.localeCompare(b)).forEach(n=>known.append(new Option(n)));
  const field=(labelText,value)=>{const label=text('label',labelText),input=document.createElement('input');input.type='text';input.maxLength=100;input.value=value;input.setAttribute('list',known.id);label.append(input);form.append(label);return input};
  form.append(title,known);

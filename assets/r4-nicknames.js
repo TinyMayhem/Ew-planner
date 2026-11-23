@@ -1,3 +1,4 @@
+import {activeMembers,searchActiveMembers} from './r4-active-members.mjs';
 import {trainAliasSuggestions} from './r4-train-alias-suggestions.mjs?version=review-v1-20261106';
 const $=id=>document.getElementById(id);
 const n=(tag,content,cls)=>{const e=document.createElement(tag);if(content!==undefined&&content!==null)e.textContent=String(content);if(cls)e.className=cls;return e};
@@ -37,16 +38,18 @@ function choose(id){
 function draw(){
  const selector=$('nickname-member');
  const keep=selected;selector.replaceChildren(new Option('Choose member…',''));
- for(const member of members)selector.append(new Option(member.display_name,member.id));
+ for(const member of members.filter(m=>!m.archived_at||m.id===keep))selector.append(new Option(member.display_name,member.id));
  selector.value=members.some(m=>m.id===keep)?keep:'';
  const other=$('nickname-existing-member'),prior=other.value;
  other.replaceChildren(new Option('Choose an existing name…',''));
- for(const member of members.filter(m=>m.id!==keep)){
+ for(const member of activeMembers(members).filter(m=>m.id!==keep)){
   const known=namesOf(member.id).filter(a=>normalized(a.alias)!==normalized(member.display_name)).map(a=>a.alias);
   other.append(new Option(member.display_name+(known.length?' (also: '+known.join(', ')+')':''),member.id));
  }
  other.value=members.some(m=>m.id===prior&&m.id!==keep)?prior:'';
- $('nickname-link-existing').disabled=!keep;
+ const restoring=Boolean(members.find(m=>m.id===keep)?.archived_at);
+ $('nickname-link-existing').disabled=!keep||restoring;
+ $('nickname-add').disabled=restoring;
  const linked=$('nickname-linked');linked.replaceChildren();
  if(!keep)linked.append(n('p','Select a member to view their linked nicknames.','nickname-empty'));
  else{
@@ -98,6 +101,7 @@ function draw(){
    busy=true;archiveButton.disabled=true;
    try{
     await request({action:archive?'archive_member':'restore_member',member_id:member.id});
+    if(archive)selected='';
     await reload();
     message(member.display_name+(archive?' archived. Historical data was preserved.':' restored to the active roster.'));
    }catch(e){message(e.message,true)}finally{busy=false;archiveButton.disabled=false}
@@ -110,7 +114,7 @@ function draw(){
 function drawTrainNameSuggestions(){
  const root=$('nickname-train-suggestions');if(!root)return;
  root.replaceChildren();
- const suggestions=trainAliasSuggestions(trainLegacy,members,aliases).filter(x=>!hiddenSuggestions.has(x.alias));
+ const suggestions=trainAliasSuggestions(trainLegacy,activeMembers(members),aliases).filter(x=>!hiddenSuggestions.has(x.alias));
  if(!suggestions.length){
   root.append(n('p','No likely unlinked train-name matches found right now.','stat-muted'));return;
  }
@@ -146,7 +150,7 @@ function drawWeekly(){
  for(const event of weeklyChanges){
   const info=event.details||{},member=members.find(m=>m.id===info.member_id);
   const nickname=event.action==='set_display_name'?info.display_name:info.alias;
-  if(!member||!nickname)continue;
+  if(!member||member.archived_at||!nickname)continue;
   const id=member.id+'|'+normalized(nickname);
   if(seen.has(id))continue;seen.add(id);
   rows.push({event,member,nickname,previous:info.previous_name||''});
@@ -170,9 +174,13 @@ function drawWeekly(){
 }
 function drawDirectory(){
  const query=normalized($('nickname-search').value);
- const matched=members.filter(m=>normalized(m.display_name).includes(query)||namesOf(m.id).some(a=>normalized(a.alias).includes(query)));
- const active=matched.filter(m=>!m.archived_at),archived=matched.filter(m=>Boolean(m.archived_at));
- const allActive=members.filter(m=>!m.archived_at).length,allArchived=members.length-allActive;
+ // The normal Search members box never includes archived names or their aliases.
+ const active=searchActiveMembers(members,aliases,query);
+ // Restore is an explicit, separate management action with its own search.
+ const archivedQuery=normalized($('nickname-archived-search')?.value);
+ const archived=members.filter(m=>m.archived_at&&
+  (normalized(m.display_name).includes(archivedQuery)||namesOf(m.id).some(a=>normalized(a.alias).includes(archivedQuery))));
+ const allActive=activeMembers(members).length,allArchived=members.length-allActive;
  $('nickname-count').textContent=active.length+' active members shown of '+allActive+'.';
  $('nickname-archived-count').textContent=allArchived+' archived';
  const render=(root,people,empty)=>{
@@ -188,7 +196,7 @@ function drawDirectory(){
   if(!people.length)root.append(n('p',empty,'nickname-empty'));
  };
  render($('nickname-directory'),active,'No active members matched.');
- render($('nickname-archived-directory'),archived,query?'No archived members matched.':'No members archived yet.');
+ render($('nickname-archived-directory'),archived,archivedQuery?'No archived records matched.':'No members archived yet.');
 }
 function showCollision(alias,memberToKeepId,existingMemberId){
  const root=$('nickname-collision');root.hidden=false;root.replaceChildren();
@@ -264,6 +272,7 @@ $('nickname-member').addEventListener('change',e=>choose(e.target.value));
 $('nickname-link-existing').addEventListener('click',linkExistingMember);
 $('nickname-existing-member').addEventListener('change',()=>{$('nickname-collision').hidden=true;$('nickname-collision').replaceChildren()});
 $('nickname-search').addEventListener('input',drawDirectory);
+$('nickname-archived-search').addEventListener('input',drawDirectory);
 $('nickname-add').addEventListener('click',addNickname);
 $('nickname-new').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addNickname()}});
 reload().then(()=>message('Names loaded. Select a member and add any alternate in-game names.')).catch(error=>message(error.message,true));
