@@ -97,6 +97,7 @@ test('authenticated reports validate dates and securely query the reporting func
   if(String(url).includes('/rpc/utw_stat_member_report_data')){
    path=String(url);payload=JSON.parse(options.body);return Response.json(raw);
   }
+  if(String(url).includes('/utw_stat_members'))return Response.json(raw.members.map(m=>({id:m.id})));
   // An empty legacy R4 account directory allows the existing signed test cookie.
   return Response.json([]);
  };

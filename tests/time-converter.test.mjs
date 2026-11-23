@@ -5,13 +5,13 @@ test('seasonal clock rules differ while Korea and Saskatchewan remain fixed',()=
 test('server midnight and late hours mark calendar rollover in copied text',()=>{const now=new Date('2026-10-13T18:00:00Z');let result=convertTime('0000',now);assert.equal(result.locations.find(l=>l.id==='vancouver').dayShift,-1);assert.match(announcement(result,['vancouver']),/1900 PCT \(-1 day\)/);result=convertTime('2359',now);assert.equal(result.locations.find(l=>l.id==='seoul').dayShift,1);assert.match(announcement(result,['seoul']),/1059 KST \(\+1 day\)/);assert.equal(announcement(result,[]),'2359 ST');});
 test('today means the Noronha server day even when UTC is already tomorrow',()=>{const result=convertTime('1200',new Date('2026-10-14T01:00:00Z'));assert.equal(result.serverDate,'2026-10-13');assert.equal(result.locations.find(l=>l.id==='seoul').date,'2026-10-13');assert.equal(new Set(result.locations.map(l=>l.id)).size,result.locations.length);});
 
-test('Vancouver stays on permanent UTC-7 while US and Alberta change on November 1, 2026',()=>{
+test('Vancouver and Alberta keep permanent offsets while US switches on November 1, 2026',()=>{
  const dates=['2026-10-31T18:00:00Z','2026-11-01T18:00:00Z','2026-11-19T18:00:00Z','2027-01-15T18:00:00Z','2027-07-15T18:00:00Z'];
  const time=(d,id)=>convertTime('1200',new Date(d)).locations.find(l=>l.id===id);
  for(const date of dates){const v=time(date,'vancouver');assert.equal(v.time,'0700');assert.equal(v.offsetMinutes,-420);assert.equal(v.code,'PCT');}
  assert.equal(time(dates[0],'losangeles').time,'0700');
  assert.equal(time(dates[1],'losangeles').time,'0600');
- assert.equal(time(dates[2],'edmonton').time,'0700');
+ assert.equal(time(dates[2],'edmonton').time,'0800');
  assert.equal(time(dates[2],'toronto').time,'0900');
  assert.equal(time(dates[2],'london').time,'1400');
  assert.equal(time(dates[2],'berlin').time,'1500');

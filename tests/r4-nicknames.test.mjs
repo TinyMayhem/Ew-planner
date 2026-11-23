@@ -129,7 +129,8 @@ test('existing-name dropdown and merge confirmation are visible without typing M
  assert.match(page,/id="nickname-existing-member"/);
  assert.match(page,/id="nickname-link-existing"/);
  assert.match(page,/id="nickname-new"/);
- assert.match(script,/for\(const member of members\.filter\(m=>m\.id!==keep\)\)/);
+ assert.match(script,/for\(const member of activeMembers\(members\)\.filter\(m=>m\.id!==keep\)\)/);
+ assert.match(page,/id="nickname-archived-search"/);
  assert.match(script,/Confirm and combine records/);
  assert.match(script,/checkbox\.checked/);
  assert.doesNotMatch(script,/prompt\('This will permanently combine/);
