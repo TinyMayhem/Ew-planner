@@ -486,7 +486,7 @@ async function candidates(){
   state.advice=advice;root.replaceChildren();showDsTeamAdvice(advice);
   root.append(text('p',advice.context,'stat-muted'));
    if(advice.excludedDepartedCount)root.append(text('p','Former UTW members are excluded from new recommendations. Their historical train entries are still kept.','stat-muted'));
-   if(mode==='donations')root.append(text('p','R4 department leaders and backups are excluded from Top Donation conductor and VIP choices, using the saved UTW roles list.','stat-muted'));
+   if(mode==='donations')root.append(text('p','Top Donation trains exclude the 11 confirmed UTW R4/R5 members. The roster is matched by member record, not login accounts or nickname spelling.','stat-muted'));
   if(advice.sameDate?.length)root.append(text('p','Already saved for this date: '+advice.sameDate.map(x=>x.driver+' (VIP: '+x.vip+')').join(' / ')+'. Use Edit above to change an existing assignment.','stat-flag'));
   if(advice.substitution)root.append(text('p',advice.substitution,'train-advice-substitution'));
   if(advice.hostProposed)root.append(text('p','Stage 16 R4 rotation proposal, not a confirmed assignment. Verify with the R4 team.','stat-muted'));
@@ -589,7 +589,8 @@ function eligibilityWarnings(){
  const isDonation=$('train-source').value==='donations'||/\btop\s+(?:donat(?:ion|ions)?|donor)\b/i.test($('train-slot').value);
  if(isDonation){
   const saved=state.advice;
-  if(!saved||saved.date!==$('train-date').value||!Array.isArray(saved.r4MemberIds))issues.push('UTW R4 Roles list must load before assigning a Top Donation train.');
+  if(!saved||saved.date!==$('train-date').value||saved.mode!==$('train-source').value||!Array.isArray(saved.r4MemberIds))
+   root.append(text('p','Verifying current R4 train roster…','stat-muted'));
   else{
    const r4s=new Set(saved.r4MemberIds);
    for(const id of [$('train-member').value,$('train-vip').value])if(id&&r4s.has(id))issues.push(memberName(id)+' is R4 and cannot take a Top Donation train (conductor or VIP).');

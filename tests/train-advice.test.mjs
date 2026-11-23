@@ -328,7 +328,7 @@ test('UTW role leaders and backups resolve aliases and block Top Donation conduc
  for(const id of ['tiny','crum','devi']){
   assert.equal(ranked.candidates.find(x=>x.id===id).eligible,false);
   assert.equal(ranked.vipCandidates.find(x=>x.id===id).eligible,false);
-  assert.match(ranked.candidates.find(x=>x.id===id).reasons.join(' '),/R4 on UTW roles list/);
+  assert.match(ranked.candidates.find(x=>x.id===id).reasons.join(' '),/R4 on current Train Desk roster/);
  }
 });
 test('R4 eligibility exclusion is scoped only to Top Donation trains',async()=>{

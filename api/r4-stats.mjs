@@ -12,7 +12,7 @@ import {buildMemberPerformance} from '../lib/member-performance.mjs';
 import {activeMembers} from '../assets/r4-active-members.mjs';
 import {stageRange,stageForDate,weekStart} from '../assets/r4-train-rules.mjs';
 import {buildTrainAdvice,resolveNames,isTopDonationTrain} from '../lib/train-advice.mjs';
-import {activeR4MemberOptions} from '../lib/r4-eligible-members.mjs';
+import {currentTrainR4Ids} from '../lib/r4-train-roster.mjs';
 import {utwConfigured,utwScoreboard,utwWeeklyOverview} from '../lib/utw-scores.mjs';
 import {GET as runDuelBackupCron} from '../lib/r4-duel-backup.mjs';
 import {latestThpSnapshotDate} from '../assets/r4-thp-roles.mjs';
@@ -41,23 +41,14 @@ async function db(path,options={}){
 const urlParams=(obj)=>new URLSearchParams(obj).toString();
 async function list(table,params){return db(table+'?'+urlParams(params))}
 async function insert(table,data){const rows=await db(table,{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify(data)});return rows}
-// Always consult the full active UTW R4 account roster, including unassigned R4s.
-// No department assignment is required for Top Donation disqualification.
-async function utwR4Membership(members,aliases){
- const accounts=await list('utw_r4_accounts',{select:'username,display_name,role,active',role:'in.(r4,admin)',active:'eq.true',limit:'100'});
- if(!Array.isArray(accounts))throw Error('UTW R4 account roster is unavailable');
- const roster=activeR4MemberOptions(accounts,members,aliases);
- if(!roster.members.length)throw Error('No active UTW R4 accounts could be matched to Train Desk members. Check member aliases.');
- if(roster.unmatched.length)throw Error('Link these active UTW R4 accounts to Train Desk nicknames before Top Donation selections: '+roster.unmatched.join(', '));
- return new Set(roster.members.map(m=>m.memberId));
+// Train eligibility uses explicit verified player identities, not R4 login accounts.
+function utwR4Membership(members){
+ return currentTrainR4Ids(members);
 }
 async function donationR4Conflict(source,slot,conductorId,vipId){
  if(!isTopDonationTrain(source,slot))return '';
- const [members,aliases]=await Promise.all([
-  list('utw_stat_members',{select:'id,display_name',limit:'1000'}),
-  list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'})
- ]);
- const r4=await utwR4Membership(members,aliases);
+ const members=await list('utw_stat_members',{select:'id,display_name,archived_at',limit:'1000'});
+ const r4=utwR4Membership(members);
  const offenders=members.filter(m=>r4.has(m.id)&&(m.id===conductorId||m.id===vipId));
  return offenders.length?'R4 members cannot be conductor or VIP on Top Donation trains: '+offenders.map(m=>m.display_name).join(', '):'';
 }
@@ -343,7 +334,7 @@ export async function GET(request){
      rosterDate=report.rosterDate||null;
     }
    }
-   const r4MemberIds=isTopDonationTrain(mode,slot)?[...await utwR4Membership(members,aliases)]:[];
+   const r4MemberIds=(mode==='r4'||isTopDonationTrain(mode,slot))?[...utwR4Membership(members)]:[];
    const adviceInput={date,mode,slot,vipMode,members,aliases,legacy,awards,exceptions,scoreboard,scoreDate,dsEvent,rosterIds,rosterDate,vsRecordCounts,r4MemberIds};
    const advice=buildTrainAdvice({...adviceInput,dsTeam:mode==='ds'?dsTeam:null,
     dsTeamRows:mode==='ds'?dsTeamReports.find(r=>r.team===dsTeam)||null:null});
