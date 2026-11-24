@@ -286,6 +286,63 @@ function dsHistory(){
   const a=text('a','Open original screenshot');a.href='/api/r4-stats?image='+encodeURIComponent(d.id);a.target='_blank';a.rel='noopener';const image=document.createElement('img');image.src=a.href;image.alt='DS evidence screenshot';image.loading='lazy';image.className='stat-evidence';a.prepend(image);card.append(a);root.append(card);
  }
 }
+let dsArchiveSequence=0,dsArchiveData=null;
+const dsArchiveTime=v=>v?new Date(v).toLocaleString():'Unknown date';
+async function loadDsArchive(){
+ const root=$('ds-archive-list');if(!root||!state.data)return;
+ const seq=++dsArchiveSequence,season=state.season;
+ dsArchiveData=null;root.replaceChildren(elEmpty('Loading saved DS history…'));
+ $('ds-archive-summary').textContent='';$('ds-archive-activity').replaceChildren();
+ try{
+  const r=await fetch('/api/r4-stats?ds_history=1&season='+encodeURIComponent(season),{credentials:'same-origin',cache:'no-store'});
+  const data=await r.json();if(seq!==dsArchiveSequence||season!==state.season)return;
+  if(!r.ok)throw Error(data.error||'DS archive unavailable');
+  dsArchiveData=data;renderDsArchive();
+ }catch(e){if(seq===dsArchiveSequence)root.replaceChildren(elEmpty(e.message))}
+}
+function renderDsArchive(){
+ if(!dsArchiveData)return;
+ const root=$('ds-archive-list'),activity=$('ds-archive-activity');
+ const from=$('ds-archive-from').value,to=$('ds-archive-to').value,team=$('ds-archive-team').value,query=normalize($('ds-archive-player').value);
+ root.replaceChildren();activity.replaceChildren();
+ if(from&&to&&from>to){root.append(elEmpty('From date must be before the to date.'));return}
+ const dateMatch=date=>(!from||date>=from)&&(!to||date<=to);
+ const playerMatch=id=>!query||normalize(memberName(id)).includes(query)||aliases().some(a=>a.member_id===id&&normalize(a.alias).includes(query));
+ const dates=new Map();
+ const group=date=>{if(!dates.has(date))dates.set(date,{teams:[],podium:[]});return dates.get(date)};
+ for(const board of dsArchiveData.teams||[])if(dateMatch(board.event_date)&&team!=='legacy'&&(!team||board.team===team)&&(!query||board.rows.some(row=>playerMatch(row.member_id))))group(board.event_date).teams.push(board);
+ for(const podium of dsArchiveData.podium||[])if(dateMatch(podium.event_date)&&(!team||team==='legacy')&&(!query||[podium.first_member,podium.second_member,podium.third_member].filter(Boolean).some(playerMatch)))group(podium.event_date).podium.push(podium);
+ $('ds-archive-summary').textContent=dates.size+' match date'+(dates.size===1?'':'s')+(query?' matching player search':'')+' · selected season';
+ for(const [date,record] of [...dates].sort((a,b)=>b[0].localeCompare(a[0]))){
+  const card=text('article',null,'stat-card');card.append(text('h3',date));
+  for(const key of ['a','b']){
+   if(team&&team!==key)continue;
+   const board=record.teams.find(t=>t.team===key);
+   if(!board){if(!query)card.append(text('p','Team '+key.toUpperCase()+': not uploaded','stat-muted'));continue}
+   const ranked=[...board.rows].sort((a,b)=>Number(b.points)-Number(a.points));
+   const detail=text('details');detail.open=!!query;
+   detail.append(text('summary','Team '+key.toUpperCase()+' · '+ranked.length+' scored members'+(!ranked.length?' (cleared)':'')));
+   detail.append(text('p','Last updated by '+board.updated_by+' · '+dsArchiveTime(board.updated_at)+' · revision '+board.revision,'stat-muted'));
+   ranked.forEach((row,index)=>{if(!playerMatch(row.member_id))return;const line=text('div',null,'stat-row');line.append(text('strong','#'+(index+1)+' '+memberName(row.member_id)),text('span',fmt(row.points)+' pts','stat-muted'));detail.append(line)});
+   const download=text('button','Download Team '+key.toUpperCase()+' CSV','stat-button');
+   download.type='button';download.onclick=()=>{
+    const csv=[['member_name','points'],...ranked.map(row=>[memberName(row.member_id),row.points])].map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\r\n');
+    const url=URL.createObjectURL(new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='utw-ds-team-'+key+'-'+date+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+   };
+   const edit=text('button','View / edit Team '+key.toUpperCase(),'stat-button');edit.type='button';edit.onclick=()=>{$('ds-date').value=date;$('ds-manual-team').value=key;void dsTeamBoards();$('ds-team-boards').scrollIntoView({block:'start',behavior:'smooth'})};
+   detail.append(download,edit);card.append(detail);
+  }
+  for(const p of record.podium){
+   const row=text('div',null,'stat-row');row.append(text('strong','Legacy podium'+(p.opponent?' · vs '+p.opponent:'')),text('p',[p.first_member,p.second_member,p.third_member].map((id,i)=>id?'#'+(i+1)+' '+memberName(id):'').filter(Boolean).join(' · ')),text('small','Saved '+dsArchiveTime(p.created_at),'stat-muted'));
+   const a=text('a','Open original screenshot','stat-button');a.href='/api/r4-stats?image='+encodeURIComponent(p.id);a.target='_blank';a.rel='noopener';row.append(a);card.append(row);
+  }
+  root.append(card);
+ }
+ if(!dates.size)root.append(elEmpty('No saved DS matches found for these filters.'));
+ const changes=(dsArchiveData.changes||[]).filter(c=>dateMatch(c.event_date)&&team!=='legacy'&&(!team||c.team===team)&&(!query||dates.has(c.event_date)&&dates.get(c.event_date).teams.some(t=>t.team===c.team)));
+ for(const c of changes){const row=text('div',null,'stat-row');row.append(text('strong',c.event_date+' · Team '+c.team.toUpperCase()+' · '+c.action),text('small',c.actor+' · '+dsArchiveTime(c.created_at),'stat-muted'));activity.append(row)}
+ if(!changes.length)activity.append(elEmpty('No matching team edit activity.'));
+}
 let dsBoardSequence=0;
 async function dsTeamBoards(){
  const root=$('ds-team-boards');if(!root||!state.data)return;
@@ -330,7 +387,7 @@ async function dsTeamBoards(){
       if(!confirm('Clear all DS Team '+team.toUpperCase()+' scores for '+date+'? This keeps the audit history and does not alter the other team.'))return;
       try{
        await post({action:'ds_team_clear',season_id:state.season,event_date:date,team,revision:saved.revision});
-       await dsTeamBoards();void candidates();
+       await dsTeamBoards();void loadDsArchive();void candidates();
        notice('Team '+team.toUpperCase()+' scores cleared. Historical edits remain in the audit log.');
       }catch(e){notice(e.message,true)}
      };
@@ -363,7 +420,7 @@ async function saveManualDsTeam(){
   await post({action:'ds_team',season_id:state.season,event_date:date,team,
    mode:'append',revision:current?.revision??0,rows:[{name:m.display_name,points}]});
   $('ds-manual-points').value='';
-  await dsTeamBoards();void candidates();
+  await dsTeamBoards();void loadDsArchive();void candidates();
   notice('Saved '+m.display_name+' on DS Team '+team.toUpperCase()+' with '+fmt(points)+' points.');
  }catch(e){notice(e.message,true)}
 }
@@ -695,7 +752,7 @@ function trainHistory(){
   const button=text('button','Remove mistaken assignment','stat-button');button.addEventListener('click',()=>{if(confirm('Delete this train assignment?'))action(()=>post({action:'delete_award',id:award.id}),'Assignment removed.')});row.append(button);root.append(row)
  }
 }
-function render(){if(!state.data)return;overview();archive();imports();memberFields();dsHistory();void dsTeamBoards();exceptionList();trainHistory();trainCalendar();candidates();eligibilityWarnings();trainHistoryChecker?.refresh()}
+function render(){if(!state.data)return;overview();archive();imports();memberFields();dsHistory();void dsTeamBoards();void loadDsArchive();exceptionList();trainHistory();trainCalendar();candidates();eligibilityWarnings();trainHistoryChecker?.refresh()}
 async function load(){
  const week=$('week').value;state.season=$('season').value;
  if(!validDate(week)||monday(week)!==week){notice('Select a Monday for the week.',true);return}
@@ -836,6 +893,9 @@ function wire(){
  $('season-report').addEventListener('click',async()=>{try{const response=await fetch('/api/r4-stats?report=1&season='+encodeURIComponent(state.season),{cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'Could not generate report');const columns=['member_name','vs_daily_total','vs_weekly_total','donations_total','recorded_vs_days','recorded_vs_weeks','trains_awarded'];const csv=[columns.join(','),...(data.rows||[]).map(row=>columns.map(k=>'\"'+String(row[k]??'').replaceAll('"','""')+'\"').join(','))].join('\r\n');const object=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=object;a.download='utw-season-report-'+state.season+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(object),1500);notice('Season report downloaded.')}catch(e){notice(e.message,true)}});
  $('week').addEventListener('change',()=>{$('train-date').value=$('week').value;$('ds-date').value=$('week').value;load()});
  $('ds-date').addEventListener('change',()=>void dsTeamBoards());
+ $('ds-archive-refresh').addEventListener('click',()=>void loadDsArchive());
+ for(const id of ['ds-archive-from','ds-archive-to','ds-archive-team','ds-archive-player'])$(id).addEventListener('input',renderDsArchive);
+ $('ds-archive-reset').addEventListener('click',()=>{for(const id of ['ds-archive-from','ds-archive-to','ds-archive-team','ds-archive-player'])$(id).value='';renderDsArchive()});
  $('ds-scan-a').addEventListener('click',()=>openDsTeamScanner('a'));
  $('ds-scan-b').addEventListener('click',()=>openDsTeamScanner('b'));
  $('ds-manual-save').addEventListener('click',()=>void saveManualDsTeam());

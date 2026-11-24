@@ -62,6 +62,7 @@ test('Same-date saved DS driver cannot drive a second DS train in this Stage',()
 });
 test('DS team scoring API is R4-private and integrated with screenshot review and CSV',async()=>{
  assert.equal((await GET(new Request('https://example.org/api/r4-stats?ds_teams=1&date=2026-11-20'))).status,401);
+ assert.equal((await GET(new Request('https://example.org/api/r4-stats?ds_history=1&season=post-s5'))).status,401);
  assert.equal((await POST(new Request('https://example.org/api/r4-stats',{
   method:'POST',headers:{Origin:'https://example.org','Content-Type':'application/json'},
   body:JSON.stringify({action:'ds_team',team:'a',event_date:'2026-11-20',rows:[]})
@@ -75,6 +76,10 @@ test('DS team scoring API is R4-private and integrated with screenshot review an
  for(const v of ['ds_team_a','ds_team_b','ocr-ds-csv-read','validateConfirmedRows','groupScreenshotRows','rankPollMemberMatches'])
   assert.ok(wizard.includes(v),v);
  assert.match(client,/teamRecommendations/);
+ assert.match(page,/DS Upload History/);
+ assert.match(client,/function renderDsArchive/);
+ assert.match(api,/q.get\('ds_history'\)/);
+ assert.match(api,/historyPages\('utw_ds_team_changes'/);
  assert.match(api,/utw_ds_team_apply/);
  assert.match(sql,/enable row level security/);
  assert.match(sql,/changed since you opened them/);
