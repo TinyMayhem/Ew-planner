@@ -234,6 +234,29 @@ export async function GET(request){
    if(!utwConfigured())return json({error:'Alliance Duel scores are not connected'},503);
    return json(await utwWeeklyOverview(reportWeek));
   }
+  if(q.get('ds_history')==='1'){
+   const actor=await sessionUser(request);
+   if(!actor||actor.role==='von')return json({error:'UTW R4 access required'},403);
+   const season=q.get('season')||'post-s5';
+   if(!/^[a-z0-9-]{2,30}$/.test(season))return json({error:'Choose a valid season'},400);
+   // Page through all saved records, not just the selected week.
+   const historyPages=async(table,select,order)=>{
+    const records=[];
+    for(let offset=0;offset<100000;offset+=200){
+     const page=await list(table,{select,season_id:'eq.'+season,order,limit:'200',offset:String(offset)});
+     if(!Array.isArray(page))throw Error('Invalid DS history response');
+     records.push(...page);
+     if(page.length<200)return records;
+    }
+    throw Error('DS history exceeds the archive limit');
+   };
+   const [teams,podium,changes]=await Promise.all([
+    historyPages('utw_ds_team_rankings','id,event_date,team,rows,revision,updated_by,updated_at','event_date.desc,team.asc,id.asc'),
+    historyPages('utw_stat_ds','id,event_date,first_member,second_member,third_member,opponent,created_at','event_date.desc,id.asc'),
+    historyPages('utw_ds_team_changes','id,event_date,team,action,actor,created_at','id.desc')
+   ]);
+   return json({season,teams,podium,changes});
+  }
   if(q.get('ds_teams')==='1'){
    const at=q.get('date'),season=q.get('season')||'post-s5';
    const actor=await sessionUser(request);
