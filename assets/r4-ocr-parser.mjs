@@ -53,6 +53,9 @@ export function levenshtein(a,b){
  return prior[y.length];
 }
 export function matchRoster(name,members,aliases=[]){
+ members=(members||[]).filter(m=>m&&!m.archived_at);
+ const allowedIds=new Set(members.map(m=>String(m.id)));
+ aliases=(aliases||[]).filter(a=>allowedIds.has(String(a.member_id)));
  const key=normalizeIgn(name).replace(/[\s._-]/g,'');
  const index=new Map(),conflicts=new Set();
  const add=(value,id)=>{

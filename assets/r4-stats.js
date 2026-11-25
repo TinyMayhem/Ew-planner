@@ -1,9 +1,9 @@
-import {activeMembers,searchActiveMembers} from './r4-active-members.mjs';
+import {activeMembers,activeAliases,searchActiveMembers} from './r4-active-members.mjs';
 import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv,isRealDate} from './r4-csv-utils.mjs';
 import {archivedWeeks,vsWeekSlots,vsLeaderboard,vsMissingDaily,weekOf,scoreFlag} from './r4-vs-archive.mjs';
 import {stageForDate,stageRange,trainWarnings,isR4Train,addDays as trainAddDays} from './r4-train-rules.mjs';
 import {trainLabelForDate} from './r4-train-schedule.mjs';
-import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=ds-podium-team-20261124';
+import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=active-pickers-ds-cleanup-20261124';
 import {initConductorSearch} from './r4-conductor-search.mjs';
 import {initTrainHistoryChecker} from './r4-train-history-checker.mjs';
 import {parseDsCsv,parseDsCsvOutcome,matchDsCsvRows} from './r4-ds-csv.mjs';
@@ -21,6 +21,7 @@ const normalize=n=>String(n||'').trim().replace(/\s+/g,' ').normalize('NFKC').to
 const allMembers=()=>state.data?.members||[];
 const members=()=>activeMembers(allMembers());
 const aliases=()=>state.data?.aliases||[];
+const selectionAliases=()=>activeAliases(allMembers(),aliases());
 const byId=id=>allMembers().find(m=>m.id===id);
 const memberName=id=>byId(id)?.display_name||'Unknown member';
 const setConductorSelection=id=>{$('train-member').value=id;conductorSearch?.sync()};
@@ -31,7 +32,7 @@ const setContent=(id,...nodes)=>$(id).replaceChildren(...nodes);
 const notice=(message,error=false)=>{const n=$('notice');n.hidden=!message;n.className='stat-notice'+(error?' error':'');n.textContent=message||'';if(message)n.scrollIntoView({block:'nearest'})};
 async function post(body,multipart=false){notice('');const r=await fetch('/api/r4-stats',{method:'POST',credentials:'same-origin',headers:multipart?{}:{'Content-Type':'application/json'},body:multipart?body:JSON.stringify(body)});const data=await r.json().catch(()=>({}));if(r.status===401){location.href='/r4-planner';throw Error('R4 sign-in expired')}if(!r.ok)throw Error(data.error||'Could not save the change');return data}
 async function action(fn,success){try{await fn();await load();notice(success)}catch(e){notice(e.message,true)}}
-const opt=(id,includeBlank=false)=>{const select=$(id),old=select.value;select.replaceChildren();if(includeBlank){const o=new Option(id==='train-member'?'Choose conductor':id==='train-vip'?'Choose VIP':'Not recorded','');select.append(o)}for(const m of members()){if((id==='train-member'||id==='train-vip')&&(m.archived_at||departedOn(m.id,$('train-date')?.value||serverToday())))continue;select.append(new Option(m.display_name,m.id))}if([...select.options].some(o=>o.value===old))select.value=old;if(id==='train-member')conductorSearch?.sync()};
+const opt=(id,includeBlank=false)=>{const select=$(id),old=select.value;select.replaceChildren();{const o=new Option(id==='train-member'?'Choose conductor':id==='train-vip'?'Choose VIP':includeBlank?'Not recorded':'Choose active member…','');select.append(o)}for(const m of members()){if((id==='train-member'||id==='train-vip')&&(m.archived_at||departedOn(m.id,$('train-date')?.value||serverToday())))continue;select.append(new Option(m.display_name,m.id))}select.value=[...select.options].some(o=>o.value===old)?old:'';if(id==='train-member')conductorSearch?.sync()};
 function ranking(metric,period){
  const imp=state.data.imports.find(x=>x.metric===metric&&x.period===period);
  if(!imp)return [];
@@ -274,7 +275,7 @@ function directory(){
  if(!filtered.length)root.append(elEmpty('No matching members.'));
 }
 function memberFields(){
- for(const id of ['merge-from','merge-to','alias-member','ds-first','ds-second','ds-third','ds-manual-member','train-member','train-vip','exception-member'])opt(id,id==='ds-second'||id==='ds-third'||id==='ds-manual-member'||id==='train-member'||id==='train-vip');
+ for(const id of ['merge-from','merge-to','alias-member','ds-manual-member','train-member','train-vip','exception-member'])opt(id,id==='ds-manual-member'||id==='train-member'||id==='train-vip');
  directory();
 }
 const dsOutcomeLabel=v=>v==='win'?'Win':v==='loss'?'Loss':'Result not recorded';
@@ -815,7 +816,7 @@ function trainHistory(){
   const edit=text('button','Edit conductor / VIP','stat-button');edit.type='button';edit.addEventListener('click',()=>{
    const existing=row.querySelector('.train-edit');if(existing){existing.remove();return}
    const fields=text('div',null,'train-edit stat-fields');
-   const makePicker=(labelText,selected)=>{const label=text('label',labelText),select=document.createElement('select');for(const m of members())select.append(new Option(m.display_name,m.id));if(selected)select.value=selected;label.append(select);fields.append(label);return select};
+   const makePicker=(labelText,selected)=>{const label=text('label',labelText),select=document.createElement('select');select.append(new Option('Choose active member…',''));for(const m of members())select.append(new Option(m.display_name,m.id));if(selected)select.value=selected;label.append(select);fields.append(label);return select};
    const conductor=makePicker('Conductor',award.member_id);
    const vip=makePicker('VIP',award.vip_member_id);
    const why=text('label','Reason for replacement'),reason=document.createElement('input');reason.type='text';reason.maxLength=200;reason.placeholder='e.g. Bob did not show up';why.append(reason);fields.append(why);
@@ -957,8 +958,8 @@ async function uploadCsvQueue(){
  notice(saved+' CSV'+(saved===1?'':'s')+' imported to '+season+'.'+(failed?' '+failed+' failed, with reasons shown beside the files.':'')+(left?' '+left+' need corrections.':'')+(stopped?' Sign in again before retrying.':''),!!failed||!!left);
 }
 function wire(){
- conductorSearch=initConductorSearch({select:$('train-member'),input:$('train-member-search'),list:$('train-member-suggestions'),getAliases:aliases});
- trainHistoryChecker=initTrainHistoryChecker({getMembers:members,getAliases:aliases});
+ conductorSearch=initConductorSearch({select:$('train-member'),input:$('train-member-search'),list:$('train-member-suggestions'),getAliases:selectionAliases});
+ trainHistoryChecker=initTrainHistoryChecker({getMembers:members,getAliases:selectionAliases});
  const today=serverToday(),week=monday(today);
  state.trainStage=stageForDate(today);for(let stage=7;stage<=30;stage++){const range=stageRange(stage);$('train-stage').append(new Option('Stage '+stage+' · '+range.start+' to '+range.end,stage))}$('train-stage').value=String(state.trainStage);
  $('week').value=week;$('ds-date').value=today;$('train-date').value=today;$('exception-start').value=today;$('exception-end').value=today;
@@ -990,7 +991,6 @@ function wire(){
   if(confirm('Permanently merge '+memberName(from)+' into '+memberName(to)+'? This also merges DS results and train history.'))action(()=>post({action:'merge',source:from,target:to}),'Member records merged. Historic points now follow the correct person.');
  });
  $('alias-save').addEventListener('click',()=>action(()=>post({action:'alias',member_id:$('alias-member').value,alias:$('alias-name').value}),'Nickname added to the member.'));
- $('ds-form').addEventListener('submit',event=>{event.preventDefault();action(()=>{const form=new FormData($('ds-form'));form.set('action','ds');form.set('season_id',state.season);return post(form,true)},'DS evidence and podium saved.')});
  $('train-stage').addEventListener('change',()=>{state.trainStage=Number($('train-stage').value);load()});
  $('train-source').addEventListener('change',()=>{
   const date=$('train-date').value,mode=$('train-source').value,slot=$('train-slot');
@@ -1028,7 +1028,7 @@ function wire(){
   action(()=>post({action:'award',season_id:state.season,train_date:date,slot:selectedSlot,member_id:id,vip_member_id:vipId,source,reason}), 'Conductor and VIP recorded.');
  });
  $('exception-save').addEventListener('click',()=>action(()=>post({action:'exception',member_id:$('exception-member').value,scope:$('exception-scope').value,starts_on:$('exception-start').value,ends_on:$('exception-end').value,reason:$('exception-reason').value}), 'Exception saved.'));
- initScreenshotWizard({getMembers:members,getAliases:aliases,getSeason:()=>state.season,reload:load,submit:post,today:serverToday});
+ initScreenshotWizard({getMembers:members,getAliases:selectionAliases,getSeason:()=>state.season,reload:load,submit:post,today:serverToday});
  if(new URLSearchParams(location.search).get('duel')==='1')showTab('duel');
  load();
 }

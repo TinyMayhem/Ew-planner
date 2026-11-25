@@ -1,3 +1,4 @@
+import {activeMembers,activeAliases} from './r4-active-members.mjs';
 import {matchRoster} from './r4-ocr-parser.mjs';
 import {parsePollOcrText,parsePollCsv,resolvePollOcrName,rankPollMemberMatches} from './r4-poll-parser.mjs';
 import {languagesForOcr} from './r4-ocr-languages.mjs';
@@ -18,15 +19,18 @@ async function api(url,body){
 const fetchEvents=()=>api('/api/r4-polls');
 const post=body=>api('/api/r4-polls',body);
 const byId=id=>store.members.find(m=>m.id===id),nameOf=id=>byId(id)?.display_name||store.current?.poll.roster.find(m=>m.id===id)?.name||'Former member';
+const selectableMembers=()=>activeMembers(store.members);
+const selectableAliases=()=>activeAliases(store.members,store.aliases);
+const selectablePollRoster=()=>{const ids=new Set(selectableMembers().map(m=>m.id));return (store.current?.poll.roster||[]).filter(m=>ids.has(m.id))};
 function matchedMembers(query,eligible=false){
  const q=tidy(query),roster=new Set(store.current?.poll.roster.map(m=>m.id)||[]);
- return store.members.filter(m=>(!eligible||roster.has(m.id))&&(!q||tidy(m.display_name).includes(q)||store.aliases.some(a=>a.member_id===m.id&&tidy(a.alias).includes(q))));
+ return selectableMembers().filter(m=>(!eligible||roster.has(m.id))&&(!q||tidy(m.display_name).includes(q)||store.aliases.some(a=>a.member_id===m.id&&tidy(a.alias).includes(q))));
 }
 function fillMemberSelect(id,query='',eligible=false){
  const select=$(id);if(!select)return;
  const previous=select.value,match=matchedMembers(query,eligible).slice(0,150);
  select.replaceChildren(new Option('Choose member…',''));
- for(const m of match)select.append(new Option(m.display_name+(m.archived_at?' (archived)':''),m.id));
+ for(const m of match)select.append(new Option(m.display_name,m.id));
  if(match.some(m=>m.id===previous))select.value=previous;
 }
 function listEvents(){
@@ -44,6 +48,7 @@ async function reload(){
 }
 async function openPoll(id){
  if(!id)return;
+ await reload();
  const data=await api('/api/r4-polls?poll='+encodeURIComponent(id));
  store.current=data;$('poll-select').value=id;$('poll-workspace').hidden=false;
  clearPreview();drawPoll();
@@ -125,7 +130,7 @@ function clearPreview(){
  const thumbs=$('poll-image-thumbs');if(thumbs)thumbs.remove();
 }
 const asRow=(name,response,source)=>{
- const matched=resolvePollOcrName(name,store.members,store.aliases);
+ const matched=resolvePollOcrName(name,selectableMembers(),selectableAliases());
  return {name:matched.name||name,response,source,
   member_id:matched.member_id||'',suggestion:matched.suggestion||'',confidence:matched.confidence};
 };
@@ -139,19 +144,20 @@ function preparePreview(rows){
 }
 function drawPreview(){
  const root=$('poll-review-list');root.replaceChildren();
- const active=store.current?.poll.roster||[];
+ const active=selectablePollRoster();
  const allowed=new Set(active.map(m=>m.id));
  for(const [i,item] of store.preview.entries()){
   if(item.deleted)continue;
+  if(item.member_id&&!allowed.has(item.member_id)){item.member_id='';item.confidence='unmatched'}
   const row=node('div',null,'poll-review-entry'+(!item.member_id||!allowed.has(item.member_id)?' issue':''));
   const inputLabel=node('label','Recognized name');
   const input=node('input');input.value=item.name;input.maxLength=90;
-  input.onchange=()=>{const m=resolvePollOcrName(input.value.trim(),store.members,store.aliases);item.name=m.name||input.value.trim();item.member_id=m.member_id||'';item.suggestion=m.suggestion||'';item.confidence=m.confidence;drawPreview()};
+  input.onchange=()=>{const m=resolvePollOcrName(input.value.trim(),selectableMembers(),selectableAliases());item.name=m.name||input.value.trim();item.member_id=m.member_id||'';item.suggestion=m.suggestion||'';item.confidence=m.confidence;drawPreview()};
   inputLabel.append(input);
   const memberLabel=node('label','Confirm member (closest matches first)');
   const select=node('select');select.append(new Option('Choose member (required)',''));
   const eligible=active.map(m=>({id:m.id,display_name:nameOf(m.id)||m.name}));
-  const ranked=rankPollMemberMatches(item.name,eligible,store.aliases);
+  const ranked=rankPollMemberMatches(item.name,eligible,selectableAliases());
   for(const m of ranked)select.append(new Option(m.name,m.id));
   select.value=item.member_id||'';select.onchange=()=>{item.member_id=select.value;item.confidence='confirmed';drawPreview()};
   memberLabel.append(select);
@@ -202,7 +208,7 @@ async function scanImages(){
  $('poll-scan').disabled=true;
  let worker=null;
  try{
-  const libs=languagesForOcr($('poll-lang').value,store.members,store.aliases);
+  const libs=languagesForOcr($('poll-lang').value,selectableMembers(),selectableAliases());
   $('poll-extract-status').textContent='Loading OCR languages: '+libs.join(', ')+'…';
   const ocr=await loadOcr();worker=await ocr.createWorker(libs,1);
   const rows=[],texts=[];
@@ -211,13 +217,13 @@ async function scanImages(){
    const crop=await cropNames(files[i]);
    const result=await worker.recognize(crop);
    const raw=result?.data?.text||'';texts.push(raw);
-   const found=parsePollOcrText(raw,store.members,store.aliases);
+   const found=parsePollOcrText(raw,selectableMembers(),selectableAliases());
    rows.push(...found.map(x=>({name:x.name,response,source:'screenshot'})));
   }
   // Don't throw away names when the overlap appears on several screenshots.
   const seen=new Set(),dedup=[];
   for(const r of rows){
-   const m=matchRoster(r.name,store.members,store.aliases);
+   const m=matchRoster(r.name,selectableMembers(),selectableAliases());
    const k=m.type==='exact'&&m.id?'id:'+m.id:'name:'+tidy(r.name);
    if(k&&!seen.has(k)){seen.add(k);dedup.push(r)}
   }
@@ -242,7 +248,7 @@ async function readCsv(){
 }
 function validatedPreview(){
  const rows=store.preview.filter(x=>!x.deleted);if(!rows.length)throw Error('Add at least one name');
- const roster=new Set(store.current.poll.roster.map(m=>m.id));
+ const roster=new Set(selectablePollRoster().map(m=>m.id));
  const seen=new Map(),unique=[];
  const current=new Map(store.current.votes.map(x=>[x.member_id,x]));
  for(const r of rows){
@@ -314,9 +320,9 @@ async function drawReport(){
   listing('poll-report-no',profiles.filter(x=>x.eligible>=min&&x.responded>=min&&x.no>0).sort((a,b)=>b.noRate-a.noRate||b.no-a.no),m=>(Math.round(m.noRate*100)+'% No · '+m.no+' of '+m.responded+' answers'));
   listing('poll-report-nonresponders',profiles.filter(x=>x.eligible>=min&&x.missing>0).sort((a,b)=>b.missing/a.eligible-a.missing/b.eligible||b.missing-a.missing),m=>(m.missing+' missing of '+m.eligible+' polls ('+Math.round(m.missing/m.eligible*100)+'%)'));
   const old=$('poll-report-member').value,select=$('poll-report-member');select.replaceChildren(new Option('Choose member…',''));
-  for(const person of profiles.filter(x=>!tidy($('poll-report-search').value)||tidy(x.name).includes(tidy($('poll-report-search').value))).sort((a,b)=>a.name.localeCompare(b.name)))
+  for(const person of profiles.filter(x=>!x.archived&&(!tidy($('poll-report-search').value)||tidy(x.name).includes(tidy($('poll-report-search').value)))).sort((a,b)=>a.name.localeCompare(b.name)))
    select.append(new Option(person.name,person.id));
-  if(profiles.some(x=>x.id===old))select.value=old;renderProfile();
+  if(profiles.some(x=>!x.archived&&x.id===old))select.value=old;renderProfile();
   const prior=document.getElementById('poll-trends');if(prior)prior.remove();
   const trend=node('div',null,'poll-trends');trend.id='poll-trends';trend.append(node('h3','Voting trends by event'));
   for(const [kind,data] of Object.entries(summary.byType)){
@@ -383,12 +389,12 @@ function init(){
  $('poll-roster-search').oninput=e=>fillMemberSelect('poll-roster-member',e.target.value,false);
  $('poll-manual-save').onclick=async()=>{
   const member=$('poll-manual-member').value,response=$('poll-manual-response').value,note=$('poll-manual-note').value.trim();
-  if(!member)return msg('Choose an eligible member.',true);
+  if(!member||!selectablePollRoster().some(m=>m.id===member))return msg('Choose an active eligible member.',true);
   await safeChange('votes',{response,mode:'manual',items:[{member_id:member,source:'manual',note}]},'Late vote or correction saved with R4 history.');
   $('poll-manual-note').value='';
  };
  for(const mode of ['add','remove'])$('poll-roster-'+mode).onclick=async()=>{
-  const id=$('poll-roster-member').value;if(!id)return msg('Select a member.',true);
+  const id=$('poll-roster-member').value;if(!id||!selectableMembers().some(m=>m.id===id))return msg('Select a member.',true);
   if(!confirm((mode==='add'?'Include ':'Exclude ')+nameOf(id)+' for this poll? This changes the eligible nonresponse roster, not historical VS data.'))return;
   await safeChange('eligibility',{mode,member_id:id},'Poll roster updated.');
  };
@@ -397,7 +403,7 @@ function init(){
  $('poll-report-search').oninput=()=>{
   const select=$('poll-report-member'),prior=select.value,q=tidy($('poll-report-search').value);
   select.replaceChildren(new Option('Choose member…',''));
-  for(const m of store.report?.profiles||[])if(tidy(m.name).includes(q))select.append(new Option(m.name,m.id));
+  for(const m of store.report?.profiles||[])if(!m.archived&&tidy(m.name).includes(q))select.append(new Option(m.name,m.id));
   if([...select.options].some(o=>o.value===prior))select.value=prior;renderProfile();
  };
  $('poll-report-min').onchange=()=>{if(store.report)drawReport()};

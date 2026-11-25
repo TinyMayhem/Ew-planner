@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {activeMembers,searchActiveMembers} from '../assets/r4-active-members.mjs';
+import {activeMembers,activeAliases,filterExternalRoster,searchActiveMembers} from '../assets/r4-active-members.mjs';
 import {buildMemberPerformance} from '../lib/member-performance.mjs';
 
 const members=[
@@ -32,4 +32,25 @@ test('historical observation data is preserved when current reports omit ex-memb
  assert.deepEqual(report.members.map(m=>m.id),['active']);
  assert.equal(raw.observations.length,2);
  assert.equal(raw.observations.find(o=>o.memberId==='former').points,49000000);
+});
+
+
+test('current selectors exclude archived aliases even if given complete historical data',()=>{
+ assert.deepEqual(activeAliases(members,aliases).map(a=>a.member_id),['active']);
+});
+test('external roster excludes archived players by current name, historical alias or external ID alias',()=>{
+ const source=[
+  {id:'1',name:'Active Player'},
+  {id:'2',name:'Former Player'},
+  {id:'3',name:'Old Nickname'},
+  {id:'4',name:'Changed after leaving'},
+  {id:'5',name:'New recruit'}
+ ];
+ assert.deepEqual(filterExternalRoster(source,members,aliases,[{source_member_id:'4',alias:'Old Nickname'}]).map(m=>m.id),['1','5']);
+ assert.equal(source.length,5,'Historical source untouched');
+});
+test('archive status is removed when the member is restored',()=>{
+ const restored=members.map(m=>({...m,archived_at:null}));
+ assert.equal(activeMembers(restored).length,2);
+ assert.equal(filterExternalRoster([{id:'2',name:'Old Nickname'}],restored,aliases).length,1);
 });
