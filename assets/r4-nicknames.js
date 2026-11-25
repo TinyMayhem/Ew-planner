@@ -268,6 +268,48 @@ async function addNickname(){
   }else message(error.message,true);
  }finally{busy=false;$('nickname-add').disabled=false}
 }
+async function createMembers(bulk){
+ if(busy)return;
+ const root=$('create-member-result');root.replaceChildren();
+ const parseLine=line=>{const [name,...aliases]=line.split('|').map(s=>s.trim());return {name,aliases:aliases.filter(Boolean)}};
+ const entries=bulk?$('create-members-bulk').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean).map(parseLine):
+  [{name:$('create-member-name').value.trim(),aliases:$('create-member-aliases').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean)}];
+ const say=(msg,error=false)=>{root.replaceChildren(n('p',msg,error?'stat-flag blocked':'stat-muted'))};
+ if(!entries.length||entries.length>100||entries.some(m=>!m.name||m.name.length>60||m.aliases.length>10||m.aliases.some(a=>a.length>60))){
+  say('Enter 1 to 100 names, up to 60 characters each, with at most 10 nicknames per player.',true);return;
+ }
+ const seen=new Set(),issues=[];
+ for(const m of entries){
+  const own=new Set();
+  for(const label of [m.name,...m.aliases]){
+   const k=normalized(label);if(own.has(k))continue;own.add(k);
+   if(seen.has(k))issues.push(label+' appears more than once in this batch.');
+   seen.add(k);
+   const alias=ownerOf(label),existing=members.find(x=>x.id===alias?.member_id||normalized(x.display_name)===k);
+   if(existing)issues.push(label+' already belongs to '+existing.display_name+(existing.archived_at?' (archived: restore the original record).':' (active member).'));
+  }
+ }
+ if(issues.length){say(issues.join(' '),true);return}
+ const review=n('div',null,'stat-card');
+ review.append(n('h3','Review '+entries.length+' new member'+(entries.length===1?'':'s')));
+ for(const m of entries)review.append(n('p',m.name+(m.aliases.length?' · Nicknames: '+m.aliases.join(', '):'')));
+ const save=n('button','Confirm and add','stat-button primary'),cancel=n('button','Cancel','stat-button');
+ save.type=cancel.type='button';cancel.onclick=()=>root.replaceChildren();
+ save.onclick=async()=>{
+  if(busy)return;busy=true;save.disabled=cancel.disabled=true;
+  $('create-member').disabled=$('create-members').disabled=true;
+  try{
+   const result=await request({action:'create_members',members:entries});
+   if(!result.ok||result.count!==entries.length)throw Error('The server could not confirm all member records. Refresh the directory before retrying.');
+   if(bulk)$('create-members-bulk').value='';else{$('create-member-name').value='';$('create-member-aliases').value=''}
+   await reload();say('Saved '+result.count+' new member'+(result.count===1?'':'s')+'! They are now in the active roster.');
+  }catch(error){say(error.message,true);try{await reload()}catch{}}
+  finally{busy=false;$('create-member').disabled=$('create-members').disabled=false}
+ };
+ review.append(save,cancel);root.append(review);
+}
+$('create-member').addEventListener('click',()=>createMembers(false));
+$('create-members').addEventListener('click',()=>createMembers(true));
 $('nickname-member').addEventListener('change',e=>choose(e.target.value));
 $('nickname-link-existing').addEventListener('click',linkExistingMember);
 $('nickname-existing-member').addEventListener('change',()=>{$('nickname-collision').hidden=true;$('nickname-collision').replaceChildren()});
