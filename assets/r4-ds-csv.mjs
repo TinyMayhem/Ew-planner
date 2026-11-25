@@ -1,5 +1,19 @@
 import {parseCsv} from './r4-csv-utils.mjs';
 const norm=v=>String(v??'').trim().replace(/\s+/g,' ').normalize('NFKC').toLowerCase();
+export function parseDsCsvOutcome(raw){
+ const {head,matrix}=parseCsv(raw);
+ const col=head.findIndex(h=>['outcome','result','winloss','winlose','matchresult'].includes(norm(h).replace(/[^a-z]/g,'')));
+ if(col<0)return null;
+ const results=new Set();
+ for(const row of matrix){
+  const value=norm(row[col]);if(!value)continue;
+  if(['win','won','w','victory'].includes(value))results.add('win');
+  else if(['loss','lose','lost','l','defeat'].includes(value))results.add('loss');
+  else throw Error('Invalid match result: '+row[col]+'. Use Win or Loss.');
+ }
+ if(results.size>1)throw Error('A team CSV must have one consistent match result. Split different matches into separate files.');
+ return [...results][0]||null;
+}
 export function parseDsCsv(raw){
  const {head,matrix}=parseCsv(raw);
  const names=head.map(h=>norm(h).replace(/[ _-]+/g,''));

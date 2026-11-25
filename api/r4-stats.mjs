@@ -251,9 +251,9 @@ export async function GET(request){
     throw Error('DS history exceeds the archive limit');
    };
    const [teams,podium,changes]=await Promise.all([
-    historyPages('utw_ds_team_rankings','id,event_date,team,rows,revision,updated_by,updated_at','event_date.desc,team.asc,id.asc'),
-    historyPages('utw_stat_ds','id,event_date,first_member,second_member,third_member,opponent,created_at','event_date.desc,id.asc'),
-    historyPages('utw_ds_team_changes','id,event_date,team,action,actor,created_at','id.desc')
+    historyPages('utw_ds_team_rankings','id,event_date,team,rows,revision,updated_by,updated_at,outcome','event_date.desc,team.asc,id.asc'),
+    historyPages('utw_stat_ds','id,event_date,first_member,second_member,third_member,opponent,created_at,team','event_date.desc,id.asc'),
+    historyPages('utw_ds_team_changes','id,event_date,team,action,actor,created_at,before_outcome,after_outcome','id.desc')
    ]);
    return json({season,teams,podium,changes});
   }
@@ -263,9 +263,9 @@ export async function GET(request){
    if(!actor||actor.role==='von')return json({error:'UTW R4 access required'},403);
    if(!isoDate(at)||!/^[a-z0-9-]{2,30}$/.test(season))return json({error:'Choose DS date and season'},400);
    const [records,changes]=await Promise.all([
-    list('utw_ds_team_rankings',{select:'id,season_id,event_date,team,rows,revision,updated_by,updated_at',
+    list('utw_ds_team_rankings',{select:'id,season_id,event_date,team,rows,revision,updated_by,updated_at,outcome',
      season_id:'eq.'+season,event_date:'eq.'+at,order:'team.asc',limit:'2'}),
-    list('utw_ds_team_changes',{select:'id,event_date,team,action,actor,created_at',
+    list('utw_ds_team_changes',{select:'id,event_date,team,action,actor,created_at,before_outcome,after_outcome',
      season_id:'eq.'+season,event_date:'eq.'+at,order:'id.desc',limit:'30'})
    ]);
    if(!Array.isArray(records)||!Array.isArray(changes))throw Error('DS team rankings unavailable');
@@ -425,6 +425,10 @@ async function dsUpload(form,request){
  const season=form.get('season_id')||'post-s5';
  if(!/^[a-z0-9-]{2,30}$/.test(season)||(await list('utw_stat_seasons',{select:'id',id:'eq.'+season,limit:'1'})).length!==1)return json({error:'Invalid season'},400);
  const eventDate=form.get('date'),first=form.get('first'),second=form.get('second')||null,third=form.get('third')||null;
+ const actor=await sessionUser(request);
+ if(!actor||actor.role==='von')return json({error:'UTW R4 access required'},403);
+ const team=form.get('team')||null;
+ if(team!==null&&!['a','b'].includes(team))return json({error:'Choose Team A or Team B'},400);
  const opponent=clean(form.get('opponent'),80),notes=clean(form.get('notes'),500),file=form.get('screenshot');
  if(!isoDate(eventDate)||!uuid(first)||((second||third)&&![second,third].filter(Boolean).every(uuid))||new Set([first,second,third].filter(Boolean)).size!==[first,second,third].filter(Boolean).length)return json({error:'Select valid, different MVP / second / third members and a match date'},400);
  if(!file||typeof file.arrayBuffer!=='function'||!['image/png','image/jpeg','image/webp'].includes(file.type)||file.size<100||file.size>4*1024*1024)return json({error:'Upload a JPG, PNG, or WebP screenshot under 4 MB'},400);
@@ -439,9 +443,9 @@ async function dsUpload(form,request){
  if(!upload.ok)throw Error('Secure screenshot upload failed');
  let created;
  try{
-  created=await insert('utw_stat_ds',{season_id:season,event_date:eventDate,first_member:first,second_member:second,third_member:third,opponent,notes,screenshot_path:path});
+  created=await insert('utw_stat_ds',{season_id:season,event_date:eventDate,first_member:first,second_member:second,third_member:third,opponent,team,notes,screenshot_path:path});
  }catch(e){await storage('utw-r4-ds-evidence/'+path,{method:'DELETE'}).catch(()=>{});throw e}
- await recordAudit(request,'ds',{id:created[0].id,season,date:eventDate,opponent,first,second,third,screenshot:path},true);
+ await recordAudit(request,'ds',{id:created[0].id,season,date:eventDate,opponent,team,first,second,third,screenshot:path},true);
  return json({ok:true,id:created[0].id},201);
 }
 export async function POST(request){
@@ -463,6 +467,17 @@ export async function POST(request){
   if(raw.length>150000)return json({error:'Request too large'},413);
   const body=JSON.parse(raw);
   switch(body.action){
+   case 'ds_podium_team':{
+    const actor=await sessionUser(request);
+    if(!actor||actor.role==='von')return json({error:'UTW R4 access required'},403);
+    if(!uuid(body.id)||!['a','b',null].includes(body.team))return json({error:'Choose a valid podium and team'},400);
+    const prior=await list('utw_stat_ds',{select:'id,team,event_date',id:'eq.'+body.id,limit:'1'});
+    if(prior.length!==1)return json({error:'Podium record not found'},404);
+    const saved=await db('utw_stat_ds?'+urlParams({id:'eq.'+body.id,team:prior[0].team?'eq.'+prior[0].team:'is.null'}),{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({team:body.team})});
+    if(saved.length!==1)return json({error:'Podium changed. Refresh and retry.'},409);
+    await recordAudit(request,'ds_podium_team',{id:body.id,date:prior[0].event_date,previous_team:prior[0].team,team:body.team},false);
+    return json({ok:true});
+   }
    case 'ds_team_clear':{
     const actor=await sessionUser(request);
     if(!actor||actor.role==='von')return json({error:'UTW R4 access required'},403);
@@ -470,9 +485,9 @@ export async function POST(request){
     if(!isoDate(date)||typeof season!=='string'||!/^[a-z0-9-]{2,30}$/.test(season)||
      !['a','b'].includes(team)||!Number.isInteger(revision)||revision<0)
      return json({error:'Choose a saved DS team and valid event date'},400);
-    const result=await db('rpc/utw_ds_team_apply',{method:'POST',body:JSON.stringify({
+    const result=await db('rpc/utw_ds_team_apply_outcome',{method:'POST',body:JSON.stringify({
      p_season:season,p_date:date,p_team:team,p_mode:'clear',p_rows:[],
-     p_revision:revision,p_actor:String(actor.username||actor.display_name||'R4').slice(0,80)
+     p_revision:revision,p_actor:String(actor.username||actor.display_name||'R4').slice(0,80),p_outcome:null
     })});
     await recordAudit(request,'ds_team_clear',{season,date,team,revision:result.revision},false);
     return json(result);
@@ -481,7 +496,8 @@ export async function POST(request){
     const actor=await sessionUser(request);
     if(!actor||actor.role==='von')return json({error:'UTW R4 access required'},403);
     const eventDate=body.event_date,season=body.season_id,team=body.team,
-     mode=body.mode||'replace',rows=body.rows;
+     mode=body.mode||'replace',rows=body.rows,outcome=body.outcome??null;
+    if(outcome!==null&&!['win','loss'].includes(outcome))return json({error:'Choose Win or Loss'},400);
     if(!isoDate(eventDate)||typeof season!=='string'||!/^[a-z0-9-]{2,30}$/.test(season)||
      !['a','b'].includes(team)||!['append','replace'].includes(mode)||
      !Array.isArray(rows)||rows.length<1||rows.length>200||
@@ -501,11 +517,11 @@ export async function POST(request){
      if(seen.has(id))return json({error:'Duplicate member in reviewed DS ranking: '+label},400);
      seen.add(id);mapped.push({member_id:id,points});
     }
-    const result=await db('rpc/utw_ds_team_apply',{method:'POST',body:JSON.stringify({
+    const result=await db('rpc/utw_ds_team_apply_outcome',{method:'POST',body:JSON.stringify({
      p_season:season,p_date:eventDate,p_team:team,p_mode:mode,p_rows:mapped,
-     p_revision:body.revision,p_actor:String(actor.username||actor.display_name||'R4').slice(0,80)
+     p_revision:body.revision,p_actor:String(actor.username||actor.display_name||'R4').slice(0,80),p_outcome:outcome
     })});
-    await recordAudit(request,'ds_team_'+mode,{season,date:eventDate,team,players:mapped.length,revision:result.revision},false);
+    await recordAudit(request,'ds_team_'+mode,{season,date:eventDate,team,players:mapped.length,revision:result.revision,outcome:result.outcome},false);
     return json(result);
    }
    case 'member_squad':{

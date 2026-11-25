@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {parseDsCsv,matchDsCsvRows} from '../assets/r4-ds-csv.mjs';
+import {parseDsCsv,parseDsCsvOutcome,matchDsCsvRows} from '../assets/r4-ds-csv.mjs';
 import {readFileSync} from 'node:fs';
 import {spawnSync} from 'node:child_process';
 test('DS CSV recognizes exported columns, quoted scores and suffixes',()=>{
@@ -21,4 +21,11 @@ test('direct DS CSV controls use existing reviewed team save',()=>{
  for(const path of ['assets/r4-stats.js','lib/r4-stats-page.mjs']){
   const r=spawnSync(process.execPath,['--check',path],{encoding:'utf8'});assert.equal(r.status,0,r.stderr);
  }
+});
+
+test('DS CSV result is optional and consistent for the whole team',()=>{
+ assert.equal(parseDsCsvOutcome('member_name,points,outcome\nMo,1,Win\nTiny,2,won'),'win');
+ assert.equal(parseDsCsvOutcome('player,score,result\nMo,1,lose'),'loss');
+ assert.equal(parseDsCsvOutcome('player,score\nMo,1'),null);
+ assert.throws(()=>parseDsCsvOutcome('player,score,outcome\nMo,1,win\nTiny,2,loss'));
 });
