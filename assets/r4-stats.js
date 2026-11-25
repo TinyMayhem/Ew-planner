@@ -1,11 +1,12 @@
 import {activeMembers,searchActiveMembers} from './r4-active-members.mjs';
-import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv} from './r4-csv-utils.mjs';
+import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv,isRealDate} from './r4-csv-utils.mjs';
 import {archivedWeeks,vsWeekSlots,vsLeaderboard,vsMissingDaily,weekOf,scoreFlag} from './r4-vs-archive.mjs';
 import {stageForDate,stageRange,trainWarnings,isR4Train,addDays as trainAddDays} from './r4-train-rules.mjs';
 import {trainLabelForDate} from './r4-train-schedule.mjs';
 import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=ds-teams-v1-20261117';
 import {initConductorSearch} from './r4-conductor-search.mjs';
 import {initTrainHistoryChecker} from './r4-train-history-checker.mjs';
+import {parseDsCsv,matchDsCsvRows} from './r4-ds-csv.mjs';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
@@ -406,6 +407,67 @@ const parseDsScore=raw=>{
  const n=Number(match[1])*({k:1e3,m:1e6,b:1e9}[String(match[2]||'').toLowerCase()]||1);
  return Number.isSafeInteger(n)&&n>=0?n:null;
 };
+let dsCsvSequence=0,dsCsvBusy=false;
+const dsCsvStatus=(message,error=false)=>{const e=$('ds-csv-status');e.textContent=message;e.className=error?'stat-flag blocked':'stat-muted'};
+function resetDsCsv(){dsCsvSequence++;$('ds-csv-review').replaceChildren();dsCsvStatus('')}
+function dsCsvTarget(){return {season:state.season,date:$('ds-csv-date').value,team:$('ds-csv-team').value,mode:$('ds-csv-mode').value}}
+const dsCsvTargetKey=t=>JSON.stringify(t);
+async function previewDsCsv(){
+ if(dsCsvBusy)return;
+ resetDsCsv();const seq=dsCsvSequence,target=dsCsvTarget(),file=$('ds-csv-file').files?.[0];
+ if(!state.data||!isRealDate(target.date)||!['a','b'].includes(target.team)||!file){dsCsvStatus('Choose a valid match date, team and CSV file.',true);return}
+ if(file.size>200000){dsCsvStatus('CSV must be under 200 KB.',true);return}
+ dsCsvBusy=true;$('ds-csv-preview').disabled=true;
+ try{
+  const rows=parseDsCsv(await file.text());
+  const params=new URLSearchParams({ds_teams:'1',date:target.date,season:target.season});
+  const response=await fetch('/api/r4-stats?'+params,{credentials:'same-origin',cache:'no-store'});
+  const prior=await response.json();if(!response.ok)throw Error(prior.error||'Could not check saved team results');
+  if(seq!==dsCsvSequence||dsCsvTargetKey(target)!==dsCsvTargetKey(dsCsvTarget()))return;
+  const saved=(prior.teams||[]).find(t=>t.team===target.team);
+  const roster=members(),mapped=matchDsCsvRows(rows,roster,aliases());
+  const root=$('ds-csv-review');
+  root.append(text('h3','Review '+rows.length+' players · Team '+target.team.toUpperCase()+' · '+target.date),
+   text('p','Season: '+$('season').selectedOptions[0]?.textContent+' · '+(target.mode==='replace'?'REPLACE entire team scoreboard':'Add / update scores')+' · '+(saved?.rows?.length||0)+' existing scores','stat-muted'));
+  const selectors=[];
+  for(const row of mapped){
+   const line=text('div',null,'stat-fields'),select=document.createElement('select');
+   select.setAttribute('aria-label','Match '+row.name);
+   select.append(new Option('Choose correct member…',''));
+   for(const m of roster)select.append(new Option(m.display_name,m.id));
+   select.value=row.memberId||'';
+   const label=text('label',row.name+' · '+fmt(row.points)+' points');label.append(select);line.append(label);root.append(line);selectors.push(select);
+  }
+  const save=text('button','Confirm and save DS CSV','stat-button primary');save.type='button';
+  const check=()=>{const ids=selectors.map(s=>s.value);const missing=ids.filter(id=>!id).length,dups=ids.filter(Boolean).length-new Set(ids.filter(Boolean)).size;
+   save.disabled=dsCsvBusy||missing>0||dups>0;
+   dsCsvStatus(missing||dups?missing+' unmatched names · '+dups+' duplicate player selections. Correct before saving.':'All '+ids.length+' rows matched. Review the scores and confirm.',!!(missing||dups));
+  };
+  selectors.forEach(s=>s.addEventListener('change',check));
+  save.onclick=async()=>{
+   if(dsCsvBusy||seq!==dsCsvSequence||dsCsvTargetKey(target)!==dsCsvTargetKey(dsCsvTarget()))return;
+   const ids=selectors.map(s=>s.value);if(ids.some(id=>!id)||new Set(ids).size!==ids.length)return;
+   const currentRoster=members();
+   const payload=ids.map((id,i)=>({name:currentRoster.find(m=>m.id===id)?.display_name,points:rows[i].points}));
+   if(payload.some(r=>!r.name)){dsCsvStatus('Member roster changed. Review the file again.',true);return}
+   if(!confirm((target.mode==='replace'?'Replace the entire scoreboard with ':'Add or update ')+rows.length+' scores for Team '+target.team.toUpperCase()+' on '+target.date+'?'))return;
+   dsCsvBusy=true;save.disabled=true;$('ds-csv-preview').disabled=true;
+   try{
+    await post({action:'ds_team',season_id:target.season,event_date:target.date,team:target.team,mode:target.mode,revision:saved?.revision??0,rows:payload});
+    $('ds-csv-file').value='';resetDsCsv();$('ds-date').value=target.date;
+    await dsTeamBoards();void loadDsArchive();void candidates();
+    dsCsvStatus('Saved '+rows.length+' scores for Team '+target.team.toUpperCase()+' · '+target.date+'.');
+   }catch(e){dsCsvStatus(e.message+' Review the CSV again before retrying.',true);save.disabled=true}
+   finally{dsCsvBusy=false;$('ds-csv-preview').disabled=false}
+  };
+  root.append(save);dsCsvBusy=false;check();
+ }catch(e){if(seq===dsCsvSequence)dsCsvStatus(e.message,true)}
+ finally{dsCsvBusy=false;$('ds-csv-preview').disabled=false}
+}
+function downloadDsCsvTemplate(){
+ const url=URL.createObjectURL(new Blob(['member_name,points\r\n'],{type:'text/csv;charset=utf-8'}));
+ const a=document.createElement('a');a.href=url;a.download='utw-ds-results-template.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
 async function saveManualDsTeam(){
  const date=$('ds-date').value,team=$('ds-manual-team').value,id=$('ds-manual-member').value;
  const points=parseDsScore($('ds-manual-points').value);
@@ -893,6 +955,10 @@ function wire(){
  $('season-report').addEventListener('click',async()=>{try{const response=await fetch('/api/r4-stats?report=1&season='+encodeURIComponent(state.season),{cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'Could not generate report');const columns=['member_name','vs_daily_total','vs_weekly_total','donations_total','recorded_vs_days','recorded_vs_weeks','trains_awarded'];const csv=[columns.join(','),...(data.rows||[]).map(row=>columns.map(k=>'\"'+String(row[k]??'').replaceAll('"','""')+'\"').join(','))].join('\r\n');const object=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=object;a.download='utw-season-report-'+state.season+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(object),1500);notice('Season report downloaded.')}catch(e){notice(e.message,true)}});
  $('week').addEventListener('change',()=>{$('train-date').value=$('week').value;$('ds-date').value=$('week').value;load()});
  $('ds-date').addEventListener('change',()=>void dsTeamBoards());
+ $('ds-csv-date').value=today;
+ $('ds-csv-preview').addEventListener('click',()=>void previewDsCsv());
+ $('ds-csv-template').addEventListener('click',downloadDsCsvTemplate);
+ for(const id of ['ds-csv-date','ds-csv-team','ds-csv-mode','ds-csv-file','season'])$(id).addEventListener('change',resetDsCsv);
  $('ds-archive-refresh').addEventListener('click',()=>void loadDsArchive());
  for(const id of ['ds-archive-from','ds-archive-to','ds-archive-team','ds-archive-player'])$(id).addEventListener('input',renderDsArchive);
  $('ds-archive-reset').addEventListener('click',()=>{for(const id of ['ds-archive-from','ds-archive-to','ds-archive-team','ds-archive-player'])$(id).value='';renderDsArchive()});
