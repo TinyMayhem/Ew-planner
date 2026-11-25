@@ -614,21 +614,11 @@ export async function POST(request){
     if(conflicts.length)return json({error:conflicts.map(c=>c.name+' already belongs to '+c.member+(c.archived?' (archived: restore the original record)':' (active member)')).join('; '),conflicts},409);
     const memberRows=fresh.map(({id,display_name})=>({id,display_name}));
     const aliasRows=fresh.flatMap(m=>m.aliases);
-    await insert('utw_stat_members',memberRows);
-    try{await insert('utw_stat_aliases',aliasRows)}
-    catch(e){
-     // A unique-key rejection rolls back the alias insert as a statement.
-     // Only remove our newly generated member IDs if no aliases were linked.
-     if(/duplicate key|unique constraint/i.test(e.message)){
-      for(const m of fresh){
-       const linked=await list('utw_stat_aliases',{select:'member_id',member_id:'eq.'+m.id,limit:'1'});
-       if(Array.isArray(linked)&&!linked.length)await del('utw_stat_members',{id:'eq.'+m.id});
-      }
-     }
-     throw e;
-    }
-    await recordAudit(request,'create_members',{members:memberRows.map(m=>({...m,nicknames:fresh.find(x=>x.id===m.id).aliases.map(a=>a.alias)})),count:fresh.length},false);
-    return json({ok:true,count:fresh.length,members:memberRows},201);
+    const saved=await db('rpc/utw_create_members',{method:'POST',body:JSON.stringify({
+     p_members:memberRows,p_aliases:aliasRows,p_actor:actor.username||'UTW R4',p_actor_id:actor.id||null
+    })});
+    if(!saved?.ok||saved.count!==fresh.length)throw Error('Could not confirm roster save');
+    return json(saved,201);
    }
    case 'import':return await importCsv(body,request);
    case 'archive_member':
