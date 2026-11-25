@@ -570,6 +570,66 @@ export async function POST(request){
     await recordAudit(request,'member_thp_'+mode,{recorded_on:date,entries:rows.length,entry_source:source},false);
     return json({ok:true,records:saved,record:saved[0]});
    }
+   case 'create_members':{
+    const actor=await sessionUser(request);
+    if(!actor||actor.role==='von')return json({error:'UTW R4 access required'},403);
+    if(!Array.isArray(body.members)||body.members.length<1||body.members.length>100)
+     return json({error:'Enter 1 to 100 new members at a time.'},400);
+    const fresh=[],claimed=new Set();
+    for(const item of body.members){
+     if(typeof item?.name!=='string'||!Array.isArray(item.aliases)||item.aliases.length>10||
+      [item.name,...item.aliases].some(v=>typeof v!=='string'||!v.trim()||v.trim().length>60||key(v).length>100))
+      return json({error:'Enter a valid member name and up to 10 nicknames (1 to 60 characters each).'},400);
+     const display=name(item.name),memberId=randomUUID(),labels=[display,...item.aliases.map(name)];
+     const unique=[];
+     for(const label of labels){
+      const k=key(label);
+      if(unique.some(a=>a.alias_key===k))continue;
+      if(claimed.has(k))return json({error:'Duplicate name or nickname in this batch: '+label},409);
+      claimed.add(k);unique.push({alias_key:k,alias:label,member_id:memberId});
+     }
+     fresh.push({id:memberId,display_name:display,aliases:unique});
+    }
+    const pages=async(table,select,order)=>{
+     const all=[];
+     for(let offset=0;offset<100000;offset+=500){
+      const rows=await list(table,{select,order,limit:'500',offset:String(offset)});
+      if(!Array.isArray(rows))throw Error('Member directory unavailable');
+      all.push(...rows);if(rows.length<500)return all;
+     }
+     throw Error('Member directory exceeds the safety limit');
+    };
+    const [members,aliases]=await Promise.all([
+     pages('utw_stat_members','id,display_name,archived_at','id.asc'),
+     pages('utw_stat_aliases','alias_key,member_id','alias_key.asc')
+    ]);
+    const owners=new Map(members.map(m=>[m.id,m]));
+    const existing=new Map(members.map(m=>[key(m.display_name),m]));
+    for(const a of aliases)existing.set(a.alias_key,owners.get(a.member_id));
+    const conflicts=[];
+    for(const m of fresh)for(const a of m.aliases){
+     const owner=existing.get(a.alias_key);
+     if(owner)conflicts.push({name:a.alias,member:owner.display_name,archived:!!owner.archived_at});
+    }
+    if(conflicts.length)return json({error:conflicts.map(c=>c.name+' already belongs to '+c.member+(c.archived?' (archived: restore the original record)':' (active member)')).join('; '),conflicts},409);
+    const memberRows=fresh.map(({id,display_name})=>({id,display_name}));
+    const aliasRows=fresh.flatMap(m=>m.aliases);
+    await insert('utw_stat_members',memberRows);
+    try{await insert('utw_stat_aliases',aliasRows)}
+    catch(e){
+     // A unique-key rejection rolls back the alias insert as a statement.
+     // Only remove our newly generated member IDs if no aliases were linked.
+     if(/duplicate key|unique constraint/i.test(e.message)){
+      for(const m of fresh){
+       const linked=await list('utw_stat_aliases',{select:'member_id',member_id:'eq.'+m.id,limit:'1'});
+       if(Array.isArray(linked)&&!linked.length)await del('utw_stat_members',{id:'eq.'+m.id});
+      }
+     }
+     throw e;
+    }
+    await recordAudit(request,'create_members',{members:memberRows.map(m=>({...m,nicknames:fresh.find(x=>x.id===m.id).aliases.map(a=>a.alias)})),count:fresh.length},false);
+    return json({ok:true,count:fresh.length,members:memberRows},201);
+   }
    case 'import':return await importCsv(body,request);
    case 'archive_member':
     case 'restore_member':{
