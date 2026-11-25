@@ -3,10 +3,10 @@ import {csvForReport,guessColumn,targetFromCsvDate,validTarget,rowsFromCsv,isRea
 import {archivedWeeks,vsWeekSlots,vsLeaderboard,vsMissingDaily,weekOf,scoreFlag} from './r4-vs-archive.mjs';
 import {stageForDate,stageRange,trainWarnings,isR4Train,addDays as trainAddDays} from './r4-train-rules.mjs';
 import {trainLabelForDate} from './r4-train-schedule.mjs';
-import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=ds-teams-v1-20261117';
+import {initScreenshotWizard} from './r4-screenshot-wizard.mjs?version=ds-podium-team-20261124';
 import {initConductorSearch} from './r4-conductor-search.mjs';
 import {initTrainHistoryChecker} from './r4-train-history-checker.mjs';
-import {parseDsCsv,matchDsCsvRows} from './r4-ds-csv.mjs';
+import {parseDsCsv,parseDsCsvOutcome,matchDsCsvRows} from './r4-ds-csv.mjs';
 
 (()=>{'use strict';
 const $=id=>document.getElementById(id), fmt=n=>Number(n).toLocaleString('en-CA');
@@ -277,12 +277,22 @@ function memberFields(){
  for(const id of ['merge-from','merge-to','alias-member','ds-first','ds-second','ds-third','ds-manual-member','train-member','train-vip','exception-member'])opt(id,id==='ds-second'||id==='ds-third'||id==='ds-manual-member'||id==='train-member'||id==='train-vip');
  directory();
 }
+const dsOutcomeLabel=v=>v==='win'?'Win':v==='loss'?'Loss':'Result not recorded';
+const dsPodiumTeamLabel=v=>v==='a'?'Team A':v==='b'?'Team B':'Team not recorded';
+function podiumTeamControl(p){
+ const wrap=text('div',null,'stat-inline'),label=text('label','Podium team'),select=document.createElement('select');
+ for(const [value,title] of [['','Not recorded'],['a','Team A'],['b','Team B']])select.append(new Option(title,value));
+ select.value=p.team||'';label.append(select);
+ const save=text('button','Save team','stat-button');save.type='button';
+ save.onclick=()=>action(()=>post({action:'ds_podium_team',id:p.id,team:select.value||null}),'Podium team updated.');
+ wrap.append(label,save);return wrap;
+}
 function dsHistory(){
  const root=$('ds-history');root.replaceChildren();const data=state.data.ds;if(!data.length){root.append(elEmpty('No DS results uploaded this week.'));return}
  for(const d of data){const card=text('article',null,'stat-row');
-  card.append(text('strong',d.event_date+(d.opponent?' · vs '+d.opponent:'')));
+  card.append(text('strong',d.event_date+' · '+dsPodiumTeamLabel(d.team)+(d.opponent?' · vs '+d.opponent:'')));
   const ol=text('p','🥇 '+memberName(d.first_member)+(d.second_member?'  ·  🥈 '+memberName(d.second_member):'')+(d.third_member?'  ·  🥉 '+memberName(d.third_member):''));card.append(ol);
-  if(d.notes)card.append(text('p',d.notes,'stat-muted'));
+  if(d.notes)card.append(text('p',d.notes,'stat-muted'));card.append(podiumTeamControl(d));
   const remove=text('button','Delete DS record','stat-button');remove.type='button';remove.addEventListener('click',()=>{if(confirm('Remove Desert Storm result from '+d.event_date+'? The owner can undo this.'))action(()=>post({action:'delete_ds',id:d.id}),'DS result removed and audited.')});card.append(remove);
   const a=text('a','Open original screenshot');a.href='/api/r4-stats?image='+encodeURIComponent(d.id);a.target='_blank';a.rel='noopener';const image=document.createElement('img');image.src=a.href;image.alt='DS evidence screenshot';image.loading='lazy';image.className='stat-evidence';a.prepend(image);card.append(a);root.append(card);
  }
@@ -312,7 +322,7 @@ function renderDsArchive(){
  const dates=new Map();
  const group=date=>{if(!dates.has(date))dates.set(date,{teams:[],podium:[]});return dates.get(date)};
  for(const board of dsArchiveData.teams||[])if(dateMatch(board.event_date)&&team!=='legacy'&&(!team||board.team===team)&&(!query||board.rows.some(row=>playerMatch(row.member_id))))group(board.event_date).teams.push(board);
- for(const podium of dsArchiveData.podium||[])if(dateMatch(podium.event_date)&&(!team||team==='legacy')&&(!query||[podium.first_member,podium.second_member,podium.third_member].filter(Boolean).some(playerMatch)))group(podium.event_date).podium.push(podium);
+ for(const podium of dsArchiveData.podium||[])if(dateMatch(podium.event_date)&&(!team||team==='legacy'||podium.team===team)&&(!query||[podium.first_member,podium.second_member,podium.third_member].filter(Boolean).some(playerMatch)))group(podium.event_date).podium.push(podium);
  $('ds-archive-summary').textContent=dates.size+' match date'+(dates.size===1?'':'s')+(query?' matching player search':'')+' · selected season';
  for(const [date,record] of [...dates].sort((a,b)=>b[0].localeCompare(a[0]))){
   const card=text('article',null,'stat-card');card.append(text('h3',date));
@@ -322,26 +332,26 @@ function renderDsArchive(){
    if(!board){if(!query)card.append(text('p','Team '+key.toUpperCase()+': not uploaded','stat-muted'));continue}
    const ranked=[...board.rows].sort((a,b)=>Number(b.points)-Number(a.points));
    const detail=text('details');detail.open=!!query;
-   detail.append(text('summary','Team '+key.toUpperCase()+' · '+ranked.length+' scored members'+(!ranked.length?' (cleared)':'')));
+   detail.append(text('summary','Team '+key.toUpperCase()+' · '+dsOutcomeLabel(board.outcome)+' · '+ranked.length+' scored members'+(!ranked.length?' (cleared)':'')));
    detail.append(text('p','Last updated by '+board.updated_by+' · '+dsArchiveTime(board.updated_at)+' · revision '+board.revision,'stat-muted'));
    ranked.forEach((row,index)=>{if(!playerMatch(row.member_id))return;const line=text('div',null,'stat-row');line.append(text('strong','#'+(index+1)+' '+memberName(row.member_id)),text('span',fmt(row.points)+' pts','stat-muted'));detail.append(line)});
    const download=text('button','Download Team '+key.toUpperCase()+' CSV','stat-button');
    download.type='button';download.onclick=()=>{
-    const csv=[['member_name','points'],...ranked.map(row=>[memberName(row.member_id),row.points])].map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\r\n');
+    const csv=[['member_name','points','outcome'],...ranked.map(row=>[memberName(row.member_id),row.points,board.outcome||''])].map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\r\n');
     const url=URL.createObjectURL(new Blob(['\uFEFF',csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='utw-ds-team-'+key+'-'+date+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
    };
    const edit=text('button','View / edit Team '+key.toUpperCase(),'stat-button');edit.type='button';edit.onclick=()=>{$('ds-date').value=date;$('ds-manual-team').value=key;void dsTeamBoards();$('ds-team-boards').scrollIntoView({block:'start',behavior:'smooth'})};
    detail.append(download,edit);card.append(detail);
   }
   for(const p of record.podium){
-   const row=text('div',null,'stat-row');row.append(text('strong','Legacy podium'+(p.opponent?' · vs '+p.opponent:'')),text('p',[p.first_member,p.second_member,p.third_member].map((id,i)=>id?'#'+(i+1)+' '+memberName(id):'').filter(Boolean).join(' · ')),text('small','Saved '+dsArchiveTime(p.created_at),'stat-muted'));
-   const a=text('a','Open original screenshot','stat-button');a.href='/api/r4-stats?image='+encodeURIComponent(p.id);a.target='_blank';a.rel='noopener';row.append(a);card.append(row);
+   const row=text('div',null,'stat-row');row.append(text('strong','Legacy podium · '+dsPodiumTeamLabel(p.team)+(p.opponent?' · vs '+p.opponent:'')),text('p',[p.first_member,p.second_member,p.third_member].map((id,i)=>id?'#'+(i+1)+' '+memberName(id):'').filter(Boolean).join(' · ')),text('small','Saved '+dsArchiveTime(p.created_at),'stat-muted'));
+   const a=text('a','Open original screenshot','stat-button');a.href='/api/r4-stats?image='+encodeURIComponent(p.id);a.target='_blank';a.rel='noopener';row.append(a,podiumTeamControl(p));card.append(row);
   }
   root.append(card);
  }
  if(!dates.size)root.append(elEmpty('No saved DS matches found for these filters.'));
  const changes=(dsArchiveData.changes||[]).filter(c=>dateMatch(c.event_date)&&team!=='legacy'&&(!team||c.team===team)&&(!query||dates.has(c.event_date)&&dates.get(c.event_date).teams.some(t=>t.team===c.team)));
- for(const c of changes){const row=text('div',null,'stat-row');row.append(text('strong',c.event_date+' · Team '+c.team.toUpperCase()+' · '+c.action),text('small',c.actor+' · '+dsArchiveTime(c.created_at),'stat-muted'));activity.append(row)}
+ for(const c of changes){const row=text('div',null,'stat-row');row.append(text('strong',c.event_date+' · Team '+c.team.toUpperCase()+' · '+c.action+(c.after_outcome?' · '+dsOutcomeLabel(c.after_outcome):'')),text('small',c.actor+' · '+dsArchiveTime(c.created_at),'stat-muted'));activity.append(row)}
  if(!changes.length)activity.append(elEmpty('No matching team edit activity.'));
 }
 let dsBoardSequence=0;
@@ -359,7 +369,7 @@ async function dsTeamBoards(){
   for(const team of ['a','b']){
    const saved=(data.teams||[]).find(x=>x.team===team);
    const card=text('article',null,'stat-card ds-team-card');
-   card.append(text('h3','Team '+team.toUpperCase()+' · '+(saved?.rows?.length||0)+' scored members'));
+   card.append(text('h3','Team '+team.toUpperCase()+' · '+dsOutcomeLabel(saved?.outcome)+' · '+(saved?.rows?.length||0)+' scored members'));
    if(saved){
     card.append(text('p','Updated by '+saved.updated_by+' · Revision '+saved.revision,'stat-muted'));
     const ranked=[...saved.rows].sort((a,b)=>Number(b.points)-Number(a.points));
@@ -374,8 +384,8 @@ async function dsTeamBoards(){
     const download=text('button','Download Team '+team.toUpperCase()+' CSV','stat-button');
     download.type='button';
     download.onclick=()=>{
-     const csv=[['member_name','points'],...[...saved.rows].sort((a,b)=>Number(b.points)-Number(a.points))
-      .map(x=>[memberName(x.member_id),x.points])]
+     const csv=[['member_name','points','outcome'],...[...saved.rows].sort((a,b)=>Number(b.points)-Number(a.points))
+       .map(x=>[memberName(x.member_id),x.points,saved.outcome||''])]
       .map(row=>row.map(value=>'"'+String(value).replaceAll('"','""')+'"').join(',')).join('\r\n');
      const url=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
      const link=document.createElement('a');link.href=url;link.download='utw-ds-team-'+team+'-'+saved.event_date+'.csv';
@@ -410,7 +420,7 @@ const parseDsScore=raw=>{
 let dsCsvSequence=0,dsCsvBusy=false;
 const dsCsvStatus=(message,error=false)=>{const e=$('ds-csv-status');e.textContent=message;e.className=error?'stat-flag blocked':'stat-muted'};
 function resetDsCsv(){dsCsvSequence++;$('ds-csv-review').replaceChildren();dsCsvStatus('')}
-function dsCsvTarget(){return {season:state.season,date:$('ds-csv-date').value,team:$('ds-csv-team').value,mode:$('ds-csv-mode').value}}
+function dsCsvTarget(){return {season:state.season,date:$('ds-csv-date').value,team:$('ds-csv-team').value,mode:$('ds-csv-mode').value,outcome:$('ds-csv-outcome').value}}
 const dsCsvTargetKey=t=>JSON.stringify(t);
 async function previewDsCsv(){
  if(dsCsvBusy)return;
@@ -419,16 +429,18 @@ async function previewDsCsv(){
  if(file.size>200000){dsCsvStatus('CSV must be under 200 KB.',true);return}
  dsCsvBusy=true;$('ds-csv-preview').disabled=true;
  try{
-  const rows=parseDsCsv(await file.text());
+  const raw=await file.text(),rows=parseDsCsv(raw),csvOutcome=parseDsCsvOutcome(raw);
+  if(target.outcome&&csvOutcome&&target.outcome!==csvOutcome)throw Error('CSV result conflicts with selected match result. Choose the matching result or leave the selection blank.');
   const params=new URLSearchParams({ds_teams:'1',date:target.date,season:target.season});
   const response=await fetch('/api/r4-stats?'+params,{credentials:'same-origin',cache:'no-store'});
   const prior=await response.json();if(!response.ok)throw Error(prior.error||'Could not check saved team results');
   if(seq!==dsCsvSequence||dsCsvTargetKey(target)!==dsCsvTargetKey(dsCsvTarget()))return;
   const saved=(prior.teams||[]).find(t=>t.team===target.team);
+  const outcome=target.outcome||csvOutcome||null;
   const roster=members(),mapped=matchDsCsvRows(rows,roster,aliases());
   const root=$('ds-csv-review');
   root.append(text('h3','Review '+rows.length+' players · Team '+target.team.toUpperCase()+' · '+target.date),
-   text('p','Season: '+$('season').selectedOptions[0]?.textContent+' · '+(target.mode==='replace'?'REPLACE entire team scoreboard':'Add / update scores')+' · '+(saved?.rows?.length||0)+' existing scores','stat-muted'));
+   text('p','Season: '+$('season').selectedOptions[0]?.textContent+' · '+(target.mode==='replace'?'REPLACE entire team scoreboard':'Add / update scores')+' · '+(saved?.rows?.length||0)+' existing scores · '+dsOutcomeLabel(outcome||saved?.outcome),'stat-muted'));
   const selectors=[];
   for(const row of mapped){
    const line=text('div',null,'stat-fields'),select=document.createElement('select');
@@ -453,7 +465,7 @@ async function previewDsCsv(){
    if(!confirm((target.mode==='replace'?'Replace the entire scoreboard with ':'Add or update ')+rows.length+' scores for Team '+target.team.toUpperCase()+' on '+target.date+'?'))return;
    dsCsvBusy=true;save.disabled=true;$('ds-csv-preview').disabled=true;
    try{
-    await post({action:'ds_team',season_id:target.season,event_date:target.date,team:target.team,mode:target.mode,revision:saved?.revision??0,rows:payload});
+    await post({action:'ds_team',season_id:target.season,event_date:target.date,team:target.team,mode:target.mode,revision:saved?.revision??0,rows:payload,outcome});
     $('ds-csv-file').value='';resetDsCsv();$('ds-date').value=target.date;
     await dsTeamBoards();void loadDsArchive();void candidates();
     dsCsvStatus('Saved '+rows.length+' scores for Team '+target.team.toUpperCase()+' · '+target.date+'.');
@@ -465,7 +477,7 @@ async function previewDsCsv(){
  finally{dsCsvBusy=false;$('ds-csv-preview').disabled=false}
 }
 function downloadDsCsvTemplate(){
- const url=URL.createObjectURL(new Blob(['member_name,points\r\n'],{type:'text/csv;charset=utf-8'}));
+ const url=URL.createObjectURL(new Blob(['member_name,points,outcome\r\n'],{type:'text/csv;charset=utf-8'}));
  const a=document.createElement('a');a.href=url;a.download='utw-ds-results-template.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 async function saveManualDsTeam(){
@@ -958,7 +970,7 @@ function wire(){
  $('ds-csv-date').value=today;
  $('ds-csv-preview').addEventListener('click',()=>void previewDsCsv());
  $('ds-csv-template').addEventListener('click',downloadDsCsvTemplate);
- for(const id of ['ds-csv-date','ds-csv-team','ds-csv-mode','ds-csv-file','season'])$(id).addEventListener('change',resetDsCsv);
+ for(const id of ['ds-csv-date','ds-csv-team','ds-csv-mode','ds-csv-outcome','ds-csv-file','season'])$(id).addEventListener('change',resetDsCsv);
  $('ds-archive-refresh').addEventListener('click',()=>void loadDsArchive());
  for(const id of ['ds-archive-from','ds-archive-to','ds-archive-team','ds-archive-player'])$(id).addEventListener('input',renderDsArchive);
  $('ds-archive-reset').addEventListener('click',()=>{for(const id of ['ds-archive-from','ds-archive-to','ds-archive-team','ds-archive-player'])$(id).value='';renderDsArchive()});
