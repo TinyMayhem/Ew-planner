@@ -113,9 +113,8 @@
         const match=r4Members.find(m=>[m.name,...(m.formerNames||[])].some(n=>String(n).trim().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase()===normalized));
         if(match)input.value=match.name;
         else{
-          const previous=new Option('Review previous name: '+value,value);
-          previous.disabled=true;
-          input.append(previous);input.value=value;
+          wrap.append(el('small','stat-muted','Previous assignment: '+value+' (no longer eligible). Choose an active R4 or leave unassigned.'));
+          input.value='';
         }
       }
       wrap.append(input);parent.append(wrap);return input;

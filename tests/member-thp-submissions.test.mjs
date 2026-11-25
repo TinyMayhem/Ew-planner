@@ -27,8 +27,10 @@ async function fixture(fn){
    }
    return Response.json([{id:'afea1c74-46cc-4f0b-9af3-66913e6d5d10',status:'pending',submitted_name:'Baba',submitted_at:'2026-11-19T00:00:00Z',measurement_date:'2026-11-18',squad_type:'air',squad_power:52780000,hero_power:159890405}]);
   }
-  if(path.endsWith('/utw_duel_backup_members'))return Response.json([{source_member_id:'54',name:'Movich Mo'},{source_member_id:'33',name:'CalllMeBaba'}]);
-  if(path.endsWith('/utw_duel_backup_aliases'))return Response.json([{source_member_id:'33',alias:'Baba'}]);
+  if(path.endsWith('/utw_stat_members'))return Response.json([{id:'active',display_name:'CalllMeBaba',archived_at:null},{id:'former',display_name:'Former Player',archived_at:'2026-11-22T00:00:00Z'}]);
+  if(path.endsWith('/utw_stat_aliases'))return Response.json([{member_id:'former',alias:'Former Alias',alias_key:'former alias'}]);
+  if(path.endsWith('/utw_duel_backup_members'))return Response.json([{source_member_id:'54',name:'Movich Mo'},{source_member_id:'33',name:'CalllMeBaba'},{source_member_id:'99',name:'Different former name'}]);
+  if(path.endsWith('/utw_duel_backup_aliases'))return Response.json([{source_member_id:'33',alias:'Baba'},{source_member_id:'99',alias:'Former Alias'}]);
   if(path.endsWith('/rpc/utw_r4_thp_latest'))return Response.json([]);
   if(path.endsWith('/utw_r4_member_squad_profiles'))return Response.json([]);
   if(path.endsWith('/rpc/utw_review_member_thp'))return Response.json({id:'afea1c74-46cc-4f0b-9af3-66913e6d5d10',status:'approved'});
@@ -116,6 +118,8 @@ test('THP review is R4-only and records an explicit member match',()=>fixture(as
  assert.equal(reviewed.status,200);
  const data=await reviewed.json();
  assert.equal(data.pending,1);
+ assert.ok(!data.roster.some(m=>m.source_member_id==='99'));
+ assert.ok(!data.aliases.some(a=>a.source_member_id==='99'));
  const body={action:'review',id:'afea1c74-46cc-4f0b-9af3-66913e6d5d10',decision:'approved',
   sourceMemberId:'33',heroPower:'159.98',squadType:'air',squadPower:'58.02',reviewNote:'Matched to Baba'};
  const res=await POST(new Request(site+'/api/thp-update',{method:'POST',headers:{Origin:site,Cookie:cookie,'Content-Type':'application/json'},body:JSON.stringify(body)}));

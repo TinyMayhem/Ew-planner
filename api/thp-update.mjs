@@ -1,3 +1,4 @@
+import {filterExternalRoster} from '../assets/r4-active-members.mjs';
 import {randomUUID,createHash} from 'node:crypto';
 import {validSession} from '../lib/buddies.mjs';
 import {authorizedAccess} from './r4-planner.mjs';
@@ -40,12 +41,16 @@ async function limited(request,action,limit){
  if(!Number.isInteger(count)||count>limit)throw Error('Too many attempts. Try again in 15 minutes.');
 }
 async function getRoster(){
- const [members,aliases]=await Promise.all([
+ const [members,aliases,directory,deskAliases]=await Promise.all([
   list('utw_duel_backup_members',{select:'source_member_id,name',order:'name.asc',limit:'1000'}),
-  list('utw_duel_backup_aliases',{select:'source_member_id,alias',limit:'5000'})
+  list('utw_duel_backup_aliases',{select:'source_member_id,alias',limit:'5000'}),
+  list('utw_stat_members',{select:'id,display_name,archived_at',limit:'1000'}),
+  list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'5000'})
  ]);
- if(!Array.isArray(members)||!Array.isArray(aliases))throw Error('Alliance Duel member names unavailable');
- return {members,aliases};
+ if(![members,aliases,directory,deskAliases].every(Array.isArray))throw Error('Alliance Duel member names unavailable');
+ const current=filterExternalRoster(members,directory,deskAliases,aliases);
+ const ids=new Set(current.map(m=>String(m.source_member_id)));
+ return {members:current,aliases:aliases.filter(a=>ids.has(String(a.source_member_id)))};
 }
 async function reviewAllowed(request){
  if(!await authorizedAccess(request))return false;
@@ -150,6 +155,10 @@ export async function POST(request){
    if(body.decision==='approved'&&(!/^[A-Za-z0-9_-]{1,100}$/.test(body.sourceMemberId||'')||
     pThp===null||pSquad===null||!['tank','air','missile'].includes(body.squadType)))
     return json({error:'Select the correct existing member and verify both THP and squad information'},400);
+   if(body.decision==='approved'){
+    const roster=await getRoster();
+    if(!roster.members.some(m=>String(m.source_member_id)===String(body.sourceMemberId)))return json({error:'Choose an active member. This player may have been archived.'},409);
+   }
    const note=String(body.reviewNote||'').trim();
    if(note.length>500)return json({error:'Review note must be under 500 characters'},400);
    const result=await db('rpc/utw_review_member_thp',{

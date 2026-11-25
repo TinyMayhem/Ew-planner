@@ -129,7 +129,7 @@ function renderMembers(){
 }
 async function refreshSnapshot(){
  const date=state.date,sequence=++requestSequence;
- const data=await requestJson('/api/r4-stats?member_thp=1&date='+encodeURIComponent(date));
+ const data=await requestJson('/api/r4-stats?member_thp=1&active_roster=1&date='+encodeURIComponent(date));
  if(sequence!==requestSequence)return;
  state.records=data.records||[];state.latest=data.latest||[];state.squads=data.squads||[];state.ready=true;
  renderMembers();
@@ -138,16 +138,17 @@ async function refreshSnapshot(){
 async function refreshRoster(){
  const week=$('week')?.value;
  if(!week)return;
- const result=await requestJson('/api/r4-stats?duel_scores=1&week='+encodeURIComponent(week));
+ const result=await requestJson('/api/r4-stats?duel_scores=1&active_roster=1&week='+encodeURIComponent(week));
  state.roster=Array.isArray(result.roster)?result.roster:[];
  state.source=result.source||'Alliance Duel';
+ sourceRoster.clear();
  for(const person of state.roster)sourceRoster.set(String(person.id),person);
 }
 async function refreshAll(){
  $('thp-source').textContent='Loading dated THP and VS roster…';
  const [snapshot,roster]=await Promise.allSettled([refreshSnapshot(),refreshRoster()]);
- if(snapshot.status==='rejected'){state.ready=false;$('thp-source').textContent='THP storage unavailable: '+snapshot.reason.message}
- if(roster.status==='rejected')$('thp-source').textContent='VS member names unavailable ('+roster.reason.message+'). Saved THP entries still work.';
+ if(snapshot.status==='rejected'){state.ready=false;state.records=[];state.latest=[];state.squads=[];$('thp-source').textContent='THP storage unavailable: '+snapshot.reason.message}
+ if(roster.status==='rejected'){state.roster=[];sourceRoster.clear();$('thp-source').textContent='VS member names unavailable ('+roster.reason.message+'). Saved THP entries still work.';}
  renderMembers();renderFiles();
 }
 function addOption(select,value,label){select.append(new Option(label,String(value)))}

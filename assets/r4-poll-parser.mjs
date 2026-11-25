@@ -45,6 +45,7 @@ const nameSimilarity=(a,b)=>{
  return x&&y?Math.max(0,1-levenshtein(x,y)/Math.max(x.length,y.length)):0;
 };
 export function rankPollMemberMatches(raw,members=[],aliases=[]){
+ members=members.filter(m=>m&&!m.archived_at);
  const candidates=pollNameCandidates(raw);
  const namesById=new Map(members.map(m=>[String(m.id),[m.display_name]]));
  for(const a of aliases){

@@ -38,15 +38,15 @@ function choose(id){
 function draw(){
  const selector=$('nickname-member');
  const keep=selected;selector.replaceChildren(new Option('Choose member…',''));
- for(const member of members.filter(m=>!m.archived_at||m.id===keep))selector.append(new Option(member.display_name,member.id));
- selector.value=members.some(m=>m.id===keep)?keep:'';
+ for(const member of activeMembers(members))selector.append(new Option(member.display_name,member.id));
+ selector.value=activeMembers(members).some(m=>m.id===keep)?keep:'';
  const other=$('nickname-existing-member'),prior=other.value;
  other.replaceChildren(new Option('Choose an existing name…',''));
  for(const member of activeMembers(members).filter(m=>m.id!==keep)){
   const known=namesOf(member.id).filter(a=>normalized(a.alias)!==normalized(member.display_name)).map(a=>a.alias);
   other.append(new Option(member.display_name+(known.length?' (also: '+known.join(', ')+')':''),member.id));
  }
- other.value=members.some(m=>m.id===prior&&m.id!==keep)?prior:'';
+ other.value=activeMembers(members).some(m=>m.id===prior&&m.id!==keep)?prior:'';
  const restoring=Boolean(members.find(m=>m.id===keep)?.archived_at);
  $('nickname-link-existing').disabled=!keep||restoring;
  $('nickname-add').disabled=restoring;
@@ -55,12 +55,13 @@ function draw(){
  else{
   const member=members.find(m=>m.id===keep);
   const rows=namesOf(keep);
+  if(restoring)linked.append(n('p','Archived record: '+member.display_name+'. Restore this member before making changes.','stat-muted'));
   const ordered=rows.slice().sort((a,b)=>Number(normalized(b.alias)===normalized(member.display_name))-Number(normalized(a.alias)===normalized(member.display_name))||a.alias.localeCompare(b.alias));
   for(const entry of ordered){
    const primary=normalized(entry.alias)===normalized(member.display_name);
    const chip=n('div',null,'nickname-alias'+(primary?' main':''));
    chip.append(n('span',entry.alias+(primary?' (main name)':'')));
-   if(!primary){
+   if(!primary&&!restoring){
     const setCurrent=n('button','Make current','stat-button');
     setCurrent.type='button';
     setCurrent.title='Show '+entry.alias+' as this member’s main name in all R4 reports';

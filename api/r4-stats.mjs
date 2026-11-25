@@ -9,7 +9,7 @@ import {GET as nicknamesPage} from '../lib/r4-nicknames-page.mjs';
 import {GET as pollsPage} from '../lib/r4-polls-page.mjs';
 import {GET as pollsGet,POST as pollsPost} from '../lib/r4-polls-handler.mjs';
 import {buildMemberPerformance} from '../lib/member-performance.mjs';
-import {activeMembers} from '../assets/r4-active-members.mjs';
+import {activeMembers,filterExternalRoster} from '../assets/r4-active-members.mjs';
 import {stageRange,stageForDate,weekStart} from '../assets/r4-train-rules.mjs';
 import {buildTrainAdvice,resolveNames,isTopDonationTrain} from '../lib/train-advice.mjs';
 import {currentTrainR4Ids} from '../lib/r4-train-roster.mjs';
@@ -153,7 +153,7 @@ export async function GET(request){
      recorded_on:'eq.'+at,order:'member_name.asc',limit:'1000'
     }),
     db('rpc/utw_r4_thp_latest',{method:'POST',body:JSON.stringify({p_date:latestAsOf})}),
-    list('utw_stat_members',{select:'id,display_name',limit:'1000'}),
+    list('utw_stat_members',{select:'id,display_name,archived_at',limit:'1000'}),
     list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'3000'}),
     list('utw_r4_member_squad_profiles',{select:'source_member_id,member_name,squad_type,squad_power,updated_at,updated_by',order:'member_name.asc',limit:'1000'})
    ]);
@@ -166,7 +166,12 @@ export async function GET(request){
     mapped.set(deskId,{member_id:deskId,source_member_id:r.source_member_id,name:r.member_name,thp:r.thp,recorded_on:r.recorded_on});
    }
    for(const id of conflicts)mapped.delete(id);
-   return json({date:at,latestAsOf,records,latest,squads,mapped:[...mapped.values()],unmatched,
+   const activeOnly=q.get('active_roster')==='1';
+   const externalAliases=activeOnly?await list('utw_duel_backup_aliases',{select:'source_member_id,alias',limit:'5000'}):[];
+   const allThpRows=[...records,...latest,...squads];
+   const activeSourceIds=new Set(filterExternalRoster(allThpRows,members,aliases,externalAliases).map(r=>String(r.source_member_id)));
+   const currentRows=rows=>activeOnly?rows.filter(r=>activeSourceIds.has(String(r.source_member_id))):rows;
+   return json({date:at,latestAsOf,records:currentRows(records),latest:currentRows(latest),squads:currentRows(squads),mapped:[...mapped.values()].filter(r=>!activeOnly||activeSourceIds.has(String(r.source_member_id))),unmatched,
     ambiguous:conflicts.size,
     explanation:'Display uses latest recorded THP through today in server time. The chosen date is exclusively for editing a dated entry.'});
   }
@@ -232,7 +237,16 @@ export async function GET(request){
    const reportWeek=q.get('week');
    if(!isMonday(reportWeek))return json({error:'Choose a valid Monday to view Alliance Duel rankings'},400);
    if(!utwConfigured())return json({error:'Alliance Duel scores are not connected'},503);
-   return json(await utwWeeklyOverview(reportWeek));
+   const overview=await utwWeeklyOverview(reportWeek);
+   if(q.get('active_roster')==='1'){
+    const [directory,aliases,sourceAliases]=await Promise.all([
+     list('utw_stat_members',{select:'id,display_name,archived_at',limit:'1000'}),
+     list('utw_stat_aliases',{select:'alias_key,alias,member_id',limit:'5000'}),
+     list('utw_duel_backup_aliases',{select:'source_member_id,alias',limit:'5000'})
+    ]);
+    return json({...overview,roster:filterExternalRoster(overview.roster,directory,aliases,sourceAliases)});
+   }
+   return json(overview);
   }
   if(q.get('ds_history')==='1'){
    const actor=await sessionUser(request);
