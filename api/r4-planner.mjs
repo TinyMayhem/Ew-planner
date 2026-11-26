@@ -109,9 +109,14 @@ const field=(label,id,type='text',attributes='')=>{
 };
 const btn=t=>'<button type="submit" class="r4-btn primary">'+t+'</button>';
 const form=(action,body)=>'<form action="/r4-planner" method="post"><input type="hidden" name="action" value="'+action+'">'+body+'</form>';
-function userLogin(error=''){return htmlHead('Sign in to R4', '<p>Use the username and personal password assigned privately by the UTW owner. No email needed.</p>'+form('user_login',field('Username','username','text','autocomplete="username" maxlength="30" pattern="[A-Za-z0-9_.-]+( [A-Za-z0-9_.-]+)*"')+field('Password','password','password','autocomplete="current-password" maxlength="128"')+btn('Sign in'))+'<p class="r4-error" role="alert">'+secureText(error)+'</p>')}
+const deviNext=v=>v==='/devi-admin.html'?v:'';
+const nextField=v=>deviNext(v)?'<input type="hidden" name="next" value="/devi-admin.html">':'';
+const changeLocation=v=>'/r4-planner?change=1'+(deviNext(v)?'&next=%2Fdevi-admin.html':'');
+const canEnterDevi=a=>!!a?.active&&!a.must_change_password&&['tiny','devi'].includes(a.username)&&['admin','r4'].includes(a.role);
+const afterR4Login=(a,next)=>deviNext(next)&&canEnterDevi(a)?'/devi-admin.html':a.role==='von'?'/r4-planner?alliance=von':'/r4-planner';
+function userLogin(error='',next=''){return htmlHead(deviNext(next)?'Sign in to Devi Operations':'Sign in to R4', '<p>Use the username and personal password assigned privately by the UTW owner. No email needed.</p>'+form('user_login',nextField(next)+field('Username','username','text','autocomplete="username" maxlength="30" pattern="[A-Za-z0-9_.-]+( [A-Za-z0-9_.-]+)*"')+field('Password','password','password','autocomplete="current-password" maxlength="128"')+btn('Sign in'))+'<p class="r4-error" role="alert">'+secureText(error)+'</p>')}
 function setupLogin(error=''){return htmlHead('Create the first R4 administrator','<p>This can only be done once, using the existing private Buddy Board admin password. After setup, the shared R4 passcode is disabled.</p>'+form('bootstrap',field('Buddy Board admin password','admin_password','password','autocomplete="current-password"')+field('Admin username','username','text','autocomplete="username" minlength="3" maxlength="30"')+field('Display name','display_name','text','maxlength="50"')+field('New personal password','password','password','autocomplete="new-password" minlength="10" maxlength="128"')+btn('Create administrator'))+'<p class="r4-error" role="alert">'+secureText(error)+'</p><a href="/r4-planner">Back to R4 login</a>')}
-function changePage(error='',first=true){return htmlHead('Change your password','<p>Choose a password of at least 10 characters. Temporary credentials cannot view R4 data until replaced.</p>'+form('change_password',(first?'':field('Current password','current_password','password','autocomplete="current-password"'))+field('New password','password','password','autocomplete="new-password" minlength="10" maxlength="128"')+btn('Save password and enter R4'))+'<p class="r4-error" role="alert">'+secureText(error)+'</p>')}
+function changePage(error='',first=true,next=''){return htmlHead('Change your password','<p>Choose a password of at least 10 characters. Temporary credentials cannot view R4 data until replaced.</p>'+form('change_password',nextField(next)+(first?'':field('Current password','current_password','password','autocomplete="current-password"'))+field('New password','password','password','autocomplete="new-password" minlength="10" maxlength="128"')+btn('Save password and enter R4'))+'<p class="r4-error" role="alert">'+secureText(error)+'</p>')}
 function locationCookie(request,account,kind='active',redirect='/r4-planner'){return new Response(null,{status:303,headers:{'Location':redirect,'Set-Cookie':sessionSetCookie(request,account,kind),'Cache-Control':'no-store'}})}
 async function noAccounts(){return (await accountCount())===0}
 export async function authorizedAccess(request){
@@ -128,14 +133,15 @@ export async function authorizedAlliance(request,alliance='utw'){
 }
 export async function GET(request){
  if(new URL(request.url).searchParams.get('view')==='hive')return hiveGet(request);
- const u=new URL(request.url),q=u.searchParams;
+ const u=new URL(request.url),q=u.searchParams,next=deviNext(q.get('next'));
  if(!configured())return oldGET(request);
  try{
   const account=await sessionUser(request,{allowPending:true});
   if(q.get('setup')==='1')return new Response(await noAccounts()?setupLogin():userLogin('Individual logins have already been configured.'),{headers:NO_STORE});
-  if(q.get('change')==='1')return new Response(account?changePage('',account.must_change_password):userLogin('Please sign in first.'),{headers:NO_STORE});
+  if(q.get('change')==='1')return new Response(account?changePage('',account.must_change_password,next):userLogin('Please sign in first.',next),{headers:NO_STORE});
   if(q.get('admin')==='1')return new Response(null,{status:303,headers:{Location:'/r4-planner','Cache-Control':'no-store'}});
-  if(account?.must_change_password)return new Response(null,{status:303,headers:{Location:'/r4-planner?change=1','Cache-Control':'no-store'}});
+  if(account?.must_change_password)return new Response(null,{status:303,headers:{Location:changeLocation(next),'Cache-Control':'no-store'}});
+  if(next&&account){if(canEnterDevi(account))return new Response(null,{status:303,headers:{Location:next,'Cache-Control':'no-store'}});return new Response(userLogin('Devi Operations is restricted to Tiny and Devi. Sign in with an authorized account.',next),{status:403,headers:NO_STORE});}
   const requested=q.get('alliance');
   if(requested&&!['utw','von'].includes(requested))return new Response('Invalid alliance',{status:400,headers:NO_STORE});
   const alliance=requested||(account?.role==='von'?'von':'utw');
@@ -144,7 +150,7 @@ export async function GET(request){
    return new Response(q.get('duel')==='1'?duelFor(alliance):plannerFor(alliance,account.role),{headers:NO_STORE});
   }
   if(await noAccounts())return oldGET(request);
-  return new Response(userLogin(),{headers:NO_STORE});
+  return new Response(userLogin('',next),{headers:NO_STORE});
  }catch{return new Response(login('Account database unavailable. Please retry.'),{status:503,headers:NO_STORE})}
 }
 export async function POST(request){
@@ -152,7 +158,7 @@ export async function POST(request){
  if(!originAllowed(request))return new Response('Invalid request origin',{status:403,headers:NO_STORE});
  if(!request.headers.get('content-type')?.startsWith('application/x-www-form-urlencoded'))return new Response('Invalid form',{status:415,headers:NO_STORE});
  const raw=await request.text();if(raw.length>1800)return new Response('Request too large',{status:413,headers:NO_STORE});
- const f=new URLSearchParams(raw),action=f.get('action')||'';
+ const f=new URLSearchParams(raw),action=f.get('action')||'',next=deviNext(f.get('next'));
  if(action==='logout'){
   const h=new Headers({'Location':'/r4-planner','Cache-Control':'no-store'});
   h.append('Set-Cookie',sessionClearCookie(request));h.append('Set-Cookie',cookie(request,'',0));
@@ -170,19 +176,20 @@ export async function POST(request){
   }
   if(action==='user_login'){
    await rateLogin(request,f.get('username'));const account=await verifyCredentials(f.get('username'),f.get('password'));
-   if(!account)return new Response(userLogin('Incorrect username or password.'),{status:401,headers:NO_STORE});
-   return locationCookie(request,account,account.must_change_password?'pending':'active',account.must_change_password?'/r4-planner?change=1':account.role==='von'?'/r4-planner?alliance=von':'/r4-planner');
+   if(!account)return new Response(userLogin('Incorrect username or password.',next),{status:401,headers:NO_STORE});
+   if(next&&!account.must_change_password&&!canEnterDevi(account))return new Response(userLogin('Devi Operations is restricted to Tiny and Devi. Sign in with an authorized account.',next),{status:403,headers:NO_STORE});
+   return locationCookie(request,account,account.must_change_password?'pending':'active',account.must_change_password?changeLocation(next):afterR4Login(account,next));
   }
   const actor=await sessionUser(request,{allowPending:true});
   if(action==='change_password'){
-   if(!actor)return new Response(userLogin('Please sign in again.'),{status:401,headers:NO_STORE});
-   if(!actor.must_change_password&&!passwordMatches(f.get('current_password'),actor.password_hash))return new Response(changePage('Current password is incorrect.',false),{status:401,headers:NO_STORE});
-   if(!strongPassword(f.get('password'))||passwordMatches(f.get('password'),actor.password_hash))return new Response(changePage('Use a new password of at least 10 characters.',actor.must_change_password),{status:400,headers:NO_STORE});
+   if(!actor)return new Response(userLogin('Please sign in again.',next),{status:401,headers:NO_STORE});
+   if(!actor.must_change_password&&!passwordMatches(f.get('current_password'),actor.password_hash))return new Response(changePage('Current password is incorrect.',false,next),{status:401,headers:NO_STORE});
+   if(!strongPassword(f.get('password'))||passwordMatches(f.get('password'),actor.password_hash))return new Response(changePage('Use a new password of at least 10 characters.',actor.must_change_password,next),{status:400,headers:NO_STORE});
    const account=await updateAccount(actor.id,{password_hash:passwordHash(f.get('password')),must_change_password:false,temporary_expires_at:null,session_version:actor.session_version+1});
-   return locationCookie(request,account,'active',account.role==='von'?'/r4-planner?alliance=von':'/r4-planner');
+   return locationCookie(request,account,'active',afterR4Login(account,next));
   }
   if(['account_create','account_toggle','account_reset'].includes(action))return new Response('R4 account administration is handled privately by the UTW owner through ChatGPT.',{status:403,headers:NO_STORE});
   if(await noAccounts())return oldPOST(new Request(request.url,{method:'POST',headers:request.headers,body:raw}));
   return new Response(userLogin('Use your individual R4 credentials.'),{status:401,headers:NO_STORE});
- }catch(e){const err=e.message.includes('duplicate')?'Username already in use.':e.message;return new Response(userLogin(err),{status:503,headers:NO_STORE})}
+ }catch(e){const err=e.message.includes('duplicate')?'Username already in use.':e.message;return new Response(userLogin(err,next),{status:503,headers:NO_STORE})}
 }
