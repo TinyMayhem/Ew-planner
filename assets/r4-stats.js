@@ -598,16 +598,17 @@ function showVipAdvice(advice,{autoSelect=false}={}){
    if(!v.eligible&&v.reasons?.length)$('train-reason').value=('VIP override: '+v.reasons.join('; ')).slice(0,480);
    eligibilityWarnings();
   });
-  row.append(info,button);
+  row.append(info);
   if(canSkip){
+   const actions=text('div');actions.style.display='flex';actions.style.flexDirection='column';actions.style.gap='6px';actions.append(button);
    const skip=text('button','Skip this week','stat-button');skip.type='button';
    skip.onclick=()=>{
     skipped.ids.add(v.id);saveVipSkipSet(skipped.key,skipped.ids);
     if($('train-vip').value===v.id){$('train-vip').value='';eligibilityWarnings();}
     showVipAdvice(advice);
    };
-   row.append(skip);
-  }
+   actions.append(skip);row.append(actions);
+  }else row.append(button);
   root.append(row);
  }
  if(pool.length>limit)root.append(text('p','Showing the first '+limit+' suggestions. '+(canSkip?'Skip a name to bring the next one into view. ':'')+'You can still pick any member from Selected VIP above.','stat-muted'));
