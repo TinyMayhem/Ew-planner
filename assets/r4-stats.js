@@ -523,6 +523,20 @@ function nextRankedVip(advice,conductorId){
  if(!advice?.scoreRanked||!conductor)return null;
  return (advice.vipCandidates||[]).find(x=>x.eligible&&x.id!==conductorId&&x.scoreRank>conductor.place)||null;
 }
+// Weekly VIP deferrals are operator/browser preferences, not train records.
+const weeklyVipSkips=new Map();
+function vipSkipSet(date){
+ const key='utw-train-vip-skip:'+monday(date);
+ if(!weeklyVipSkips.has(key)){
+  let ids=[];
+  try{const saved=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(saved))ids=saved.filter(x=>typeof x==='string')}catch{}
+  weeklyVipSkips.set(key,new Set(ids));
+ }
+ return {key,ids:weeklyVipSkips.get(key)};
+}
+function saveVipSkipSet(key,ids){
+ try{localStorage.setItem(key,JSON.stringify([...ids]))}catch{}
+}
 function showVipAdvice(advice,{autoSelect=false}={}){
  const root=$('vip-candidates'),pair=$('train-pair-suggestion');
  root.replaceChildren();pair.replaceChildren();
@@ -543,14 +557,31 @@ function showVipAdvice(advice,{autoSelect=false}={}){
   pair.append(card);
  }
  const fresh=advice.vipMode==='stage'&&advice.mode!=='vs';
- const pool=advice.vipCandidates||[];
+ const canSkip=advice.mode==='never'&&validDate(advice.date);
+ const all=advice.vipCandidates||[];
+ const skipped=canSkip?vipSkipSet(advice.date):null;
+ const pool=canSkip?all.filter(v=>!skipped.ids.has(v.id)):all;
+ const limit=canSkip?35:25;
  root.append(text('p',ranked?
   'VIP follows the next highest eligible '+(advice.mode==='vs'?'VS':'donation')+
    ' score below the conductor. No repeat VIP in the same week. '+(advice.vipEligibleCount||0)+' eligible.':
   (fresh?'VIPs with no VIP turn in Stage '+advice.stage:
    'VIPs who have not ridden this Monday-to-Sunday week')+
    ' · '+(advice.vipEligibleCount||0)+' eligible. Ranked by longest time since their last VIP turn, then archived VS appearances instead of alphabetical order.','stat-muted'));
- for(const v of pool.slice(0,25)){
+ if(canSkip){
+  root.append(text('p','Skip for this week hides a VIP suggestion on this browser only. It does not record a train or affect conductor eligibility. Skips reset for the next Monday-to-Sunday server week.','stat-muted'));
+  const deferred=all.filter(v=>skipped.ids.has(v.id));
+  if(deferred.length){
+   const panel=text('details');panel.append(text('summary','Skipped this week ('+deferred.length+')'));
+   for(const v of deferred){
+    const row=text('div',null,'stat-candidate'),restore=text('button','Restore','stat-button');
+    restore.type='button';restore.onclick=()=>{skipped.ids.delete(v.id);saveVipSkipSet(skipped.key,skipped.ids);showVipAdvice(advice);};
+    row.append(text('span',v.name),restore);panel.append(row);
+   }
+   root.append(panel);
+  }
+ }
+ for(const v of pool.slice(0,limit)){
   const samePerson=v.id===selectedDriver;
   const highlighted=ranked&&suggestedVip?.id===v.id;
   const row=text('div',null,'stat-candidate'+(v.eligible&&!samePerson?' train-vip-eligible':'')+(highlighted?' train-advice-favorite':''));
@@ -567,9 +598,20 @@ function showVipAdvice(advice,{autoSelect=false}={}){
    if(!v.eligible&&v.reasons?.length)$('train-reason').value=('VIP override: '+v.reasons.join('; ')).slice(0,480);
    eligibilityWarnings();
   });
-  row.append(info,button);root.append(row);
+  row.append(info);
+  if(canSkip){
+   const actions=text('div');actions.style.display='flex';actions.style.flexDirection='column';actions.style.gap='6px';actions.append(button);
+   const skip=text('button','Skip this week','stat-button');skip.type='button';
+   skip.onclick=()=>{
+    skipped.ids.add(v.id);saveVipSkipSet(skipped.key,skipped.ids);
+    if($('train-vip').value===v.id){$('train-vip').value='';eligibilityWarnings();}
+    showVipAdvice(advice);
+   };
+   actions.append(skip);row.append(actions);
+  }else row.append(button);
+  root.append(row);
  }
- if(pool.length>25)root.append(text('p','Showing the first 25 suggestions. You can still pick any member from Selected VIP above.','stat-muted'));
+ if(pool.length>limit)root.append(text('p','Showing the first '+limit+' suggestions. '+(canSkip?'Skip a name to bring the next one into view. ':'')+'You can still pick any member from Selected VIP above.','stat-muted'));
 }
 function showDsTeamAdvice(advice){
  const root=$('train-ds-teams');root.replaceChildren();
